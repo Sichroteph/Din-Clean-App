@@ -24,6 +24,10 @@ static void menu_selection_changed(MenuLayer *ml, MenuIndex new_index,
                                    MenuIndex old_index, void *data);
 static void menu_window_load(Window *window);
 static void menu_window_unload(Window *window);
+static void handle_up_click(ClickRecognizerRef recognizer, void *context);
+static void handle_down_click(ClickRecognizerRef recognizer, void *context);
+static void handle_select_click(ClickRecognizerRef recognizer, void *context);
+static void menu_click_config_provider(void *context);
 
 void hub_menu_push(bool is_up_menu, HubDirection direction) {
   uint8_t count;
@@ -97,7 +101,7 @@ static void menu_window_load(Window *window) {
     .select_click = menu_select,
     .selection_changed = menu_selection_changed,
   });
-  menu_layer_set_click_config_onto_window(ctx->menu, window);
+  window_set_click_config_provider_with_context(window, menu_click_config_provider, ctx);
   layer_add_child(root, menu_layer_get_layer(ctx->menu));
 
   if (ctx->depth == 0 && ctx->direction == HUB_DIR_UP && ctx->visible_count > 0) {
@@ -178,26 +182,60 @@ static void menu_selection_changed(MenuLayer *ml, MenuIndex new_index,
                                    MenuIndex old_index, void *data) {
   MenuCtx *ctx = data;
   hub_timeout_reset();
+}
 
-  // Exit-on-opposite-direction only for root menus (depth == 0)
-  if (ctx->depth != 0) return;
+// Custom click handlers replace menu_layer_set_click_config_onto_window so we
+// can detect when the user presses the opposite button at the list boundary
+// and exit immediately, without relying on wrap (MenuLayer doesn't wrap).
 
-  uint16_t total_rows = ctx->visible_count + ctx->padding;
-  uint16_t last_row = total_rows - 1;
+static void handle_up_click(ClickRecognizerRef recognizer, void *context) {
+  MenuCtx *ctx = context;
+  hub_timeout_reset();
+  MenuIndex current = menu_layer_get_selected_index(ctx->menu);
+  uint16_t first_real_row = (uint16_t)ctx->padding;
 
-  if (ctx->direction == HUB_DIR_DOWN) {
-    // Opened by DOWN: exit when moving UP (any upward step, including wrap)
-    bool moved_up = (new_index.row < old_index.row) ||
-                    (old_index.row == 0 && new_index.row == last_row);
-    if (moved_up) {
+  if (ctx->depth == 0 && ctx->direction == HUB_DIR_DOWN) {
+    // Menu opened by DOWN: pressing UP at first real item exits
+    if (current.row <= first_real_row) {
       app_timer_register(0, delayed_return_to_watchface, NULL);
-    }
-  } else {
-    // Opened by UP: exit when moving DOWN (any downward step, including wrap)
-    bool moved_down = (new_index.row > old_index.row) ||
-                      (old_index.row == last_row && new_index.row == 0);
-    if (moved_down) {
-      app_timer_register(0, delayed_return_to_watchface, NULL);
+      return;
     }
   }
+  // Navigate up, but not past first real row
+  if (current.row > first_real_row) {
+    MenuIndex prev = { .section = 0, .row = current.row - 1 };
+    menu_layer_set_selected_index(ctx->menu, prev, MenuRowAlignCenter, true);
+  }
+}
+
+static void handle_down_click(ClickRecognizerRef recognizer, void *context) {
+  MenuCtx *ctx = context;
+  hub_timeout_reset();
+  MenuIndex current = menu_layer_get_selected_index(ctx->menu);
+  uint16_t last_real_row = (uint16_t)(ctx->padding + ctx->visible_count - 1);
+
+  if (ctx->depth == 0 && ctx->direction == HUB_DIR_UP) {
+    // Menu opened by UP: pressing DOWN at last real item exits
+    if (current.row >= last_real_row) {
+      app_timer_register(0, delayed_return_to_watchface, NULL);
+      return;
+    }
+  }
+  // Navigate down, but not past last real row
+  if (current.row < last_real_row) {
+    MenuIndex next = { .section = 0, .row = current.row + 1 };
+    menu_layer_set_selected_index(ctx->menu, next, MenuRowAlignCenter, true);
+  }
+}
+
+static void handle_select_click(ClickRecognizerRef recognizer, void *context) {
+  MenuCtx *ctx = context;
+  MenuIndex idx = menu_layer_get_selected_index(ctx->menu);
+  menu_select(ctx->menu, &idx, ctx);
+}
+
+static void menu_click_config_provider(void *context) {
+  window_single_click_subscribe(BUTTON_ID_UP, handle_up_click);
+  window_single_click_subscribe(BUTTON_ID_DOWN, handle_down_click);
+  window_single_click_subscribe(BUTTON_ID_SELECT, handle_select_click);
 }
