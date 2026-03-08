@@ -931,9 +931,13 @@
       webhookUrl = localStorage['webhook_url_' + prefill.data] || '';
     }
 
+    var labelVisible = (type !== 1);
+    var labelDisplayStyle = labelVisible ? '' : 'display:none';
     var html = '<div class="menu-form" style="margin-left:' + (depth * 20) + 'px">' +
+      '<div id="mf_label_section" style="' + labelDisplayStyle + '">' +
       '<label>Label</label>' +
       '<input type="text" id="mf_label" maxlength="15" value="' + label + '" placeholder="Item name">' +
+      '</div>' +
       '<label>Type</label>' +
       '<select id="mf_type" onchange="onFormTypeChange()">' + typeOptions + '</select>' +
       '<div id="mf_app_div" style="' + (type === 1 ? '' : 'display:none') + '">' +
@@ -954,6 +958,8 @@
     var type = parseInt(document.getElementById('mf_type').value);
     document.getElementById('mf_app_div').style.display = (type === 1) ? '' : 'none';
     document.getElementById('mf_action_div').style.display = (type === 2) ? '' : 'none';
+    var labelSection = document.getElementById('mf_label_section');
+    if (labelSection) labelSection.style.display = (type === 1) ? 'none' : '';
   }
 
   function showAddForm(menuId, parentPath, depth) {
@@ -981,11 +987,22 @@
   }
 
   function saveForm() {
-    var labelEl = document.getElementById('mf_label');
-    var label = labelEl ? labelEl.value.trim() : '';
-    if (!label) { alert('Please enter a label'); return; }
-
     var type = parseInt(document.getElementById('mf_type').value);
+    var label;
+    if (type === 1) {
+      // Pseudo-app: auto-use the app's name as label
+      var appId = parseInt(document.getElementById('mf_app').value);
+      label = '';
+      for (var pi = 0; pi < PSEUDOAPPS.length; pi++) {
+        if (PSEUDOAPPS[pi].id === appId) { label = PSEUDOAPPS[pi].name; break; }
+      }
+      if (!label) label = 'App';
+    } else {
+      var labelEl = document.getElementById('mf_label');
+      label = labelEl ? labelEl.value.trim() : '';
+      if (!label) { alert('Please enter a label'); return; }
+    }
+
     var data = 0;
     if (type === 1) data = parseInt(document.getElementById('mf_app').value);
     if (type === 2) {

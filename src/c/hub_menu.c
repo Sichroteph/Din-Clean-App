@@ -179,20 +179,24 @@ static void menu_selection_changed(MenuLayer *ml, MenuIndex new_index,
   MenuCtx *ctx = data;
   hub_timeout_reset();
 
-  // Exit-on-wrap only for root menus (depth == 0)
+  // Exit-on-opposite-direction only for root menus (depth == 0)
   if (ctx->depth != 0) return;
 
   uint16_t total_rows = ctx->visible_count + ctx->padding;
   uint16_t last_row = total_rows - 1;
 
   if (ctx->direction == HUB_DIR_DOWN) {
-    // Opened by DOWN: exit when wrapping UP from first item
-    if (old_index.row == 0 && new_index.row == last_row) {
+    // Opened by DOWN: exit when moving UP (any upward step, including wrap)
+    bool moved_up = (new_index.row < old_index.row) ||
+                    (old_index.row == 0 && new_index.row == last_row);
+    if (moved_up) {
       app_timer_register(0, delayed_return_to_watchface, NULL);
     }
   } else {
-    // Opened by UP: exit when wrapping DOWN from last item
-    if (old_index.row == last_row && new_index.row == 0) {
+    // Opened by UP: exit when moving DOWN (any downward step, including wrap)
+    bool moved_down = (new_index.row > old_index.row) ||
+                      (old_index.row == last_row && new_index.row == 0);
+    if (moved_down) {
       app_timer_register(0, delayed_return_to_watchface, NULL);
     }
   }
