@@ -319,6 +319,19 @@
       </div>
     </div>
 
+    <div class='item-container'>
+      <div class='item-container-header'>Transition animation</div>
+      <div class='item-container-content'>
+        <label class='item'>
+          Enable
+          <input type='checkbox' class='item-toggle' id='hub_anim' checked>
+        </label>
+      </div>
+      <div class='item-container-footer'>
+        Slide animation when opening/closing panels.
+      </div>
+    </div>
+
     <!-- UP button short press -->
     <div class='sub-header'>Short press</div>
     <div class='item-container'>
@@ -1164,6 +1177,7 @@
       'weather_api': document.getElementById('weather_api_openmeteo').checked ? 'openmeteo' : 'metno',
       'wind_speed_unit': document.getElementById('wind_unit_kmh').checked ? 'kmh' : 'ms',
       'hub_timeout': document.getElementById('hub_timeout').value,
+      'hub_anim': document.getElementById('hub_anim').checked ? '1' : '0',
       'hub_btn_up': document.getElementById('hub_btn_up_widgets').checked ? '1' : '0',
       'hub_btn_down': document.getElementById('hub_btn_down_menu').checked ? '0' : '1',
       'hub_lp_up': document.getElementById('hub_lp_up').value,
@@ -1234,6 +1248,9 @@
     document.getElementById('wind_unit_ms').checked = (savedWindUnit === 'ms');
 
     document.getElementById('hub_timeout').value = localStorage['hub_timeout'] || '30';
+
+    var savedHubAnim = localStorage['hub_anim'];
+    document.getElementById('hub_anim').checked = (savedHubAnim === undefined || savedHubAnim === '1');
 
     var savedBtnUp = localStorage['hub_btn_up'] || '1';
     document.getElementById('hub_btn_up_widgets').checked = (savedBtnUp === '1');

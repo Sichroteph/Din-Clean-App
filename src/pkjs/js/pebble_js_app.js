@@ -1153,6 +1153,7 @@ Pebble.addEventListener('webviewclosed', function (e) {
 
   // --- Hub configuration ---
   var hub_timeout = parseInt(configData['hub_timeout']) || 30;
+  var hub_anim = (configData['hub_anim'] !== undefined) ? parseInt(configData['hub_anim']) : 1;
   var hub_btn_up = parseInt(configData['hub_btn_up']) || 1;  // 0=menu, 1=widgets
   var hub_btn_down = parseInt(configData['hub_btn_down']) || 0; // 0=menu, 1=widgets
 
@@ -1166,6 +1167,7 @@ Pebble.addEventListener('webviewclosed', function (e) {
   var hub_views = configData['hub_views'] || '0,1,2,3';
 
   dict['KEY_HUB_TIMEOUT'] = hub_timeout;
+  dict['KEY_HUB_ANIM'] = hub_anim;
   dict['KEY_HUB_BTN_UP'] = hub_btn_up;
   dict['KEY_HUB_BTN_DOWN'] = hub_btn_down;
   dict['KEY_HUB_LP_UP'] = hub_lp_up;

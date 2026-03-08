@@ -964,6 +964,8 @@ static void inbox_received_callback(DictionaryIterator *iterator,
       hub_config_parse_widgets(t->value->cstring, true);
     if ((t = dict_find(iterator, KEY_HUB_WIDGETS_DOWN)))
       hub_config_parse_widgets(t->value->cstring, false);
+    if ((t = dict_find(iterator, KEY_HUB_ANIM)))
+      g_hub_config.anim_enabled = (uint8_t)t->value->int32;
 
     hub_config_save();
     hub_timeout_reset();

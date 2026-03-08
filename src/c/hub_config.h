@@ -21,6 +21,7 @@
 #define KEY_HUB_MENU_DOWN  359
 #define KEY_HUB_WIDGETS_UP   360
 #define KEY_HUB_WIDGETS_DOWN 361
+#define KEY_HUB_ANIM         362
 
 // Limits
 #define HUB_MAX_MENU_ITEMS  12
@@ -59,6 +60,7 @@ typedef struct {
   uint8_t  lp_select_data;
   uint8_t  view_count;
   uint8_t  view_order[HUB_MAX_VIEWS];
+  uint8_t  anim_enabled;  // 1 = animated transitions, 0 = instant
 } HubConfig;
 
 // Global config

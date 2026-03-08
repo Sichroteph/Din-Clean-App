@@ -65,7 +65,7 @@ void hub_widgets_push(bool is_up, HubDirection direction) {
     .unload = widget_window_unload,
   });
 
-  window_stack_push(ctx->window, true);
+  window_stack_push(ctx->window, g_hub_config.anim_enabled ? true : false);
 }
 
 static void widget_window_load(Window *window) {
@@ -137,7 +137,7 @@ static void widget_navigate(WidgetCtx *ctx, bool forward) {
       layer_mark_dirty(ctx->canvas);
     } else {
       // Past last widget: exit
-      window_stack_pop(true);
+      window_stack_pop(g_hub_config.anim_enabled ? true : false);
     }
   } else {
     if (ctx->current_index > 0) {
@@ -146,7 +146,7 @@ static void widget_navigate(WidgetCtx *ctx, bool forward) {
       layer_mark_dirty(ctx->canvas);
     } else {
       // Past first widget: return to watchface
-      window_stack_pop(true);
+      window_stack_pop(g_hub_config.anim_enabled ? true : false);
     }
   }
 }
@@ -176,7 +176,7 @@ static void widget_select_handler(ClickRecognizerRef rec, void *context) {
 }
 
 static void widget_back_handler(ClickRecognizerRef rec, void *context) {
-  window_stack_pop(true);
+  window_stack_pop(g_hub_config.anim_enabled ? true : false);
 }
 
 // ========== Widget implementations (stubs) ==========

@@ -82,7 +82,8 @@
             "KEY_HUB_MENU_UP": 358,
             "KEY_HUB_MENU_DOWN": 359,
             "KEY_HUB_WIDGETS_UP": 360,
-            "KEY_HUB_WIDGETS_DOWN": 361
+            "KEY_HUB_WIDGETS_DOWN": 361,
+            "KEY_HUB_ANIM": 362
         },
         "projectType": "native",
         "resources": {
