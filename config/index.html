@@ -1081,6 +1081,12 @@
     var wDown = localStorage['hub_widgets_down'];
     if (wUp) widgetLists.up = deserializeWidgets(wUp);
     if (wDown) widgetLists.down = deserializeWidgets(wDown);
+
+    // Migration: if UP only has Weather (old default), upgrade to Weather+Stocks
+    if (widgetLists.up.length === 1 && widgetLists.up[0] === 0) {
+      widgetLists.up = [0, 1];
+      persistWidgets();
+    }
   }
 
   // ================================================================
