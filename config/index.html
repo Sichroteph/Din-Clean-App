@@ -583,28 +583,6 @@
     </div>
     <div class="section-body"><div class="section-body-inner">
 
-      <!-- Timeout -->
-      <div class="card">
-        <div class="card-header">Inactivity timeout</div>
-        <div class="row">
-          <div class="row-label">
-            Return to watchface
-            <div class="row-sublabel">0 = disabled</div>
-          </div>
-          <input type="number" class="input-field input-narrow" id="hub_timeout" value="30" min="0" max="300">
-          <span style="margin-left:6px;color:var(--text-muted);font-size:0.8rem">sec</span>
-        </div>
-      </div>
-
-      <!-- Animation -->
-      <div class="card">
-        <div class="row">
-          <div class="row-label">Transition animation</div>
-          <input type="checkbox" class="hidden-input" id="hub_anim" checked>
-          <label class="toggle-track" for="hub_anim"></label>
-        </div>
-      </div>
-
       <!-- SHORT PRESS -->
       <div class="sub-header">Short press</div>
 
@@ -707,15 +685,37 @@
   </div>
 
   <!-- ==========================================================
-       SECTION 2: VIEWS
+       SECTION 2: VIEWS & BEHAVIOR
        ========================================================== -->
   <div class="section" data-section>
     <div class="section-header" onclick="toggleSection(this)">
       <div class="icon">&#128368;</div>
-      <div class="label">Watchface Views</div>
+      <div class="label">Navigation &amp; Behavior</div>
       <svg class="chevron" viewBox="0 0 20 20" fill="currentColor"><path d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"/></svg>
     </div>
     <div class="section-body"><div class="section-body-inner">
+      <!-- Timeout -->
+      <div class="card">
+        <div class="card-header">Inactivity timeout</div>
+        <div class="row">
+          <div class="row-label">
+            Return to watchface
+            <div class="row-sublabel">0 = disabled</div>
+          </div>
+          <input type="number" class="input-field input-narrow" id="hub_timeout" value="30" min="0" max="300">
+          <span style="margin-left:6px;color:var(--text-muted);font-size:0.8rem">sec</span>
+        </div>
+      </div>
+
+      <!-- Animation -->
+      <div class="card">
+        <div class="row">
+          <div class="row-label">Transition animation</div>
+          <input type="checkbox" class="hidden-input" id="hub_anim" checked>
+          <label class="toggle-track" for="hub_anim"></label>
+        </div>
+      </div>
+
       <div class="card">
         <div class="card-header">Enabled views (SELECT cycles)</div>
         <div class="row">
