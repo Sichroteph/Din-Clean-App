@@ -131,11 +131,13 @@ static void widget_navigate(WidgetCtx *ctx, bool forward) {
   hub_timeout_reset();
 
   if (forward) {
-    // Don't cycle: stop at last widget
     if (ctx->current_index < ctx->widget_count - 1) {
       ctx->current_index++;
       ctx->current_page = 0;
       layer_mark_dirty(ctx->canvas);
+    } else {
+      // Past last widget: exit
+      window_stack_pop(true);
     }
   } else {
     if (ctx->current_index > 0) {

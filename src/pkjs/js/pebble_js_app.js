@@ -1176,7 +1176,7 @@ Pebble.addEventListener('webviewclosed', function (e) {
   // Custom menu/widget data
   var hub_menu_up = configData['hub_menu_up'] || '';
   var hub_menu_down = configData['hub_menu_down'] || '';
-  var hub_widgets_up = configData['hub_widgets_up'] || '0';
+  var hub_widgets_up = configData['hub_widgets_up'] || '0,1';
   var hub_widgets_down = configData['hub_widgets_down'] || '0,1';
 
   dict['KEY_HUB_MENU_UP'] = hub_menu_up;

@@ -11,8 +11,8 @@ static const HubMenuItem s_default_down_menu[] = {
 };
 #define DEFAULT_DOWN_MENU_COUNT 3
 
-static const uint8_t s_default_up_widgets[] = { HUB_WIDGET_WEATHER };
-#define DEFAULT_UP_WIDGET_COUNT 1
+static const uint8_t s_default_up_widgets[] = { HUB_WIDGET_WEATHER, HUB_WIDGET_STOCKS };
+#define DEFAULT_UP_WIDGET_COUNT 2
 
 static const uint8_t s_default_down_widgets[] = { HUB_WIDGET_WEATHER, HUB_WIDGET_STOCKS };
 #define DEFAULT_DOWN_WIDGET_COUNT 2
