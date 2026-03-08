@@ -1099,7 +1099,7 @@ Pebble.addEventListener('appmessage',
 
 Pebble.addEventListener('showConfiguration', function () {
 
-  var url = 'https://sichroteph.github.io/Din-Clean-App/';
+  var url = 'https://sichroteph.github.io/Din-Clean-App/?v=' + Date.now();
   Pebble.openURL(url);
 });
 
