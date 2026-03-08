@@ -70,7 +70,15 @@
             "KEY_COLOR_RIGHT_BACK_B": 41,
             "KEY_COLOR_LEFT_BACK_R": 42,
             "KEY_COLOR_LEFT_BACK_G": 43,
-            "KEY_COLOR_LEFT_BACK_B": 44
+            "KEY_COLOR_LEFT_BACK_B": 44,
+            "KEY_HUB_WEBHOOK": 350,
+            "KEY_HUB_TIMEOUT": 351,
+            "KEY_HUB_BTN_UP": 352,
+            "KEY_HUB_BTN_DOWN": 353,
+            "KEY_HUB_LP_UP": 354,
+            "KEY_HUB_LP_DOWN": 355,
+            "KEY_HUB_LP_SELECT": 356,
+            "KEY_HUB_VIEWS": 357
         },
         "projectType": "native",
         "resources": {

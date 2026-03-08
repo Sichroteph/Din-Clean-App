@@ -51,6 +51,16 @@
       max-height: 2000px;
       transition: max-height 0.5s ease-in;
     }
+
+    .item-select {
+      width: 100%;
+      padding: 10px;
+      font-size: 1em;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      background-color: #fff;
+      margin: 5px 0;
+    }
   </style>
 </head>
 
@@ -164,6 +174,136 @@
     </div>
   </div>
 
+  <!-- Section Hub Navigation -->
+  <button class='accordion-header'>Hub Navigation</button>
+  <div class='accordion-content'>
+    <div class='item-container'>
+      <div class='item-container-header'>Inactivity timeout (seconds)</div>
+      <div class='item-container-content'>
+        <label class='item'>
+          <div class='item-input-wrapper'>
+            <input type='number' class='item-input' id='hub_timeout' value='30' min='5' max='300'>
+          </div>
+        </label>
+      </div>
+      <div class='item-container-footer'>
+        Auto-return to watchface after this delay. Set 0 to disable.
+      </div>
+    </div>
+
+    <div class='item-container'>
+      <div class='item-container-header'>UP button (short press)</div>
+      <div class='item-container-content'>
+        <label class='item'>
+          Widget list
+          <input type='radio' class='item-radio' name='hub_btn_up' id='hub_btn_up_widgets' value='1' checked>
+        </label>
+        <label class='item'>
+          Menu
+          <input type='radio' class='item-radio' name='hub_btn_up' id='hub_btn_up_menu' value='0'>
+        </label>
+      </div>
+    </div>
+
+    <div class='item-container'>
+      <div class='item-container-header'>DOWN button (short press)</div>
+      <div class='item-container-content'>
+        <label class='item'>
+          Menu
+          <input type='radio' class='item-radio' name='hub_btn_down' id='hub_btn_down_menu' value='0' checked>
+        </label>
+        <label class='item'>
+          Widget list
+          <input type='radio' class='item-radio' name='hub_btn_down' id='hub_btn_down_widgets' value='1'>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section Long Press Actions -->
+  <button class='accordion-header'>Long Press Actions</button>
+  <div class='accordion-content'>
+    <div class='item-container'>
+      <div class='item-container-header'>UP long press</div>
+      <div class='item-container-content'>
+        <select class='item-select' id='hub_lp_up'>
+          <option value='16'>Webhook</option>
+          <option value='0'>Stopwatch</option>
+          <option value='1'>Timer</option>
+          <option value='2'>Alarm</option>
+        </select>
+      </div>
+    </div>
+
+    <div class='item-container'>
+      <div class='item-container-header'>DOWN long press</div>
+      <div class='item-container-content'>
+        <select class='item-select' id='hub_lp_down'>
+          <option value='0' selected>Stopwatch</option>
+          <option value='1'>Timer</option>
+          <option value='2'>Alarm</option>
+          <option value='16'>Webhook</option>
+        </select>
+      </div>
+    </div>
+
+    <div class='item-container'>
+      <div class='item-container-header'>SELECT long press</div>
+      <div class='item-container-content'>
+        <select class='item-select' id='hub_lp_select'>
+          <option value='0'>Stopwatch</option>
+          <option value='1' selected>Timer</option>
+          <option value='2'>Alarm</option>
+          <option value='16'>Webhook</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section Watchface Views -->
+  <button class='accordion-header'>Watchface Views</button>
+  <div class='accordion-content'>
+    <div class='item-container'>
+      <div class='item-container-header'>Enabled views (SELECT cycles between them)</div>
+      <div class='item-container-content'>
+        <label class='item'>
+          Main view
+          <input type='checkbox' class='item-toggle' id='hub_view_0' checked disabled>
+        </label>
+        <label class='item'>
+          View 2
+          <input type='checkbox' class='item-toggle' id='hub_view_1' checked>
+        </label>
+        <label class='item'>
+          View 3
+          <input type='checkbox' class='item-toggle' id='hub_view_2' checked>
+        </label>
+        <label class='item'>
+          Analog
+          <input type='checkbox' class='item-toggle' id='hub_view_3' checked>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section Webhook -->
+  <button class='accordion-header'>Webhook (Optional)</button>
+  <div class='accordion-content'>
+    <div class='item-container'>
+      <div class='item-container-header'>Webhook URL</div>
+      <div class='item-container-content'>
+        <label class='item'>
+          <div class='item-input-wrapper'>
+            <input type='text' class='item-input' id='webhook_url' placeholder='https://example.com/hook'>
+          </div>
+        </label>
+      </div>
+      <div class='item-container-footer'>
+        URL called via POST when a webhook action is triggered.
+      </div>
+    </div>
+  </div>
+
   <div class='item-container'>
     <div class='button-container'>
       <input id='submit_button' type='button' class='item-button' value='SUBMIT'>
@@ -208,6 +348,21 @@
     var color_left_back = document.getElementById('color_left_back');
     var weather_api_openmeteo = document.getElementById('weather_api_openmeteo');
 
+    // Hub config
+    var hub_timeout = document.getElementById('hub_timeout');
+    var hub_btn_up_widgets = document.getElementById('hub_btn_up_widgets');
+    var hub_btn_down_menu = document.getElementById('hub_btn_down_menu');
+    var hub_lp_up = document.getElementById('hub_lp_up');
+    var hub_lp_down = document.getElementById('hub_lp_down');
+    var hub_lp_select = document.getElementById('hub_lp_select');
+    var webhook_url = document.getElementById('webhook_url');
+
+    // Build views string
+    var views = ['0']; // Main always included
+    if (document.getElementById('hub_view_1').checked) views.push('1');
+    if (document.getElementById('hub_view_2').checked) views.push('2');
+    if (document.getElementById('hub_view_3').checked) views.push('3');
+
     var options = {
       'input_iopool_token': input_iopool_token.value,
       'radio_units': radio_units.checked,
@@ -216,7 +371,15 @@
       'toggle_bt': toggle_bt.checked,
       'color_right_back': color_right_back.value,
       'color_left_back': color_left_back.value,
-      'weather_api': weather_api_openmeteo.checked ? 'openmeteo' : 'metno'
+      'weather_api': weather_api_openmeteo.checked ? 'openmeteo' : 'metno',
+      'hub_timeout': hub_timeout.value,
+      'hub_btn_up': hub_btn_up_widgets.checked ? '1' : '0',
+      'hub_btn_down': hub_btn_down_menu.checked ? '0' : '1',
+      'hub_lp_up': hub_lp_up.value,
+      'hub_lp_down': hub_lp_down.value,
+      'hub_lp_select': hub_lp_select.value,
+      'hub_views': views.join(','),
+      'webhook_url': webhook_url.value
     };
 
     // Save for next launch
@@ -228,6 +391,14 @@
     localStorage['color_right_back'] = options['color_right_back'];
     localStorage['color_left_back'] = options['color_left_back'];
     localStorage['weather_api'] = options['weather_api'];
+    localStorage['hub_timeout'] = options['hub_timeout'];
+    localStorage['hub_btn_up'] = options['hub_btn_up'];
+    localStorage['hub_btn_down'] = options['hub_btn_down'];
+    localStorage['hub_lp_up'] = options['hub_lp_up'];
+    localStorage['hub_lp_down'] = options['hub_lp_down'];
+    localStorage['hub_lp_select'] = options['hub_lp_select'];
+    localStorage['hub_views'] = options['hub_views'];
+    localStorage['webhook_url'] = options['webhook_url'];
 
     console.log('Got options: ' + JSON.stringify(options));
     return options;
@@ -276,6 +447,29 @@
     var savedApi = localStorage['weather_api'] || 'openmeteo';
     weather_api_openmeteo.checked = (savedApi === 'openmeteo');
     weather_api_metno.checked = (savedApi === 'metno');
+
+    // Restore hub settings
+    document.getElementById('hub_timeout').value = localStorage['hub_timeout'] || '30';
+
+    var savedBtnUp = localStorage['hub_btn_up'] || '1';
+    document.getElementById('hub_btn_up_widgets').checked = (savedBtnUp === '1');
+    document.getElementById('hub_btn_up_menu').checked = (savedBtnUp === '0');
+
+    var savedBtnDown = localStorage['hub_btn_down'] || '0';
+    document.getElementById('hub_btn_down_menu').checked = (savedBtnDown === '0');
+    document.getElementById('hub_btn_down_widgets').checked = (savedBtnDown === '1');
+
+    document.getElementById('hub_lp_up').value = localStorage['hub_lp_up'] || '16';
+    document.getElementById('hub_lp_down').value = localStorage['hub_lp_down'] || '0';
+    document.getElementById('hub_lp_select').value = localStorage['hub_lp_select'] || '1';
+
+    var savedViews = localStorage['hub_views'] || '0,1,2,3';
+    var viewIds = savedViews.split(',');
+    document.getElementById('hub_view_1').checked = viewIds.indexOf('1') >= 0;
+    document.getElementById('hub_view_2').checked = viewIds.indexOf('2') >= 0;
+    document.getElementById('hub_view_3').checked = viewIds.indexOf('3') >= 0;
+
+    document.getElementById('webhook_url').value = localStorage['webhook_url'] || '';
   })();
 </script>
 </html>

@@ -5,6 +5,11 @@
 #include "ui_icon_bar.h"
 #include "ui_time.h"
 #include "weather_utils.h"
+#include "hub_config.h"
+#include "hub_menu.h"
+#include "hub_widgets.h"
+#include "hub_pseudoapp.h"
+#include "hub_actions.h"
 
 #define FORCE_REFRESH false
 #define IS_HOUR_FICTIVE false
@@ -238,6 +243,9 @@ static char days_wind[3][5] = {"0km", "0km", "0km"};
 static bool s_weather_request_pending = false;
 static AppTimer *s_weather_retry_timer = NULL;
 #define WEATHER_RETRY_DELAY_MS 5000
+
+// Hub: current watchface view index
+static uint8_t current_view_index = 0;
 
 // Packed flags to save memory
 typedef struct {
@@ -486,6 +494,26 @@ static void update_proc(Layer *layer, GContext *ctx) {
                            .rect_screen = rect_screen};
 
   ui_draw_icon_bar(ctx, &icon_data);
+
+  // Draw view label for non-main views (stubs)
+  if (g_hub_config.view_count > 0 && current_view_index < g_hub_config.view_count) {
+    uint8_t view_id = g_hub_config.view_order[current_view_index];
+    const char *view_label = NULL;
+    switch (view_id) {
+      case HUB_VIEW_2:      view_label = "View 2"; break;
+      case HUB_VIEW_3:      view_label = "View 3"; break;
+      case HUB_VIEW_ANALOG: view_label = "Analog"; break;
+      default: break;
+    }
+    if (view_label) {
+      graphics_context_set_text_color(ctx, GColorWhite);
+      GRect label_rect = GRect(40, 0, 100, 20);
+      graphics_draw_text(ctx, view_label,
+                         fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD),
+                         label_rect, GTextOverflowModeTrailingEllipsis,
+                         GTextAlignmentRight, NULL);
+    }
+  }
 }
 
 static void handle_tick(struct tm *cur, TimeUnits units_changed) {
@@ -891,6 +919,45 @@ static void inbox_received_callback(DictionaryIterator *iterator,
     dict_write_uint8(iter, 0, 0);
     app_message_outbox_send();
   }
+
+  // Hub config message (sent alongside regular config, or separately)
+  Tuple *hub_timeout_tuple = dict_find(iterator, KEY_HUB_TIMEOUT);
+  if (hub_timeout_tuple) {
+    g_hub_config.timeout_s = (uint16_t)hub_timeout_tuple->value->int32;
+
+    Tuple *t;
+    if ((t = dict_find(iterator, KEY_HUB_BTN_UP)))
+      g_hub_config.btn_up_type = (uint8_t)t->value->int32;
+    if ((t = dict_find(iterator, KEY_HUB_BTN_DOWN)))
+      g_hub_config.btn_down_type = (uint8_t)t->value->int32;
+    if ((t = dict_find(iterator, KEY_HUB_LP_UP))) {
+      uint8_t v = (uint8_t)t->value->int32;
+      g_hub_config.lp_up_type = v >> 4;
+      g_hub_config.lp_up_data = v & 0x0F;
+    }
+    if ((t = dict_find(iterator, KEY_HUB_LP_DOWN))) {
+      uint8_t v = (uint8_t)t->value->int32;
+      g_hub_config.lp_down_type = v >> 4;
+      g_hub_config.lp_down_data = v & 0x0F;
+    }
+    if ((t = dict_find(iterator, KEY_HUB_LP_SELECT))) {
+      uint8_t v = (uint8_t)t->value->int32;
+      g_hub_config.lp_select_type = v >> 4;
+      g_hub_config.lp_select_data = v & 0x0F;
+    }
+    if ((t = dict_find(iterator, KEY_HUB_VIEWS))) {
+      const char *views_str = t->value->cstring;
+      g_hub_config.view_count = 0;
+      for (const char *p = views_str; *p && g_hub_config.view_count < HUB_MAX_VIEWS; p++) {
+        if (*p >= '0' && *p <= '9') {
+          g_hub_config.view_order[g_hub_config.view_count++] = *p - '0';
+        }
+      }
+    }
+
+    hub_config_save();
+    hub_timeout_reset();
+  }
 }
 
 // Forward declaration for weather retry
@@ -1137,17 +1204,87 @@ static void init_var() {
     duration = 3600;
 }
 
+// --- Hub timeout callback: return to watchface ---
+static void hub_timeout_fired(void) {
+  while (window_stack_get_top_window() != s_main_window) {
+    window_stack_pop(false);
+  }
+  current_view_index = 0;
+  layer_mark_dirty(layer);
+}
+
+// --- Button handlers ---
 static void back_click_handler(ClickRecognizerRef recognizer, void *context) {
-  // intentionally empty — prevents accidental exit on short Back press
+  // Reset to default view; don't exit app on back press
+  if (current_view_index != 0) {
+    current_view_index = 0;
+    layer_mark_dirty(layer);
+  }
+}
+
+static void up_click_handler(ClickRecognizerRef recognizer, void *context) {
+  hub_timeout_reset();
+  if (g_hub_config.btn_up_type == HUB_OBJ_MENU) {
+    hub_menu_push(true, HUB_DIR_UP);
+  } else {
+    hub_widgets_push(true, HUB_DIR_UP);
+  }
+}
+
+static void down_click_handler(ClickRecognizerRef recognizer, void *context) {
+  hub_timeout_reset();
+  if (g_hub_config.btn_down_type == HUB_OBJ_MENU) {
+    hub_menu_push(false, HUB_DIR_DOWN);
+  } else {
+    hub_widgets_push(false, HUB_DIR_DOWN);
+  }
+}
+
+static void select_click_handler(ClickRecognizerRef recognizer, void *context) {
+  // Cycle watchface views
+  if (g_hub_config.view_count > 1) {
+    current_view_index = (current_view_index + 1) % g_hub_config.view_count;
+    layer_mark_dirty(layer);
+  }
+}
+
+static void execute_long_press(uint8_t type, uint8_t data) {
+  if (type == HUB_LP_PSEUDOAPP) {
+    hub_pseudoapp_push(data);
+  } else if (type == HUB_LP_WEBHOOK) {
+    hub_action_execute(data);
+  }
+}
+
+static void up_long_handler(ClickRecognizerRef recognizer, void *context) {
+  hub_timeout_reset();
+  execute_long_press(g_hub_config.lp_up_type, g_hub_config.lp_up_data);
+}
+
+static void down_long_handler(ClickRecognizerRef recognizer, void *context) {
+  hub_timeout_reset();
+  execute_long_press(g_hub_config.lp_down_type, g_hub_config.lp_down_data);
+}
+
+static void select_long_handler(ClickRecognizerRef recognizer, void *context) {
+  hub_timeout_reset();
+  execute_long_press(g_hub_config.lp_select_type, g_hub_config.lp_select_data);
 }
 
 static void click_config_provider(void *context) {
   window_single_click_subscribe(BUTTON_ID_BACK, back_click_handler);
+  window_single_click_subscribe(BUTTON_ID_UP, up_click_handler);
+  window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler);
+  window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler);
+  window_long_click_subscribe(BUTTON_ID_UP, 500, up_long_handler, NULL);
+  window_long_click_subscribe(BUTTON_ID_DOWN, 500, down_long_handler, NULL);
+  window_long_click_subscribe(BUTTON_ID_SELECT, 500, select_long_handler, NULL);
 }
 
 static void init() {
 
   init_var();
+  hub_config_init();
 
   s_main_window = window_create();
   window_stack_push(s_main_window, true);
@@ -1170,6 +1307,10 @@ static void init() {
   app_focus_service_subscribe_handlers((AppFocusHandlers){
       .did_focus = app_focus_changed, .will_focus = app_focus_changing});
 
+  // Hub: set main window reference and start timeout
+  hub_set_main_window(s_main_window);
+  hub_timeout_init(hub_timeout_fired);
+
   // Trigger weather fetch if cache is stale
   t = time(NULL);
   now = *(localtime(&t));
@@ -1183,6 +1324,8 @@ static void init() {
 }
 
 static void deinit() {
+
+  hub_timeout_deinit();
 
   tick_timer_service_unsubscribe();
   bluetooth_connection_service_unsubscribe();

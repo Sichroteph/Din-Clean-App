@@ -1020,6 +1020,34 @@ function getWeather() {
 
 }
 
+// Execute a webhook POST request (triggered from C side via KEY_HUB_WEBHOOK)
+function executeWebhook(index) {
+  var url = localStorage.getItem('webhook_url_' + index);
+  if (!url) {
+    console.log("No webhook URL configured for index " + index);
+    return;
+  }
+
+  var xhr = new XMLHttpRequest();
+  xhr.timeout = 10000;
+  xhr.onload = function () {
+    console.log("Webhook sent successfully: " + xhr.status);
+  };
+  xhr.onerror = function () {
+    console.error("Webhook request failed");
+  };
+  xhr.ontimeout = function () {
+    console.error("Webhook request timed out");
+  };
+  xhr.open('POST', url);
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.send(JSON.stringify({
+    source: 'din-clean-app',
+    timestamp: Date.now(),
+    index: index
+  }));
+}
+
 // Listen for when the app is opened
 Pebble.addEventListener('ready',
   function () {
@@ -1055,6 +1083,13 @@ Pebble.addEventListener('ready',
 
 Pebble.addEventListener('appmessage',
   function (e) {
+    // Check for webhook trigger from C side
+    if (e.payload && e.payload['KEY_HUB_WEBHOOK'] !== undefined) {
+      var webhookIndex = e.payload['KEY_HUB_WEBHOOK'];
+      executeWebhook(webhookIndex);
+      return;
+    }
+
     if ((navigator.onLine) || (b_force_internet)) {
       console.log("Appel météo !!");
       getWeather();
@@ -1115,6 +1150,34 @@ Pebble.addEventListener('webviewclosed', function (e) {
   dict['KEY_COLOR_LEFT_BACK_R'] = safeColorComponent(color_left_back, 2, 4);
   dict['KEY_COLOR_LEFT_BACK_G'] = safeColorComponent(color_left_back, 4, 6);
   dict['KEY_COLOR_LEFT_BACK_B'] = safeColorComponent(color_left_back, 6, 8);
+
+  // --- Hub configuration ---
+  var hub_timeout = parseInt(configData['hub_timeout']) || 30;
+  var hub_btn_up = parseInt(configData['hub_btn_up']) || 1;  // 0=menu, 1=widgets
+  var hub_btn_down = parseInt(configData['hub_btn_down']) || 0; // 0=menu, 1=widgets
+
+  // Long press: encode as (type << 4) | data
+  // type: 0=pseudoapp, 1=webhook
+  var hub_lp_up = parseInt(configData['hub_lp_up']) || 0x10; // webhook:0
+  var hub_lp_down = parseInt(configData['hub_lp_down']) || 0x00; // pseudoapp:stopwatch
+  var hub_lp_select = parseInt(configData['hub_lp_select']) || 0x01; // pseudoapp:timer
+
+  // Views: comma-separated enabled view IDs
+  var hub_views = configData['hub_views'] || '0,1,2,3';
+
+  dict['KEY_HUB_TIMEOUT'] = hub_timeout;
+  dict['KEY_HUB_BTN_UP'] = hub_btn_up;
+  dict['KEY_HUB_BTN_DOWN'] = hub_btn_down;
+  dict['KEY_HUB_LP_UP'] = hub_lp_up;
+  dict['KEY_HUB_LP_DOWN'] = hub_lp_down;
+  dict['KEY_HUB_LP_SELECT'] = hub_lp_select;
+  dict['KEY_HUB_VIEWS'] = hub_views;
+
+  // Webhook URL (stored in JS localStorage only)
+  var webhook_url = configData['webhook_url'] || '';
+  if (webhook_url) {
+    localStorage.setItem('webhook_url_0', webhook_url);
+  }
 
   Pebble.sendAppMessage(dict, function () {
     // Refresh weather data after configuration changes (e.g., API provider, units)
