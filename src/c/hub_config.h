@@ -2,7 +2,11 @@
 #include <pebble.h>
 
 // Persist key for hub config binary blob
-#define HUB_PERSIST_CONFIG 300
+#define HUB_PERSIST_CONFIG       300
+#define HUB_PERSIST_MENU_UP      301
+#define HUB_PERSIST_MENU_DOWN    302
+#define HUB_PERSIST_WIDGETS_UP   303
+#define HUB_PERSIST_WIDGETS_DOWN 304
 
 // Message keys for hub (C<->JS)
 #define KEY_HUB_WEBHOOK    350
@@ -13,6 +17,10 @@
 #define KEY_HUB_LP_DOWN    355
 #define KEY_HUB_LP_SELECT  356
 #define KEY_HUB_VIEWS      357
+#define KEY_HUB_MENU_UP    358
+#define KEY_HUB_MENU_DOWN  359
+#define KEY_HUB_WIDGETS_UP   360
+#define KEY_HUB_WIDGETS_DOWN 361
 
 // Limits
 #define HUB_MAX_MENU_ITEMS  12
@@ -79,6 +87,10 @@ const HubMenuItem *hub_config_get_up_menu(uint8_t *count);
 const HubMenuItem *hub_config_get_down_menu(uint8_t *count);
 const uint8_t     *hub_config_get_up_widgets(uint8_t *count);
 const uint8_t     *hub_config_get_down_widgets(uint8_t *count);
+
+// Parse incoming menu/widget config strings from JS
+void hub_config_parse_menu(const char *str, bool is_up);
+void hub_config_parse_widgets(const char *str, bool is_up);
 
 // Menu helper: get children of a parent (-1 for root)
 uint8_t hub_menu_get_children(const HubMenuItem *items, uint8_t total,

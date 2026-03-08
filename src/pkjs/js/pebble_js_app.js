@@ -1173,6 +1173,17 @@ Pebble.addEventListener('webviewclosed', function (e) {
   dict['KEY_HUB_LP_SELECT'] = hub_lp_select;
   dict['KEY_HUB_VIEWS'] = hub_views;
 
+  // Custom menu/widget data
+  var hub_menu_up = configData['hub_menu_up'] || '';
+  var hub_menu_down = configData['hub_menu_down'] || '';
+  var hub_widgets_up = configData['hub_widgets_up'] || '0';
+  var hub_widgets_down = configData['hub_widgets_down'] || '0,1';
+
+  dict['KEY_HUB_MENU_UP'] = hub_menu_up;
+  dict['KEY_HUB_MENU_DOWN'] = hub_menu_down;
+  dict['KEY_HUB_WIDGETS_UP'] = hub_widgets_up;
+  dict['KEY_HUB_WIDGETS_DOWN'] = hub_widgets_down;
+
   // Webhook URL (stored in JS localStorage only)
   var webhook_url = configData['webhook_url'] || '';
   if (webhook_url) {

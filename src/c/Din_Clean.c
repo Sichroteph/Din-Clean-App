@@ -955,6 +955,16 @@ static void inbox_received_callback(DictionaryIterator *iterator,
       }
     }
 
+    // Parse custom menu/widget data
+    if ((t = dict_find(iterator, KEY_HUB_MENU_UP)))
+      hub_config_parse_menu(t->value->cstring, true);
+    if ((t = dict_find(iterator, KEY_HUB_MENU_DOWN)))
+      hub_config_parse_menu(t->value->cstring, false);
+    if ((t = dict_find(iterator, KEY_HUB_WIDGETS_UP)))
+      hub_config_parse_widgets(t->value->cstring, true);
+    if ((t = dict_find(iterator, KEY_HUB_WIDGETS_DOWN)))
+      hub_config_parse_widgets(t->value->cstring, false);
+
     hub_config_save();
     hub_timeout_reset();
   }
@@ -1303,7 +1313,7 @@ static void init() {
   app_message_register_outbox_failed(outbox_failed_callback);
   app_message_register_outbox_sent(outbox_sent_callback);
 
-  app_message_open(650, 50);
+  app_message_open(1024, 50);
   app_focus_service_subscribe_handlers((AppFocusHandlers){
       .did_focus = app_focus_changed, .will_focus = app_focus_changing});
 

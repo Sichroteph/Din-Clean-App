@@ -39,6 +39,7 @@
 
     .accordion-header.active {
       background-color: #2a5298;
+      border-radius: 5px 5px 0 0;
     }
 
     .accordion-content {
@@ -48,7 +49,7 @@
     }
 
     .accordion-content.active {
-      max-height: 2000px;
+      max-height: 5000px;
       transition: max-height 0.5s ease-in;
     }
 
@@ -61,138 +62,267 @@
       background-color: #fff;
       margin: 5px 0;
     }
+
+    .sub-header {
+      font-size: 0.95em;
+      font-weight: 600;
+      color: #555;
+      padding: 10px 10px 5px 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Menu tree editor */
+    .menu-editor {
+      margin: 5px 0 10px 0;
+      border: 1px solid #e0e0e0;
+      border-radius: 5px;
+      background: #fafafa;
+      overflow: hidden;
+    }
+
+    .menu-item-row {
+      display: flex;
+      align-items: center;
+      padding: 8px 10px;
+      border-bottom: 1px solid #eee;
+      background: #fff;
+    }
+
+    .menu-item-row:last-child {
+      border-bottom: none;
+    }
+
+    .menu-item-icon {
+      width: 22px;
+      font-size: 14px;
+      text-align: center;
+      margin-right: 6px;
+      flex-shrink: 0;
+    }
+
+    .menu-item-label {
+      flex: 1;
+      font-size: 14px;
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .menu-item-type {
+      font-size: 11px;
+      color: #999;
+      margin-right: 8px;
+      flex-shrink: 0;
+    }
+
+    .menu-item-btn {
+      border: 1px solid #ccc;
+      background: #f5f5f5;
+      padding: 4px 7px;
+      margin: 0 1px;
+      cursor: pointer;
+      border-radius: 3px;
+      font-size: 13px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .menu-item-btn:active {
+      background: #ddd;
+    }
+
+    .menu-item-btn.danger {
+      color: #e74c3c;
+    }
+
+    .menu-add-row {
+      padding: 6px 10px;
+      background: #fafafa;
+    }
+
+    .menu-add-row button {
+      border: 1px dashed #4a90e2;
+      background: transparent;
+      color: #4a90e2;
+      padding: 6px 12px;
+      cursor: pointer;
+      border-radius: 3px;
+      font-size: 13px;
+      width: 100%;
+    }
+
+    .menu-add-row button:active {
+      background: #e8f0fe;
+    }
+
+    .menu-count {
+      font-size: 11px;
+      color: #aaa;
+      text-align: right;
+      padding: 4px 10px;
+      background: #fafafa;
+    }
+
+    .menu-form {
+      background: #f0f4f8;
+      border: 1px solid #c8d6e5;
+      border-radius: 5px;
+      padding: 12px;
+      margin: 8px 10px;
+    }
+
+    .menu-form label {
+      display: block;
+      margin: 8px 0 4px 0;
+      font-size: 12px;
+      color: #555;
+      font-weight: 600;
+    }
+
+    .menu-form input[type="text"] {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+
+    .menu-form select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      font-size: 14px;
+      background: #fff;
+    }
+
+    .menu-form-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .menu-form-buttons button {
+      flex: 1;
+      padding: 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .btn-save {
+      background: #4a90e2;
+      color: white;
+      border: none;
+    }
+
+    .btn-save:active {
+      background: #357abd;
+    }
+
+    .btn-cancel {
+      background: #eee;
+      color: #333;
+      border: 1px solid #ccc;
+    }
+
+    /* Widget list editor */
+    .widget-editor {
+      margin: 5px 0 10px 0;
+      border: 1px solid #e0e0e0;
+      border-radius: 5px;
+      background: #fafafa;
+      overflow: hidden;
+    }
+
+    .widget-item-row {
+      display: flex;
+      align-items: center;
+      padding: 10px 10px;
+      border-bottom: 1px solid #eee;
+      background: #fff;
+    }
+
+    .widget-item-row.disabled {
+      opacity: 0.45;
+    }
+
+    .widget-item-check {
+      margin-right: 10px;
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+    }
+
+    .widget-item-name {
+      flex: 1;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .widget-item-desc {
+      font-size: 11px;
+      color: #999;
+      margin-right: 8px;
+    }
+
+    /* Editor container visibility */
+    .editor-panel {
+      margin: 0 0 5px 0;
+    }
+
+    .editor-panel.hidden {
+      display: none;
+    }
+
+    .editor-label {
+      font-size: 12px;
+      color: #777;
+      padding: 5px 0 3px 0;
+      font-style: italic;
+    }
+
+    .empty-msg {
+      padding: 15px;
+      text-align: center;
+      color: #aaa;
+      font-size: 13px;
+      font-style: italic;
+    }
   </style>
 </head>
 
 <body>
-  <h1 class='title'>Settings</h1>
+  <h1 class='title'>Din Clean App</h1>
 
-  <!-- Section Météo -->
-  <button class='accordion-header'>Weather</button>
+  <!-- ============================================================ -->
+  <!-- Section 1: Button Configuration (core interaction)           -->
+  <!-- ============================================================ -->
+  <button class='accordion-header'>Button Configuration</button>
   <div class='accordion-content'>
-    <div class='item-container'>
-      <div class='item-container-header'>Weather Provider</div>
-      <div class='item-container-content'>
-        <label class='item'>
-          Open-Meteo (AROME)
-          <input type='radio' class='item-radio' name='radio_api' id='weather_api_openmeteo' value='openmeteo' checked>
-        </label>
-        <label class='item'>
-          MET Norway (yr.no)
-          <input type='radio' class='item-radio' name='radio_api' id='weather_api_metno' value='metno'>
-        </label>
-      </div>
-      <div class='item-container-footer'>
-        Open-Meteo uses Météo-France AROME model (1.5km resolution) - recommended for France.
-      </div>
-    </div>
 
     <div class='item-container'>
-      <div class='item-container-header'>Weather update</div>
-      <div class='item-container-content'>
-        <label class='item'>
-          30 mn
-          <input type='radio' class='item-radio' name='radio2' input id='radio_refresh' value='a'>
-        </label>
-        <label class='item'>
-          60 mn
-          <input type='radio' class='item-radio' name='radio2' input id='radio_refresh' value='b' checked>
-        </label>
-      </div>
-    </div>
-  </div>
-
-  <!-- Section Apparence -->
-  <button class='accordion-header'>Display & Units</button>
-  <div class='accordion-content'>
-    <div class='item-container'>
-      <div class='item-container-header'>Units</div>
-      <div class='item-container-content'>
-        <label class='item'>
-          Imperial
-          <input type='radio' class='item-radio' name='radio1' input id='radio_units' value='a'>
-        </label>
-        <label class='item'>
-          Metric
-          <input type='radio' class='item-radio' name='radio1' input id='radio_units' value='b' checked>
-        </label>
-      </div>
-    </div>
-
-    <div class='item-container' style="display:none;">
-      <div class='item-container-header'>Background color</div>
-      <div class='item-container-content'>
-        <label class='item'>
-          Temperatures - Background color
-          <input type='text' class='item-color item-color-normal' input id='color_left_back' value='0x000000'>
-        </label>
-        <label class='item'>
-          Hours - Background color
-          <input type='text' class='item-color item-color-normal' input id='color_right_back' value='0x000000'>
-        </label>
-      </div>
-    </div>
-  </div>
-
-  <!-- Section Comportement -->
-  <button class='accordion-header'>Behavior & Alerts</button>
-  <div class='accordion-content'>
-    <div class='item-container'>
-      <div class='item-container-content'>
-        <label class='item'>
-          Bluetooth disconnection vibration
-          <input type='checkbox' class='item-toggle' input id='toggle_bt'>
-        </label>
-
-        <label class='item'>
-          Hourly vibrations
-          <input type='checkbox' class='item-toggle' input id='toggle_vibration'>
-        </label>
-        <div class='item-container-footer'>
-          Starts at 10am - Ends at 10pm
-        </div>
-        <div class='item-container-footer'>
-          Only applies to Pebble Time.
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Section IOPool -->
-  <button class='accordion-header'>IOPool Integration (Optional)</button>
-  <div class='accordion-content'>
-    <div class='item-container'>
-      <div class='item-container-header'>iopool API Token</div>
-      <div class='item-container-content'>
-        Your io-pool token :
-        <label class='item'>
-          <div class='item-input-wrapper'>
-            <input type='text' class='item-input' input id='input_iopool_token' placeholder='Input field'>
-          </div>
-        </label>
-      </div>
-    </div>
-  </div>
-
-  <!-- Section Hub Navigation -->
-  <button class='accordion-header'>Hub Navigation</button>
-  <div class='accordion-content'>
-    <div class='item-container'>
-      <div class='item-container-header'>Inactivity timeout (seconds)</div>
+      <div class='item-container-header'>Inactivity timeout</div>
       <div class='item-container-content'>
         <label class='item'>
           <div class='item-input-wrapper'>
-            <input type='number' class='item-input' id='hub_timeout' value='30' min='5' max='300'>
+            <input type='number' class='item-input' id='hub_timeout' value='30' min='0' max='300'>
           </div>
         </label>
       </div>
       <div class='item-container-footer'>
-        Auto-return to watchface after this delay. Set 0 to disable.
+        Seconds before auto-return to watchface. 0 = disabled.
       </div>
     </div>
 
+    <!-- UP button short press -->
+    <div class='sub-header'>Short press</div>
     <div class='item-container'>
-      <div class='item-container-header'>UP button (short press)</div>
+      <div class='item-container-header'>UP button</div>
       <div class='item-container-content'>
         <label class='item'>
           Widget list
@@ -203,10 +333,23 @@
           <input type='radio' class='item-radio' name='hub_btn_up' id='hub_btn_up_menu' value='0'>
         </label>
       </div>
+
+      <!-- Inline widget editor for UP -->
+      <div id='editor_up_widgets' class='editor-panel'>
+        <div class='editor-label'>Configure widgets shown on UP press:</div>
+        <div class='widget-editor' id='widget_tree_up'></div>
+      </div>
+
+      <!-- Inline menu editor for UP -->
+      <div id='editor_up_menu' class='editor-panel hidden'>
+        <div class='editor-label'>Configure menu shown on UP press:</div>
+        <div class='menu-editor' id='menu_tree_up'></div>
+      </div>
     </div>
 
+    <!-- DOWN button short press -->
     <div class='item-container'>
-      <div class='item-container-header'>DOWN button (short press)</div>
+      <div class='item-container-header'>DOWN button</div>
       <div class='item-container-content'>
         <label class='item'>
           Menu
@@ -217,12 +360,22 @@
           <input type='radio' class='item-radio' name='hub_btn_down' id='hub_btn_down_widgets' value='1'>
         </label>
       </div>
-    </div>
-  </div>
 
-  <!-- Section Long Press Actions -->
-  <button class='accordion-header'>Long Press Actions</button>
-  <div class='accordion-content'>
+      <!-- Inline menu editor for DOWN -->
+      <div id='editor_down_menu' class='editor-panel'>
+        <div class='editor-label'>Configure menu shown on DOWN press:</div>
+        <div class='menu-editor' id='menu_tree_down'></div>
+      </div>
+
+      <!-- Inline widget editor for DOWN -->
+      <div id='editor_down_widgets' class='editor-panel hidden'>
+        <div class='editor-label'>Configure widgets shown on DOWN press:</div>
+        <div class='widget-editor' id='widget_tree_down'></div>
+      </div>
+    </div>
+
+    <!-- Long press actions -->
+    <div class='sub-header'>Long press</div>
     <div class='item-container'>
       <div class='item-container-header'>UP long press</div>
       <div class='item-container-content'>
@@ -260,7 +413,9 @@
     </div>
   </div>
 
-  <!-- Section Watchface Views -->
+  <!-- ============================================================ -->
+  <!-- Section 2: Watchface Views                                   -->
+  <!-- ============================================================ -->
   <button class='accordion-header'>Watchface Views</button>
   <div class='accordion-content'>
     <div class='item-container'>
@@ -286,9 +441,131 @@
     </div>
   </div>
 
-  <!-- Section Webhook -->
-  <button class='accordion-header'>Webhook (Optional)</button>
+  <!-- ============================================================ -->
+  <!-- Section 3: Weather                                           -->
+  <!-- ============================================================ -->
+  <button class='accordion-header'>Weather</button>
   <div class='accordion-content'>
+    <div class='item-container'>
+      <div class='item-container-header'>Weather Provider</div>
+      <div class='item-container-content'>
+        <label class='item'>
+          Open-Meteo (AROME)
+          <input type='radio' class='item-radio' name='radio_api' id='weather_api_openmeteo' value='openmeteo' checked>
+        </label>
+        <label class='item'>
+          MET Norway (yr.no)
+          <input type='radio' class='item-radio' name='radio_api' id='weather_api_metno' value='metno'>
+        </label>
+      </div>
+      <div class='item-container-footer'>
+        Open-Meteo uses Météo-France AROME model (1.5km resolution) - recommended for France.
+      </div>
+    </div>
+
+    <div class='item-container'>
+      <div class='item-container-header'>Weather update</div>
+      <div class='item-container-content'>
+        <label class='item'>
+          30 mn
+          <input type='radio' class='item-radio' name='radio2' id='radio_refresh' value='a'>
+        </label>
+        <label class='item'>
+          60 mn
+          <input type='radio' class='item-radio' name='radio2' id='radio_refresh' value='b' checked>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- Section 4: Display & Units                                   -->
+  <!-- ============================================================ -->
+  <button class='accordion-header'>Display &amp; Units</button>
+  <div class='accordion-content'>
+    <div class='item-container'>
+      <div class='item-container-header'>Units</div>
+      <div class='item-container-content'>
+        <label class='item'>
+          Imperial
+          <input type='radio' class='item-radio' name='radio1' id='radio_units' value='a'>
+        </label>
+        <label class='item'>
+          Metric
+          <input type='radio' class='item-radio' name='radio1' id='radio_units' value='b' checked>
+        </label>
+      </div>
+    </div>
+
+    <div class='item-container' id='wind_speed_container'>
+      <div class='item-container-header'>Wind speed unit (metric)</div>
+      <div class='item-container-content'>
+        <label class='item'>
+          km/h
+          <input type='radio' class='item-radio' name='wind_unit' id='wind_unit_kmh' value='kmh' checked>
+        </label>
+        <label class='item'>
+          m/s
+          <input type='radio' class='item-radio' name='wind_unit' id='wind_unit_ms' value='ms'>
+        </label>
+      </div>
+    </div>
+
+    <div class='item-container' style="display:none;">
+      <div class='item-container-header'>Background color</div>
+      <div class='item-container-content'>
+        <label class='item'>
+          Temperatures - Background color
+          <input type='text' class='item-color item-color-normal' id='color_left_back' value='0x000000'>
+        </label>
+        <label class='item'>
+          Hours - Background color
+          <input type='text' class='item-color item-color-normal' id='color_right_back' value='0x000000'>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- Section 5: Alerts                                            -->
+  <!-- ============================================================ -->
+  <button class='accordion-header'>Alerts</button>
+  <div class='accordion-content'>
+    <div class='item-container'>
+      <div class='item-container-content'>
+        <label class='item'>
+          Bluetooth disconnection vibration
+          <input type='checkbox' class='item-toggle' id='toggle_bt'>
+        </label>
+
+        <label class='item'>
+          Hourly vibrations
+          <input type='checkbox' class='item-toggle' id='toggle_vibration'>
+        </label>
+        <div class='item-container-footer'>
+          Starts at 10am - Ends at 10pm. Only applies to Pebble Time.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- Section 6: Integrations                                      -->
+  <!-- ============================================================ -->
+  <button class='accordion-header'>Integrations</button>
+  <div class='accordion-content'>
+    <div class='item-container'>
+      <div class='item-container-header'>iopool API Token</div>
+      <div class='item-container-content'>
+        <label class='item'>
+          <div class='item-input-wrapper'>
+            <input type='text' class='item-input' id='input_iopool_token' placeholder='Your iopool token'>
+          </div>
+        </label>
+      </div>
+      <div class='item-container-footer'>Optional. Connect your iopool for pool monitoring data.</div>
+    </div>
+
     <div class='item-container'>
       <div class='item-container-header'>Webhook URL</div>
       <div class='item-container-content'>
@@ -304,6 +581,7 @@
     </div>
   </div>
 
+  <!-- Submit -->
   <div class='item-container'>
     <div class='button-container'>
       <input id='submit_button' type='button' class='item-button' value='SUBMIT'>
@@ -319,11 +597,518 @@
 </body>
 
 <script>
+  // ================================================================
+  // Constants
+  // ================================================================
+  var MAX_MENU_ITEMS = 12;
+  var MAX_MENU_DEPTH = 3;
 
-  // Accordion functionality
+  var PSEUDOAPPS = [
+    { id: 0, name: 'Stopwatch' },
+    { id: 1, name: 'Timer' },
+    { id: 2, name: 'Alarm' }
+  ];
+
+  var AVAILABLE_WIDGETS = [
+    { id: 0, name: 'Weather', desc: '3 pages: 0-12h, 12-24h, 24-36h' },
+    { id: 1, name: 'Stocks', desc: '2 pages' }
+  ];
+
+  // ================================================================
+  // Data (nested tree for menus, flat arrays for widgets)
+  // ================================================================
+  var menus = {
+    up: [],
+    down: [
+      { label: 'Stopwatch', type: 1, data: 0, children: [] },
+      { label: 'Timer', type: 1, data: 1, children: [] },
+      { label: 'Alarm', type: 1, data: 2, children: [] }
+    ]
+  };
+
+  var widgetLists = {
+    up: [0],
+    down: [0, 1]
+  };
+
+  // Form state (one form at a time across all editors)
+  var formState = {
+    active: false,
+    menuId: null,
+    parentPath: null,
+    editPath: null,
+    depth: 0
+  };
+
+  // ================================================================
+  // Utility
+  // ================================================================
+  function escapeHtml(str) {
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function countMenuItems(tree) {
+    var c = 0;
+    for (var i = 0; i < tree.length; i++) {
+      c++;
+      if (tree[i].children) c += countMenuItems(tree[i].children);
+    }
+    return c;
+  }
+
+  // Get parent array and index from a dot-separated path (e.g. "1.0.2")
+  function resolveMenuPath(menuId, path) {
+    var tree = menus[menuId];
+    var parts = path.split('.').map(Number);
+    var arr = tree;
+    for (var i = 0; i < parts.length - 1; i++) {
+      arr = arr[parts[i]].children;
+    }
+    return { array: arr, index: parts[parts.length - 1] };
+  }
+
+  function getParentArray(menuId, parentPath) {
+    var tree = menus[menuId];
+    if (parentPath === '') return tree;
+    var parts = parentPath.split('.').map(Number);
+    var arr = tree;
+    for (var i = 0; i < parts.length; i++) {
+      arr = arr[parts[i]].children;
+    }
+    return arr;
+  }
+
+  // ================================================================
+  // Serialization (nested tree -> flat string for Pebble)
+  // ================================================================
+  function flattenTree(tree) {
+    var flat = [];
+    function visit(items, parentIndex) {
+      for (var i = 0; i < items.length; i++) {
+        var idx = flat.length;
+        flat.push({
+          label: items[i].label,
+          type: items[i].type,
+          parentIndex: parentIndex,
+          data: items[i].data
+        });
+        if (items[i].children && items[i].children.length > 0) {
+          visit(items[i].children, idx);
+        }
+      }
+    }
+    visit(tree, -1);
+    return flat;
+  }
+
+  function serializeMenu(tree) {
+    var flat = flattenTree(tree);
+    if (flat.length === 0) return '';
+    return flat.map(function (item) {
+      // Sanitize label: remove ; and | characters
+      var safeLabel = item.label.replace(/[;|]/g, ' ');
+      return safeLabel + ';' + item.type + ';' + item.parentIndex + ';' + item.data;
+    }).join('|');
+  }
+
+  function deserializeMenu(str) {
+    if (!str || str === '') return [];
+    var parts = str.split('|');
+    var flat = parts.map(function (s) {
+      var f = s.split(';');
+      return {
+        label: f[0] || '?',
+        type: parseInt(f[1]) || 0,
+        parentIndex: parseInt(f[2]),
+        data: parseInt(f[3]) || 0
+      };
+    });
+    // Convert flat to nested
+    var nodes = flat.map(function (item) {
+      return { label: item.label, type: item.type, data: item.data, children: [] };
+    });
+    var roots = [];
+    for (var i = 0; i < flat.length; i++) {
+      if (flat[i].parentIndex === -1 || flat[i].parentIndex >= nodes.length) {
+        roots.push(nodes[i]);
+      } else {
+        nodes[flat[i].parentIndex].children.push(nodes[i]);
+      }
+    }
+    return roots;
+  }
+
+  function serializeWidgets(list) {
+    return list.join(',');
+  }
+
+  function deserializeWidgets(str) {
+    if (!str || str === '') return [];
+    return str.split(',').map(function (s) { return parseInt(s); }).filter(function (n) { return !isNaN(n); });
+  }
+
+  // ================================================================
+  // Menu tree rendering
+  // ================================================================
+  function renderMenuTree(menuId) {
+    var container = document.getElementById('menu_tree_' + menuId);
+    container.innerHTML = '';
+    var tree = menus[menuId];
+    var total = countMenuItems(tree);
+
+    renderMenuItems(container, tree, '', 0, menuId);
+
+    // Root-level "Add" button
+    if (total < MAX_MENU_ITEMS) {
+      if (formState.active && formState.menuId === menuId && formState.parentPath === '' && !formState.editPath) {
+        container.innerHTML += createFormHTML(null);
+      } else if (!formState.active || formState.menuId !== menuId) {
+        var addRow = document.createElement('div');
+        addRow.className = 'menu-add-row';
+        addRow.innerHTML = '<button onclick="showAddForm(\'' + menuId + '\',\'\',0)">+ Add item</button>';
+        container.appendChild(addRow);
+      }
+    }
+
+    // Item count
+    var countEl = document.createElement('div');
+    countEl.className = 'menu-count';
+    countEl.textContent = total + '/' + MAX_MENU_ITEMS + ' items';
+    container.appendChild(countEl);
+
+    if (total === 0 && !formState.active) {
+      var msg = document.createElement('div');
+      msg.className = 'empty-msg';
+      msg.textContent = 'No items yet. Click + to add.';
+      container.insertBefore(msg, container.firstChild);
+    }
+  }
+
+  function renderMenuItems(container, items, pathPrefix, depth, menuId) {
+    var total = countMenuItems(menus[menuId]);
+
+    for (var i = 0; i < items.length; i++) {
+      var item = items[i];
+      var path = pathPrefix !== '' ? pathPrefix + '.' + i : '' + i;
+
+      // If editing this item, show form instead
+      if (formState.active && formState.editPath === path && formState.menuId === menuId) {
+        container.innerHTML += createFormHTML(item);
+        // Still render children below the form if it's a folder
+        if (item.type === 0 && item.children.length > 0) {
+          renderMenuItems(container, item.children, path, depth + 1, menuId);
+        }
+        continue;
+      }
+
+      // Item row
+      var icon, typeLabel;
+      switch (item.type) {
+        case 0: icon = '\u{1F4C1}'; typeLabel = 'folder'; break;
+        case 1: icon = '\u{25B6}'; typeLabel = PSEUDOAPPS[item.data] ? PSEUDOAPPS[item.data].name : 'app'; break;
+        case 2: icon = '\u{26A1}'; typeLabel = 'action'; break;
+        default: icon = '?'; typeLabel = '?';
+      }
+
+      var row = document.createElement('div');
+      row.className = 'menu-item-row';
+      row.style.paddingLeft = (depth * 20 + 10) + 'px';
+      row.innerHTML =
+        '<span class="menu-item-icon">' + icon + '</span>' +
+        '<span class="menu-item-label">' + escapeHtml(item.label) + '</span>' +
+        '<span class="menu-item-type">' + typeLabel + '</span>' +
+        '<button class="menu-item-btn" onclick="showEditForm(\'' + menuId + '\',\'' + path + '\',' + depth + ')" title="Edit">\u270E</button>' +
+        '<button class="menu-item-btn danger" onclick="deleteMenuItem(\'' + menuId + '\',\'' + path + '\')" title="Delete">\u2715</button>' +
+        '<button class="menu-item-btn" onclick="moveMenuItem(\'' + menuId + '\',\'' + path + '\',-1)" title="Move up">\u25B2</button>' +
+        '<button class="menu-item-btn" onclick="moveMenuItem(\'' + menuId + '\',\'' + path + '\',1)" title="Move down">\u25BC</button>';
+      container.appendChild(row);
+
+      // If folder, render children
+      if (item.type === 0) {
+        renderMenuItems(container, item.children, path, depth + 1, menuId);
+
+        // "Add to folder" button
+        if (depth + 1 < MAX_MENU_DEPTH && total < MAX_MENU_ITEMS) {
+          if (formState.active && formState.menuId === menuId && formState.parentPath === path && !formState.editPath) {
+            container.innerHTML += createFormHTML(null, depth + 1);
+          } else if (!formState.active || formState.menuId !== menuId) {
+            var addRow = document.createElement('div');
+            addRow.className = 'menu-add-row';
+            addRow.style.paddingLeft = ((depth + 1) * 20 + 10) + 'px';
+            addRow.innerHTML = '<button onclick="showAddForm(\'' + menuId + '\',\'' + path + '\',' + (depth + 1) + ')">+ Add to &quot;' + escapeHtml(item.label) + '&quot;</button>';
+            container.appendChild(addRow);
+          }
+        }
+      }
+    }
+  }
+
+  // ================================================================
+  // Menu form
+  // ================================================================
+  function createFormHTML(prefill, depth) {
+    depth = depth || formState.depth || 0;
+    var label = prefill ? escapeHtml(prefill.label) : '';
+    var type = prefill ? prefill.type : 1;
+    var data = prefill ? prefill.data : 0;
+    var canFolder = depth < MAX_MENU_DEPTH - 1;
+
+    var typeOptions = '';
+    if (canFolder) typeOptions += '<option value="0"' + (type === 0 ? ' selected' : '') + '>Folder</option>';
+    typeOptions += '<option value="1"' + (type === 1 ? ' selected' : '') + '>Pseudo-app</option>';
+    typeOptions += '<option value="2"' + (type === 2 ? ' selected' : '') + '>Action</option>';
+
+    var appOptions = PSEUDOAPPS.map(function (a) {
+      return '<option value="' + a.id + '"' + (type === 1 && data === a.id ? ' selected' : '') + '>' + a.name + '</option>';
+    }).join('');
+
+    var html = '<div class="menu-form" style="margin-left:' + (depth * 20) + 'px">' +
+      '<label>Label</label>' +
+      '<input type="text" id="mf_label" maxlength="15" value="' + label + '" placeholder="Item name">' +
+      '<label>Type</label>' +
+      '<select id="mf_type" onchange="onFormTypeChange()">' + typeOptions + '</select>' +
+      '<div id="mf_app_div" style="' + (type === 1 ? '' : 'display:none') + '">' +
+      '<label>Application</label>' +
+      '<select id="mf_app">' + appOptions + '</select></div>' +
+      '<div id="mf_action_div" style="' + (type === 2 ? '' : 'display:none') + '">' +
+      '<label>Action</label>' +
+      '<select id="mf_action"><option value="0">Webhook</option></select></div>' +
+      '<div class="menu-form-buttons">' +
+      '<button class="btn-save" onclick="saveForm()">Save</button>' +
+      '<button class="btn-cancel" onclick="cancelForm()">Cancel</button>' +
+      '</div></div>';
+    return html;
+  }
+
+  function onFormTypeChange() {
+    var type = parseInt(document.getElementById('mf_type').value);
+    document.getElementById('mf_app_div').style.display = (type === 1) ? '' : 'none';
+    document.getElementById('mf_action_div').style.display = (type === 2) ? '' : 'none';
+  }
+
+  function showAddForm(menuId, parentPath, depth) {
+    formState = { active: true, menuId: menuId, parentPath: parentPath, editPath: null, depth: depth };
+    renderMenuTree(menuId);
+    // Focus the label input after a tick
+    setTimeout(function () {
+      var el = document.getElementById('mf_label');
+      if (el) el.focus();
+    }, 50);
+  }
+
+  function showEditForm(menuId, path, depth) {
+    formState = { active: true, menuId: menuId, parentPath: null, editPath: path, depth: depth };
+    renderMenuTree(menuId);
+    setTimeout(function () {
+      var el = document.getElementById('mf_label');
+      if (el) el.focus();
+    }, 50);
+  }
+
+  function cancelForm() {
+    formState.active = false;
+    renderMenuTree(formState.menuId);
+  }
+
+  function saveForm() {
+    var labelEl = document.getElementById('mf_label');
+    var label = labelEl ? labelEl.value.trim() : '';
+    if (!label) { alert('Please enter a label'); return; }
+
+    var type = parseInt(document.getElementById('mf_type').value);
+    var data = 0;
+    if (type === 1) data = parseInt(document.getElementById('mf_app').value);
+    if (type === 2) data = parseInt(document.getElementById('mf_action').value);
+
+    var menuId = formState.menuId;
+
+    if (formState.editPath) {
+      // Edit existing
+      var ref = resolveMenuPath(menuId, formState.editPath);
+      var item = ref.array[ref.index];
+      item.label = label;
+      // If changing from folder to non-folder, warn about children
+      if (item.type === 0 && type !== 0 && item.children && item.children.length > 0) {
+        if (!confirm('Changing type from Folder will remove all sub-items. Continue?')) return;
+      }
+      item.type = type;
+      item.data = data;
+      if (type !== 0) item.children = [];
+      if (type === 0 && !item.children) item.children = [];
+    } else {
+      // Add new
+      var newItem = { label: label, type: type, data: data, children: [] };
+      var parentArr = getParentArray(menuId, formState.parentPath);
+      parentArr.push(newItem);
+    }
+
+    formState.active = false;
+    renderMenuTree(menuId);
+    persistMenus();
+  }
+
+  function deleteMenuItem(menuId, path) {
+    var ref = resolveMenuPath(menuId, path);
+    var item = ref.array[ref.index];
+    var childCount = item.children ? countMenuItems(item.children) : 0;
+    var msg = 'Delete "' + item.label + '"?';
+    if (childCount > 0) msg += ' (' + childCount + ' sub-item' + (childCount > 1 ? 's' : '') + ' will also be removed)';
+    if (!confirm(msg)) return;
+
+    ref.array.splice(ref.index, 1);
+    formState.active = false;
+    renderMenuTree(menuId);
+    persistMenus();
+  }
+
+  function moveMenuItem(menuId, path, direction) {
+    var ref = resolveMenuPath(menuId, path);
+    var idx = ref.index;
+    var newIdx = idx + direction;
+    if (newIdx < 0 || newIdx >= ref.array.length) return;
+
+    var temp = ref.array[idx];
+    ref.array[idx] = ref.array[newIdx];
+    ref.array[newIdx] = temp;
+
+    renderMenuTree(menuId);
+    persistMenus();
+  }
+
+  // ================================================================
+  // Widget list rendering
+  // ================================================================
+  function renderWidgetEditor(editorId) {
+    var container = document.getElementById('widget_tree_' + editorId);
+    container.innerHTML = '';
+    var list = widgetLists[editorId];
+
+    // Show enabled widgets first (in order), then disabled ones
+    var enabledIds = list.slice();
+    var disabledIds = [];
+    for (var i = 0; i < AVAILABLE_WIDGETS.length; i++) {
+      if (enabledIds.indexOf(AVAILABLE_WIDGETS[i].id) === -1) {
+        disabledIds.push(AVAILABLE_WIDGETS[i].id);
+      }
+    }
+
+    var allIds = enabledIds.concat(disabledIds);
+
+    for (var j = 0; j < allIds.length; j++) {
+      var wid = allIds[j];
+      var widget = null;
+      for (var k = 0; k < AVAILABLE_WIDGETS.length; k++) {
+        if (AVAILABLE_WIDGETS[k].id === wid) { widget = AVAILABLE_WIDGETS[k]; break; }
+      }
+      if (!widget) continue;
+
+      var isEnabled = enabledIds.indexOf(wid) >= 0;
+      var posInList = enabledIds.indexOf(wid);
+
+      var row = document.createElement('div');
+      row.className = 'widget-item-row' + (isEnabled ? '' : ' disabled');
+      row.innerHTML =
+        '<input type="checkbox" class="widget-item-check" ' + (isEnabled ? 'checked' : '') +
+        ' onchange="toggleWidget(\'' + editorId + '\',' + wid + ',this.checked)">' +
+        '<span class="widget-item-name">' + escapeHtml(widget.name) + '</span>' +
+        '<span class="widget-item-desc">' + escapeHtml(widget.desc) + '</span>' +
+        (isEnabled ? '<button class="menu-item-btn" onclick="moveWidget(\'' + editorId + '\',' + wid + ',-1)" title="Move up">\u25B2</button>' +
+          '<button class="menu-item-btn" onclick="moveWidget(\'' + editorId + '\',' + wid + ',1)" title="Move down">\u25BC</button>' : '');
+      container.appendChild(row);
+    }
+
+    if (allIds.length === 0) {
+      container.innerHTML = '<div class="empty-msg">No widgets available.</div>';
+    }
+  }
+
+  function toggleWidget(editorId, widgetId, enabled) {
+    var list = widgetLists[editorId];
+    if (enabled) {
+      if (list.indexOf(widgetId) === -1) list.push(widgetId);
+    } else {
+      var idx = list.indexOf(widgetId);
+      if (idx >= 0) list.splice(idx, 1);
+    }
+    renderWidgetEditor(editorId);
+    persistWidgets();
+  }
+
+  function moveWidget(editorId, widgetId, direction) {
+    var list = widgetLists[editorId];
+    var idx = list.indexOf(widgetId);
+    if (idx < 0) return;
+    var newIdx = idx + direction;
+    if (newIdx < 0 || newIdx >= list.length) return;
+    var temp = list[idx];
+    list[idx] = list[newIdx];
+    list[newIdx] = temp;
+    renderWidgetEditor(editorId);
+    persistWidgets();
+  }
+
+  // ================================================================
+  // Persistence (localStorage)
+  // ================================================================
+  function persistMenus() {
+    localStorage['hub_menu_up_json'] = JSON.stringify(menus.up);
+    localStorage['hub_menu_down_json'] = JSON.stringify(menus.down);
+  }
+
+  function persistWidgets() {
+    localStorage['hub_widgets_up'] = serializeWidgets(widgetLists.up);
+    localStorage['hub_widgets_down'] = serializeWidgets(widgetLists.down);
+  }
+
+  function loadMenus() {
+    try {
+      if (localStorage['hub_menu_up_json']) menus.up = JSON.parse(localStorage['hub_menu_up_json']);
+    } catch (e) { menus.up = []; }
+    try {
+      if (localStorage['hub_menu_down_json']) menus.down = JSON.parse(localStorage['hub_menu_down_json']);
+    } catch (e) {
+      menus.down = [
+        { label: 'Stopwatch', type: 1, data: 0, children: [] },
+        { label: 'Timer', type: 1, data: 1, children: [] },
+        { label: 'Alarm', type: 1, data: 2, children: [] }
+      ];
+    }
+  }
+
+  function loadWidgets() {
+    var wUp = localStorage['hub_widgets_up'];
+    var wDown = localStorage['hub_widgets_down'];
+    if (wUp) widgetLists.up = deserializeWidgets(wUp);
+    if (wDown) widgetLists.down = deserializeWidgets(wDown);
+  }
+
+  // ================================================================
+  // Toggle editor visibility based on button type
+  // ================================================================
+  function updateEditorVisibility() {
+    var upIsWidgets = document.getElementById('hub_btn_up_widgets').checked;
+    document.getElementById('editor_up_widgets').className = 'editor-panel' + (upIsWidgets ? '' : ' hidden');
+    document.getElementById('editor_up_menu').className = 'editor-panel' + (upIsWidgets ? ' hidden' : '');
+
+    var downIsMenu = document.getElementById('hub_btn_down_menu').checked;
+    document.getElementById('editor_down_menu').className = 'editor-panel' + (downIsMenu ? '' : ' hidden');
+    document.getElementById('editor_down_widgets').className = 'editor-panel' + (downIsMenu ? ' hidden' : '');
+  }
+
+  // ================================================================
+  // Wind speed unit visibility
+  // ================================================================
+  function updateWindUnitVisibility() {
+    var isMetric = document.getElementById('radio_units').checked;
+    document.getElementById('wind_speed_container').style.display = isMetric ? '' : 'none';
+  }
+
+  // ================================================================
+  // Accordion
+  // ================================================================
   document.addEventListener('DOMContentLoaded', function () {
     var accordionHeaders = document.querySelectorAll('.accordion-header');
-
     accordionHeaders.forEach(function (header) {
       header.addEventListener('click', function () {
         this.classList.toggle('active');
@@ -336,71 +1121,72 @@
     if (accordionHeaders.length > 0) {
       accordionHeaders[0].click();
     }
+
+    // Button type radio change listeners
+    var btnUpRadios = document.querySelectorAll('input[name="hub_btn_up"]');
+    btnUpRadios.forEach(function (r) { r.addEventListener('change', updateEditorVisibility); });
+    var btnDownRadios = document.querySelectorAll('input[name="hub_btn_down"]');
+    btnDownRadios.forEach(function (r) { r.addEventListener('change', updateEditorVisibility); });
+
+    // Units radio change listener for wind speed visibility
+    var unitRadios = document.querySelectorAll('input[name="radio1"]');
+    unitRadios.forEach(function (r) { r.addEventListener('change', updateWindUnitVisibility); });
+
+    // Initial render of editors
+    loadMenus();
+    loadWidgets();
+    renderMenuTree('up');
+    renderMenuTree('down');
+    renderWidgetEditor('up');
+    renderWidgetEditor('down');
+    updateEditorVisibility();
+    updateWindUnitVisibility();
   });
 
+  // ================================================================
+  // Config data collection & submission
+  // ================================================================
   function getConfigData() {
-    var input_iopool_token = document.getElementById('input_iopool_token');
-    var radio_units = document.getElementById('radio_units');
-    var radio_refresh = document.getElementById('radio_refresh');
-    var toggle_vibration = document.getElementById('toggle_vibration');
-    var toggle_bt = document.getElementById('toggle_bt');
-    var color_right_back = document.getElementById('color_right_back');
-    var color_left_back = document.getElementById('color_left_back');
-    var weather_api_openmeteo = document.getElementById('weather_api_openmeteo');
-
-    // Hub config
-    var hub_timeout = document.getElementById('hub_timeout');
-    var hub_btn_up_widgets = document.getElementById('hub_btn_up_widgets');
-    var hub_btn_down_menu = document.getElementById('hub_btn_down_menu');
-    var hub_lp_up = document.getElementById('hub_lp_up');
-    var hub_lp_down = document.getElementById('hub_lp_down');
-    var hub_lp_select = document.getElementById('hub_lp_select');
-    var webhook_url = document.getElementById('webhook_url');
+    var options = {
+      'input_iopool_token': document.getElementById('input_iopool_token').value,
+      'radio_units': document.getElementById('radio_units').checked,
+      'radio_refresh': document.getElementById('radio_refresh').checked,
+      'toggle_vibration': document.getElementById('toggle_vibration').checked,
+      'toggle_bt': document.getElementById('toggle_bt').checked,
+      'color_right_back': document.getElementById('color_right_back').value,
+      'color_left_back': document.getElementById('color_left_back').value,
+      'weather_api': document.getElementById('weather_api_openmeteo').checked ? 'openmeteo' : 'metno',
+      'wind_speed_unit': document.getElementById('wind_unit_kmh').checked ? 'kmh' : 'ms',
+      'hub_timeout': document.getElementById('hub_timeout').value,
+      'hub_btn_up': document.getElementById('hub_btn_up_widgets').checked ? '1' : '0',
+      'hub_btn_down': document.getElementById('hub_btn_down_menu').checked ? '0' : '1',
+      'hub_lp_up': document.getElementById('hub_lp_up').value,
+      'hub_lp_down': document.getElementById('hub_lp_down').value,
+      'hub_lp_select': document.getElementById('hub_lp_select').value,
+      'webhook_url': document.getElementById('webhook_url').value,
+      // Menu data (serialized flat format for Pebble)
+      'hub_menu_up': serializeMenu(menus.up),
+      'hub_menu_down': serializeMenu(menus.down),
+      // Widget data
+      'hub_widgets_up': serializeWidgets(widgetLists.up),
+      'hub_widgets_down': serializeWidgets(widgetLists.down)
+    };
 
     // Build views string
-    var views = ['0']; // Main always included
+    var views = ['0'];
     if (document.getElementById('hub_view_1').checked) views.push('1');
     if (document.getElementById('hub_view_2').checked) views.push('2');
     if (document.getElementById('hub_view_3').checked) views.push('3');
+    options['hub_views'] = views.join(',');
 
-    var options = {
-      'input_iopool_token': input_iopool_token.value,
-      'radio_units': radio_units.checked,
-      'radio_refresh': radio_refresh.checked,
-      'toggle_vibration': toggle_vibration.checked,
-      'toggle_bt': toggle_bt.checked,
-      'color_right_back': color_right_back.value,
-      'color_left_back': color_left_back.value,
-      'weather_api': weather_api_openmeteo.checked ? 'openmeteo' : 'metno',
-      'hub_timeout': hub_timeout.value,
-      'hub_btn_up': hub_btn_up_widgets.checked ? '1' : '0',
-      'hub_btn_down': hub_btn_down_menu.checked ? '0' : '1',
-      'hub_lp_up': hub_lp_up.value,
-      'hub_lp_down': hub_lp_down.value,
-      'hub_lp_select': hub_lp_select.value,
-      'hub_views': views.join(','),
-      'webhook_url': webhook_url.value
-    };
+    // Save all to localStorage
+    for (var key in options) {
+      localStorage[key] = options[key];
+    }
+    // Also persist nested JSON for menu restoration
+    persistMenus();
 
-    // Save for next launch
-    localStorage['input_iopool_token'] = options['input_iopool_token'];
-    localStorage['radio_units'] = options['radio_units'];
-    localStorage['radio_refresh'] = options['radio_refresh'];
-    localStorage['toggle_vibration'] = options['toggle_vibration'];
-    localStorage['toggle_bt'] = options['toggle_bt'];
-    localStorage['color_right_back'] = options['color_right_back'];
-    localStorage['color_left_back'] = options['color_left_back'];
-    localStorage['weather_api'] = options['weather_api'];
-    localStorage['hub_timeout'] = options['hub_timeout'];
-    localStorage['hub_btn_up'] = options['hub_btn_up'];
-    localStorage['hub_btn_down'] = options['hub_btn_down'];
-    localStorage['hub_lp_up'] = options['hub_lp_up'];
-    localStorage['hub_lp_down'] = options['hub_lp_down'];
-    localStorage['hub_lp_select'] = options['hub_lp_select'];
-    localStorage['hub_views'] = options['hub_views'];
-    localStorage['webhook_url'] = options['webhook_url'];
-
-    console.log('Got options: ' + JSON.stringify(options));
+    console.log('Config data: ' + JSON.stringify(options));
     return options;
   }
 
@@ -416,39 +1202,31 @@
     return defaultValue || false;
   }
 
-  var submitButton = document.getElementById('submit_button');
-  submitButton.addEventListener('click', function () {
-    console.log('Submit');
-
-    // Set the return URL depending on the runtime environment
+  document.getElementById('submit_button').addEventListener('click', function () {
     var return_to = getQueryParam('return_to', 'pebblejs://close#');
     document.location = return_to + encodeURIComponent(JSON.stringify(getConfigData()));
   });
 
+  // ================================================================
+  // Restore saved settings on page load
+  // ================================================================
   (function () {
-    var input_iopool_token = document.getElementById('input_iopool_token');
-    var radio_units = document.getElementById('radio_units');
-    var radio_refresh = document.getElementById('radio_refresh');
-    var toggle_vibration = document.getElementById('toggle_vibration');
-    var toggle_bt = document.getElementById('toggle_bt');
-    var color_right_back = document.getElementById('color_right_back');
-    var color_left_back = document.getElementById('color_left_back');
-    var weather_api_openmeteo = document.getElementById('weather_api_openmeteo');
-    var weather_api_metno = document.getElementById('weather_api_metno');
+    document.getElementById('input_iopool_token').value = localStorage['input_iopool_token'] || '';
+    document.getElementById('radio_units').checked = JSON.parse(localStorage['radio_units'] || 'false');
+    document.getElementById('radio_refresh').checked = JSON.parse(localStorage['radio_refresh'] || 'false');
+    document.getElementById('toggle_vibration').checked = JSON.parse(localStorage['toggle_vibration'] || 'false');
+    document.getElementById('toggle_bt').checked = JSON.parse(localStorage['toggle_bt'] || 'false');
+    document.getElementById('color_right_back').value = localStorage['color_right_back'] || '0x000000';
+    document.getElementById('color_left_back').value = localStorage['color_left_back'] || '0x000000';
 
-    input_iopool_token.value = localStorage['input_iopool_token'] || '';
-    radio_units.checked = JSON.parse(localStorage['radio_units'] || 'false');
-    radio_refresh.checked = JSON.parse(localStorage['radio_refresh'] || 'false');
-    toggle_vibration.checked = JSON.parse(localStorage['toggle_vibration'] || 'false');
-    toggle_bt.checked = JSON.parse(localStorage['toggle_bt'] || 'false');
-    color_right_back.value = localStorage['color_right_back'] || '0x000000';
-    color_left_back.value = localStorage['color_left_back'] || '0x000000';
-    // Weather API: default to openmeteo
     var savedApi = localStorage['weather_api'] || 'openmeteo';
-    weather_api_openmeteo.checked = (savedApi === 'openmeteo');
-    weather_api_metno.checked = (savedApi === 'metno');
+    document.getElementById('weather_api_openmeteo').checked = (savedApi === 'openmeteo');
+    document.getElementById('weather_api_metno').checked = (savedApi === 'metno');
 
-    // Restore hub settings
+    var savedWindUnit = localStorage['wind_speed_unit'] || 'kmh';
+    document.getElementById('wind_unit_kmh').checked = (savedWindUnit === 'kmh');
+    document.getElementById('wind_unit_ms').checked = (savedWindUnit === 'ms');
+
     document.getElementById('hub_timeout').value = localStorage['hub_timeout'] || '30';
 
     var savedBtnUp = localStorage['hub_btn_up'] || '1';
@@ -472,4 +1250,5 @@
     document.getElementById('webhook_url').value = localStorage['webhook_url'] || '';
   })();
 </script>
+
 </html>
