@@ -1,0 +1,358 @@
+{
+    "author": "CJ",
+    "dependencies": {},
+    "keywords": [],
+    "name": "din_clean_app",
+    "pebble": {
+        "capabilities": [
+            "location",
+            "configurable"
+        ],
+        "displayName": "Din Clean App",
+        "enableMultiJS": false,
+        "messageKeys": {
+            "KEY_TEMPERATURE": 0,
+            "KEY_HUMIDITY": 5,
+            "KEY_WIND_SPEED": 3,
+            "KEY_ICON": 10,
+            "KEY_TMIN": 8,
+            "KEY_TMAX": 9,
+            "KEY_FORECAST_TEMP1": 11,
+            "KEY_FORECAST_TEMP2": 12,
+            "KEY_FORECAST_TEMP3": 13,
+            "KEY_FORECAST_TEMP4": 14,
+            "KEY_FORECAST_TEMP5": 15,
+            "KEY_FORECAST_H0": 120,
+            "KEY_FORECAST_H1": 16,
+            "KEY_FORECAST_H2": 17,
+            "KEY_FORECAST_H3": 18,
+            "KEY_FORECAST_WIND0": 149,
+            "KEY_FORECAST_WIND1": 29,
+            "KEY_FORECAST_WIND2": 30,
+            "KEY_FORECAST_WIND3": 31,
+            "KEY_FORECAST_RAIN1": 21,
+            "KEY_FORECAST_RAIN11": 126,
+            "KEY_FORECAST_RAIN12": 127,
+            "KEY_FORECAST_RAIN2": 22,
+            "KEY_FORECAST_RAIN21": 128,
+            "KEY_FORECAST_RAIN22": 129,
+            "KEY_FORECAST_RAIN3": 23,
+            "KEY_FORECAST_RAIN31": 130,
+            "KEY_FORECAST_RAIN32": 131,
+            "KEY_FORECAST_RAIN4": 24,
+            "KEY_FORECAST_RAIN41": 132,
+            "KEY_FORECAST_RAIN42": 133,
+            "KEY_FORECAST_ICON1": 26,
+            "KEY_FORECAST_ICON2": 27,
+            "KEY_FORECAST_ICON3": 28,
+            "KEY_LOCATION": 32,
+            "POOLTEMP": 113,
+            "POOLPH": 114,
+            "POOLORP": 115,
+            "KEY_DAY1_TEMP": 200,
+            "KEY_DAY1_ICON": 201,
+            "KEY_DAY1_RAIN": 202,
+            "KEY_DAY1_WIND": 203,
+            "KEY_DAY2_TEMP": 204,
+            "KEY_DAY2_ICON": 205,
+            "KEY_DAY2_RAIN": 206,
+            "KEY_DAY2_WIND": 207,
+            "KEY_DAY3_TEMP": 208,
+            "KEY_DAY3_ICON": 209,
+            "KEY_DAY3_RAIN": 210,
+            "KEY_DAY3_WIND": 211,
+            "KEY_RADIO_UNITS": 36,
+            "KEY_RADIO_REFRESH": 54,
+            "KEY_TOGGLE_VIBRATION": 37,
+            "KEY_TOGGLE_BT": 103,
+            "KEY_COLOR_RIGHT_BACK_R": 39,
+            "KEY_COLOR_RIGHT_BACK_G": 40,
+            "KEY_COLOR_RIGHT_BACK_B": 41,
+            "KEY_COLOR_LEFT_BACK_R": 42,
+            "KEY_COLOR_LEFT_BACK_G": 43,
+            "KEY_COLOR_LEFT_BACK_B": 44
+        },
+        "projectType": "native",
+        "resources": {
+            "media": [
+                {
+                    "file": "images/WARNING_W",
+                    "name": "WARNING_W",
+                    "targetPlatforms": null,
+                    "type": "bitmap",
+                    "memoryFormat": "1BitPalette"
+                },
+                {
+                    "file": "images/NEIGE_FORTE_W",
+                    "name": "NEIGE_FORTE_W",
+                    "targetPlatforms": null,
+                    "type": "bitmap",
+                    "memoryFormat": "1BitPalette"
+                },
+                {
+                    "file": "images/DRY",
+                    "name": "DRY",
+                    "targetPlatforms": null,
+                    "type": "bitmap",
+                    "memoryFormat": "1BitPalette"
+                },
+                {
+                    "file": "images/HUMIDITY",
+                    "name": "HUMIDITY",
+                    "targetPlatforms": null,
+                    "type": "bitmap",
+                    "memoryFormat": "1BitPalette"
+                },
+                {
+                    "file": "images/NUIT_AVEC_AVERSES_W",
+                    "name": "NUIT_AVEC_AVERSES_W",
+                    "targetPlatforms": null,
+                    "type": "bitmap",
+                    "memoryFormat": "1BitPalette"
+                },
+                {
+                    "file": "images/NUIT_AVEC_DEVELOPPEMENT_NUAGEUX_W",
+                    "name": "NUIT_AVEC_DEVELOPPEMENT_NUAGEUX_W",
+                    "targetPlatforms": null,
+                    "type": "bitmap",
+                    "memoryFormat": "1BitPalette"
+                },
+                {
+                    "file": "images/NUIT_BIEN_DEGAGEE_W",
+                    "name": "NUIT_BIEN_DEGAGEE_W",
+                    "targetPlatforms": null,
+                    "type": "bitmap",
+                    "memoryFormat": "1BitPalette"
+                },
+                {
+                    "file": "images/NUIT_CLAIRE_W",
+                    "name": "NUIT_CLAIRE_W",
+                    "targetPlatforms": null,
+                    "type": "bitmap",
+                    "memoryFormat": "1BitPalette"
+                },
+                {
+                    "characterRegex": "[0-9:]",
+                    "file": "fonts/Clearview_45.ttf",
+                    "name": "FONT_CLEARVIEW_45",
+                    "targetPlatforms": null,
+                    "type": "font"
+                },
+                {
+                    "file": "images/0",
+                    "name": "0",
+                    "targetPlatforms": null,
+                    "type": "bitmap",
+                    "memoryFormat": "1BitPalette"
+                },
+                {
+                    "file": "images/1",
+                    "name": "1",
+                    "targetPlatforms": null,
+                    "type": "bitmap",
+                    "memoryFormat": "1BitPalette"
+                },
+                {
+                    "file": "images/2",
+                    "name": "2",
+                    "targetPlatforms": null,
+                    "type": "bitmap",
+                    "memoryFormat": "1BitPalette"
+                },
+                {
+                    "file": "images/3",
+                    "name": "3",
+                    "targetPlatforms": null,
+                    "type": "bitmap",
+                    "memoryFormat": "1BitPalette"
+                },
+                {
+                    "file": "images/4",
+                    "name": "4",
+                    "targetPlatforms": null,
+                    "type": "bitmap",
+                    "memoryFormat": "1BitPalette"
+                },
+                {
+                    "file": "images/5",
+                    "name": "5",
+                    "targetPlatforms": null,
+                    "type": "bitmap",
+                    "memoryFormat": "1BitPalette"
+                },
+                {
+                    "file": "images/6",
+                    "name": "6",
+                    "targetPlatforms": null,
+                    "type": "bitmap",
+                    "memoryFormat": "1BitPalette"
+                },
+                {
+                    "file": "images/7",
+                    "name": "7",
+                    "targetPlatforms": null,
+                    "type": "bitmap",
+                    "memoryFormat": "1BitPalette"
+                },
+                {
+                    "file": "images/8",
+                    "name": "8",
+                    "targetPlatforms": null,
+                    "type": "bitmap",
+                    "memoryFormat": "1BitPalette"
+                },
+                {
+                    "file": "images/9",
+                    "name": "9",
+                    "targetPlatforms": null,
+                    "type": "bitmap",
+                    "memoryFormat": "1BitPalette"
+                },
+                {
+                    "file": "images/AVERSES_DE_PLUIE_FORTE_W",
+                    "name": "AVERSES_DE_PLUIE_FORTE_W",
+                    "targetPlatforms": null,
+                    "type": "bitmap",
+                    "memoryFormat": "1BitPalette"
+                },
+                {
+                    "file": "images/BROUILLARD_W",
+                    "name": "BROUILLARD_W",
+                    "targetPlatforms": null,
+                    "type": "bitmap",
+                    "memoryFormat": "1BitPalette"
+                },
+                {
+                    "file": "images/BT",
+                    "name": "BT",
+                    "targetPlatforms": null,
+                    "type": "bitmap",
+                    "memoryFormat": "1BitPalette"
+                },
+                {
+                    "file": "images/BT_DISCONECT",
+                    "name": "BT_DISCONECT",
+                    "targetPlatforms": null,
+                    "type": "bitmap",
+                    "memoryFormat": "1BitPalette"
+                },
+                {
+                    "file": "images/DEVELOPPEMENT_NUAGEUX_W",
+                    "name": "DEVELOPPEMENT_NUAGEUX_W",
+                    "targetPlatforms": null,
+                    "type": "bitmap",
+                    "memoryFormat": "1BitPalette"
+                },
+                {
+                    "file": "images/ENSOLEILLE_W",
+                    "name": "ENSOLEILLE_W",
+                    "targetPlatforms": null,
+                    "type": "bitmap",
+                    "memoryFormat": "1BitPalette"
+                },
+                {
+                    "file": "images/FAIBLES_PASSAGES_NUAGEUX_W",
+                    "name": "FAIBLES_PASSAGES_NUAGEUX_W",
+                    "targetPlatforms": null,
+                    "type": "bitmap",
+                    "memoryFormat": "1BitPalette"
+                },
+                {
+                    "file": "images/FORTEMENT_NUAGEUX_W",
+                    "name": "FORTEMENT_NUAGEUX_W",
+                    "targetPlatforms": null,
+                    "type": "bitmap",
+                    "memoryFormat": "1BitPalette"
+                },
+                {
+                    "file": "images/FORTEMENT_ORAGEUX_W",
+                    "name": "FORTEMENT_ORAGEUX_W",
+                    "targetPlatforms": null,
+                    "type": "bitmap",
+                    "memoryFormat": "2BitPalette"
+                },
+                {
+                    "file": "images/BACKGROUND",
+                    "name": "BACKGROUND",
+                    "targetPlatforms": null,
+                    "type": "bitmap",
+                    "memoryFormat": "1BitPalette"
+                },
+                {
+                    "file": "images/LEAF",
+                    "name": "LEAF",
+                    "targetPlatforms": null,
+                    "type": "bitmap",
+                    "memoryFormat": "1BitPalette"
+                },
+                {
+                    "file": "images/NUIT_NUAGEUSE_W",
+                    "name": "NUIT_NUAGEUSE_W",
+                    "targetPlatforms": null,
+                    "type": "bitmap",
+                    "memoryFormat": "1BitPalette"
+                },
+                {
+                    "file": "images/POURTOURW1",
+                    "name": "POURTOURW1",
+                    "targetPlatforms": null,
+                    "type": "bitmap",
+                    "memoryFormat": "1BitPalette"
+                },
+                {
+                    "file": "images/POURTOUR2",
+                    "name": "POURTOUR2",
+                    "targetPlatforms": null,
+                    "type": "bitmap",
+                    "memoryFormat": "1BitPalette"
+                },
+                {
+                    "file": "images/POURTOURW2",
+                    "name": "POURTOURW2",
+                    "targetPlatforms": null,
+                    "type": "bitmap",
+                    "memoryFormat": "1BitPalette"
+                },
+                {
+                    "file": "images/POURTOURW3",
+                    "name": "POURTOURW3",
+                    "targetPlatforms": null,
+                    "type": "bitmap",
+                    "memoryFormat": "1BitPalette"
+                },
+                {
+                    "file": "images/POURTOURW4",
+                    "name": "POURTOURW4",
+                    "targetPlatforms": null,
+                    "type": "bitmap",
+                    "memoryFormat": "1BitPalette"
+                },
+                {
+                    "file": "images/WIND",
+                    "name": "WIND",
+                    "targetPlatforms": null,
+                    "type": "bitmap",
+                    "memoryFormat": "2BitPalette"
+                },
+                {
+                    "file": "images/SILENT",
+                    "name": "SILENT",
+                    "targetPlatforms": null,
+                    "type": "bitmap",
+                    "memoryFormat": "2BitPalette"
+                }
+            ]
+        },
+        "sdkVersion": "3",
+        "targetPlatforms": [
+            "aplite",
+            "basalt",
+            "diorite"
+        ],
+        "uuid": "b3f0d7f1-a42e-4e1c-9b7d-3e8f6a5c2d01",
+        "watchapp": {
+            "watchface": false
+        }
+    },
+    "version": "1.0.0"
+}
