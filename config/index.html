@@ -206,6 +206,20 @@
       background: #fff !important;
       color: #333 !important;
       box-sizing: border-box;
+      -webkit-appearance: menulist !important;
+      appearance: menulist !important;
+    }
+
+    /* Override Slate's position:absolute on select for our custom selects */
+    .item-select {
+      position: relative !important;
+      top: auto !important;
+      right: auto !important;
+      display: block !important;
+      -webkit-appearance: menulist !important;
+      appearance: menulist !important;
+      color: #333 !important;
+      border: 1px solid #ddd !important;
     }
 
     .menu-form-buttons {
