@@ -140,14 +140,56 @@ static void menu_draw_row(GContext *gctx, const Layer *cell,
   uint8_t item_idx = ctx->visible_indices[real_row];
   const HubMenuItem *item = &ctx->all_items[item_idx];
 
-  const char *subtitle = NULL;
+  GRect bounds = layer_get_bounds(cell);
+
+  // Set drawing color based on selection state
+  MenuIndex sel = menu_layer_get_selected_index(ctx->menu);
+  bool is_selected = (sel.section == idx->section && sel.row == idx->row);
+  GColor fg = is_selected ? GColorWhite : GColorBlack;
+
+  graphics_context_set_fill_color(gctx, fg);
+  graphics_context_set_stroke_color(gctx, fg);
+
+  // Draw a 14×14 type icon at x=4, vertically centred
+  const int ICON_W = 14;
+  const int ICON_X = 4;
+  int icon_y = (bounds.size.h - ICON_W) / 2;
+
   switch (item->type) {
-    case HUB_MI_FOLDER:    subtitle = ">"; break;
-    case HUB_MI_PSEUDOAPP: break;
-    case HUB_MI_ACTION:    subtitle = "!"; break;
+    case HUB_MI_FOLDER:
+      // Tab: 5×2 at top-left of icon area
+      graphics_fill_rect(gctx, GRect(ICON_X, icon_y, 5, 2), 0, GCornerNone);
+      // Body: outline rectangle, 1 px below the tab
+      graphics_draw_rect(gctx, GRect(ICON_X, icon_y + 1, ICON_W, ICON_W - 1));
+      break;
+
+    case HUB_MI_PSEUDOAPP:
+      // App icon: rounded-square outline with a filled centre mark
+      graphics_draw_round_rect(gctx, GRect(ICON_X, icon_y, ICON_W, ICON_W), 3);
+      graphics_fill_rect(gctx, GRect(ICON_X + 5, icon_y + 5, 4, 4), 0, GCornerNone);
+      break;
+
+    case HUB_MI_ACTION:
+      // Quick action: right-pointing filled triangle (▶)
+      // Each column drawn as a vertical segment that shrinks toward the tip
+      for (int col = 0; col < ICON_W / 2; col++) {
+        graphics_draw_line(gctx,
+          GPoint(ICON_X + col, icon_y + col),
+          GPoint(ICON_X + col, icon_y + ICON_W - 1 - col));
+      }
+      break;
   }
 
-  menu_cell_basic_draw(gctx, cell, item->label, subtitle, NULL);
+  // Label text, offset to the right of the icon, vertically centred
+  int text_x = ICON_X + ICON_W + 4;
+  GRect text_rect = GRect(text_x, (bounds.size.h - 22) / 2,
+                          bounds.size.w - text_x, 26);
+  graphics_context_set_text_color(gctx, fg);
+  graphics_draw_text(gctx, item->label,
+                     fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
+                     text_rect,
+                     GTextOverflowModeTrailingEllipsis,
+                     GTextAlignmentLeft, NULL);
 }
 
 static void menu_select(MenuLayer *ml, MenuIndex *idx, void *data) {
