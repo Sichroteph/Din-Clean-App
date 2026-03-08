@@ -21,15 +21,16 @@ void hub_action_execute(uint8_t webhook_index) {
 
   // Show confirmation window
   ActionCtx *ctx = malloc(sizeof(ActionCtx));
-  if (!ctx) return;
+  if (!ctx)
+    return;
 
   ctx->close_timer = NULL;
   ctx->window = window_create();
   window_set_user_data(ctx->window, ctx);
-  window_set_window_handlers(ctx->window, (WindowHandlers) {
-    .load = action_window_load,
-    .unload = action_window_unload,
-  });
+  window_set_window_handlers(ctx->window, (WindowHandlers){
+                                              .load = action_window_load,
+                                              .unload = action_window_unload,
+                                          });
   window_set_background_color(ctx->window, GColorBlack);
 
   window_stack_push(ctx->window, true);
@@ -43,7 +44,7 @@ static void action_window_load(Window *window) {
   ctx->text_layer = text_layer_create(GRect(0, 60, bounds.size.w, 40));
   text_layer_set_text(ctx->text_layer, "Action sent!");
   text_layer_set_font(ctx->text_layer,
-    fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
+                      fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
   text_layer_set_text_alignment(ctx->text_layer, GTextAlignmentCenter);
   text_layer_set_background_color(ctx->text_layer, GColorBlack);
   text_layer_set_text_color(ctx->text_layer, GColorWhite);

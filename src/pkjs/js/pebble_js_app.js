@@ -1186,9 +1186,23 @@ Pebble.addEventListener('webviewclosed', function (e) {
   dict['KEY_HUB_WIDGETS_UP'] = hub_widgets_up;
   dict['KEY_HUB_WIDGETS_DOWN'] = hub_widgets_down;
 
-  // Webhook URL (stored in JS localStorage only)
-  var webhook_url = configData['webhook_url'] || '';
-  if (webhook_url) {
+  // Webhook URLs (stored in JS localStorage only, keyed by index)
+  var webhookUrlsStr = configData['webhook_urls'];
+  if (webhookUrlsStr) {
+    try {
+      var webhookUrls = JSON.parse(webhookUrlsStr);
+      for (var k in webhookUrls) {
+        if (webhookUrls.hasOwnProperty(k)) {
+          localStorage.setItem('webhook_url_' + k, webhookUrls[k]);
+        }
+      }
+    } catch (e) {
+      console.log('Failed to parse webhook_urls');
+    }
+  }
+  // Backward compat: single webhook_url from old config
+  var webhook_url = configData['webhook_url'];
+  if (webhook_url && !webhookUrlsStr) {
     localStorage.setItem('webhook_url_0', webhook_url);
   }
 

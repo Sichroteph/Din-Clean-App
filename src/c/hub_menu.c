@@ -12,6 +12,7 @@ typedef struct {
   int8_t parent_index;
   uint8_t depth;
   HubDirection direction;
+  uint8_t padding;  // empty rows at top for UP-opened root menus with few items
 } MenuCtx;
 
 // Forward declarations
@@ -72,8 +73,19 @@ void hub_menu_push_submenu(const HubMenuItem *items, uint8_t count,
   window_stack_push(ctx->window, true);
 }
 
+// Delayed return to avoid freeing menu context inside callback
+static void delayed_return_to_watchface(void *data) {
+  hub_return_to_watchface();
+}
+
 static void menu_window_load(Window *window) {
   MenuCtx *ctx = window_get_user_data(window);
+
+  // Calculate padding for UP-opened root menus with few items
+  ctx->padding = 0;
+  if (ctx->depth == 0 && ctx->direction == HUB_DIR_UP && ctx->visible_count < 4) {
+    ctx->padding = 4 - ctx->visible_count;
+  }
 
   Layer *root = window_get_root_layer(window);
   GRect bounds = layer_get_bounds(root);
@@ -88,10 +100,14 @@ static void menu_window_load(Window *window) {
   menu_layer_set_click_config_onto_window(ctx->menu, window);
   layer_add_child(root, menu_layer_get_layer(ctx->menu));
 
-  // If opened via UP, start at last item
-  if (ctx->direction == HUB_DIR_UP && ctx->visible_count > 0) {
-    MenuIndex last = { .section = 0, .row = ctx->visible_count - 1 };
-    menu_layer_set_selected_index(ctx->menu, last, MenuRowAlignCenter, false);
+  if (ctx->depth == 0 && ctx->direction == HUB_DIR_UP && ctx->visible_count > 0) {
+    // Start at last real item (after padding), aligned to bottom for continuity
+    MenuIndex last = { .section = 0, .row = ctx->padding + ctx->visible_count - 1 };
+    menu_layer_set_selected_index(ctx->menu, last, MenuRowAlignBottom, false);
+  } else if (ctx->depth > 0) {
+    // Submenus: always start at first item, aligned to top
+    MenuIndex first = { .section = 0, .row = 0 };
+    menu_layer_set_selected_index(ctx->menu, first, MenuRowAlignTop, false);
   }
 
   hub_timeout_reset();
@@ -106,13 +122,18 @@ static void menu_window_unload(Window *window) {
 
 static uint16_t menu_get_num_rows(MenuLayer *ml, uint16_t section, void *data) {
   MenuCtx *ctx = data;
-  return ctx->visible_count;
+  return ctx->visible_count + ctx->padding;
 }
 
 static void menu_draw_row(GContext *gctx, const Layer *cell,
                           MenuIndex *idx, void *data) {
   MenuCtx *ctx = data;
-  uint8_t item_idx = ctx->visible_indices[idx->row];
+
+  // Padding rows are empty
+  if (idx->row < ctx->padding) return;
+
+  uint8_t real_row = idx->row - ctx->padding;
+  uint8_t item_idx = ctx->visible_indices[real_row];
   const HubMenuItem *item = &ctx->all_items[item_idx];
 
   const char *subtitle = NULL;
@@ -127,7 +148,12 @@ static void menu_draw_row(GContext *gctx, const Layer *cell,
 
 static void menu_select(MenuLayer *ml, MenuIndex *idx, void *data) {
   MenuCtx *ctx = data;
-  uint8_t item_idx = ctx->visible_indices[idx->row];
+
+  // Ignore padding rows
+  if (idx->row < ctx->padding) return;
+
+  uint8_t real_row = idx->row - ctx->padding;
+  uint8_t item_idx = ctx->visible_indices[real_row];
   const HubMenuItem *item = &ctx->all_items[item_idx];
 
   hub_timeout_reset();
@@ -138,9 +164,11 @@ static void menu_select(MenuLayer *ml, MenuIndex *idx, void *data) {
                             item_idx, ctx->depth + 1, ctx->direction);
       break;
     case HUB_MI_PSEUDOAPP:
+      vibes_double_pulse();
       hub_pseudoapp_push(item->data);
       break;
     case HUB_MI_ACTION:
+      vibes_double_pulse();
       hub_action_execute(item->data);
       break;
   }
@@ -148,5 +176,24 @@ static void menu_select(MenuLayer *ml, MenuIndex *idx, void *data) {
 
 static void menu_selection_changed(MenuLayer *ml, MenuIndex new_index,
                                    MenuIndex old_index, void *data) {
+  MenuCtx *ctx = data;
   hub_timeout_reset();
+
+  // Exit-on-wrap only for root menus (depth == 0)
+  if (ctx->depth != 0) return;
+
+  uint16_t total_rows = ctx->visible_count + ctx->padding;
+  uint16_t last_row = total_rows - 1;
+
+  if (ctx->direction == HUB_DIR_DOWN) {
+    // Opened by DOWN: exit when wrapping UP from first item
+    if (old_index.row == 0 && new_index.row == last_row) {
+      app_timer_register(0, delayed_return_to_watchface, NULL);
+    }
+  } else {
+    // Opened by UP: exit when wrapping DOWN from last item
+    if (old_index.row == last_row && new_index.row == 0) {
+      app_timer_register(0, delayed_return_to_watchface, NULL);
+    }
+  }
 }

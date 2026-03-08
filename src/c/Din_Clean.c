@@ -1261,6 +1261,7 @@ static void select_click_handler(ClickRecognizerRef recognizer, void *context) {
 }
 
 static void execute_long_press(uint8_t type, uint8_t data) {
+  vibes_double_pulse();
   if (type == HUB_LP_PSEUDOAPP) {
     hub_pseudoapp_push(data);
   } else if (type == HUB_LP_WEBHOOK) {

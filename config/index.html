@@ -415,36 +415,45 @@
     <div class='item-container'>
       <div class='item-container-header'>UP long press</div>
       <div class='item-container-content'>
-        <select class='item-select' id='hub_lp_up'>
-          <option value='16'>Webhook</option>
+        <select class='item-select' id='hub_lp_up' onchange='onLpChange("up")'>
+          <option value='26'>Webhook</option>
           <option value='0'>Stopwatch</option>
           <option value='1'>Timer</option>
           <option value='2'>Alarm</option>
         </select>
+        <div id='lp_url_up' style='display:none;margin-top:8px'>
+          <input type='text' class='item-input' id='lp_webhook_url_up' placeholder='https://example.com/hook'>
+        </div>
       </div>
     </div>
 
     <div class='item-container'>
       <div class='item-container-header'>DOWN long press</div>
       <div class='item-container-content'>
-        <select class='item-select' id='hub_lp_down'>
+        <select class='item-select' id='hub_lp_down' onchange='onLpChange("down")'>
           <option value='0' selected>Stopwatch</option>
           <option value='1'>Timer</option>
           <option value='2'>Alarm</option>
-          <option value='16'>Webhook</option>
+          <option value='27'>Webhook</option>
         </select>
+        <div id='lp_url_down' style='display:none;margin-top:8px'>
+          <input type='text' class='item-input' id='lp_webhook_url_down' placeholder='https://example.com/hook'>
+        </div>
       </div>
     </div>
 
     <div class='item-container'>
       <div class='item-container-header'>SELECT long press</div>
       <div class='item-container-content'>
-        <select class='item-select' id='hub_lp_select'>
+        <select class='item-select' id='hub_lp_select' onchange='onLpChange("select")'>
           <option value='0'>Stopwatch</option>
           <option value='1' selected>Timer</option>
           <option value='2'>Alarm</option>
-          <option value='16'>Webhook</option>
+          <option value='28'>Webhook</option>
         </select>
+        <div id='lp_url_select' style='display:none;margin-top:8px'>
+          <input type='text' class='item-input' id='lp_webhook_url_select' placeholder='https://example.com/hook'>
+        </div>
       </div>
     </div>
   </div>
@@ -601,20 +610,6 @@
       </div>
       <div class='item-container-footer'>Optional. Connect your iopool for pool monitoring data.</div>
     </div>
-
-    <div class='item-container'>
-      <div class='item-container-header'>Webhook URL</div>
-      <div class='item-container-content'>
-        <label class='item'>
-          <div class='item-input-wrapper'>
-            <input type='text' class='item-input' id='webhook_url' placeholder='https://example.com/hook'>
-          </div>
-        </label>
-      </div>
-      <div class='item-container-footer'>
-        URL called via POST when a webhook action is triggered.
-      </div>
-    </div>
   </div>
 
   <!-- Submit -->
@@ -691,6 +686,37 @@
       if (tree[i].children) c += countMenuItems(tree[i].children);
     }
     return c;
+  }
+
+  // Find next available webhook index (avoids indices 10-12 reserved for LP)
+  function nextWebhookIndex() {
+    var used = {};
+    function scan(tree) {
+      for (var i = 0; i < tree.length; i++) {
+        if (tree[i].type === 2) used[tree[i].data] = true;
+        if (tree[i].children) scan(tree[i].children);
+      }
+    }
+    scan(menus.up);
+    scan(menus.down);
+    used[10] = true; used[11] = true; used[12] = true;
+    for (var idx = 0; idx < 256; idx++) {
+      if (!used[idx]) return idx;
+    }
+    return 0;
+  }
+
+  // Show/hide URL input when long press webhook is selected
+  function onLpChange(which) {
+    var sel = document.getElementById('hub_lp_' + which);
+    var urlDiv = document.getElementById('lp_url_' + which);
+    var isWebhook = parseInt(sel.value) >= 16;
+    urlDiv.style.display = isWebhook ? '' : 'none';
+    if (isWebhook) {
+      var idx = parseInt(sel.value) & 0xF;
+      var urlInput = document.getElementById('lp_webhook_url_' + which);
+      urlInput.value = localStorage['webhook_url_' + idx] || '';
+    }
   }
 
   // Get parent array and index from a dot-separated path (e.g. "1.0.2")
@@ -899,6 +925,12 @@
       return '<option value="' + a.id + '"' + (type === 1 && data === a.id ? ' selected' : '') + '>' + a.name + '</option>';
     }).join('');
 
+    // Pre-fill webhook URL for existing action items
+    var webhookUrl = '';
+    if (prefill && prefill.type === 2) {
+      webhookUrl = localStorage['webhook_url_' + prefill.data] || '';
+    }
+
     var html = '<div class="menu-form" style="margin-left:' + (depth * 20) + 'px">' +
       '<label>Label</label>' +
       '<input type="text" id="mf_label" maxlength="15" value="' + label + '" placeholder="Item name">' +
@@ -908,8 +940,9 @@
       '<label>Application</label>' +
       '<select id="mf_app">' + appOptions + '</select></div>' +
       '<div id="mf_action_div" style="' + (type === 2 ? '' : 'display:none') + '">' +
-      '<label>Action</label>' +
-      '<select id="mf_action"><option value="0">Webhook</option></select></div>' +
+      '<label>Webhook URL</label>' +
+      '<input type="text" id="mf_action_url" placeholder="https://example.com/hook" value="' + escapeHtml(webhookUrl) + '">' +
+      '</div>' +
       '<div class="menu-form-buttons">' +
       '<button class="btn-save" onclick="saveForm()">Save</button>' +
       '<button class="btn-cancel" onclick="cancelForm()">Cancel</button>' +
@@ -955,7 +988,22 @@
     var type = parseInt(document.getElementById('mf_type').value);
     var data = 0;
     if (type === 1) data = parseInt(document.getElementById('mf_app').value);
-    if (type === 2) data = parseInt(document.getElementById('mf_action').value);
+    if (type === 2) {
+      // Auto-assign or keep existing webhook index
+      var menuId = formState.menuId;
+      if (formState.editPath) {
+        var editRef = resolveMenuPath(menuId, formState.editPath);
+        if (editRef.array[editRef.index].type === 2) {
+          data = editRef.array[editRef.index].data; // Keep existing index
+        } else {
+          data = nextWebhookIndex();
+        }
+      } else {
+        data = nextWebhookIndex();
+      }
+      var actionUrl = document.getElementById('mf_action_url').value.trim();
+      localStorage['webhook_url_' + data] = actionUrl;
+    }
 
     var menuId = formState.menuId;
 
@@ -1206,7 +1254,6 @@
       'hub_lp_up': document.getElementById('hub_lp_up').value,
       'hub_lp_down': document.getElementById('hub_lp_down').value,
       'hub_lp_select': document.getElementById('hub_lp_select').value,
-      'webhook_url': document.getElementById('webhook_url').value,
       // Menu data (serialized flat format for Pebble)
       'hub_menu_up': serializeMenu(menus.up),
       'hub_menu_down': serializeMenu(menus.down),
@@ -1214,6 +1261,32 @@
       'hub_widgets_up': serializeWidgets(widgetLists.up),
       'hub_widgets_down': serializeWidgets(widgetLists.down)
     };
+
+    // Collect all webhook URLs (from menu actions and LP webhooks)
+    var allWebhookUrls = {};
+    function scanWebhooks(tree) {
+      for (var i = 0; i < tree.length; i++) {
+        if (tree[i].type === 2) {
+          allWebhookUrls[tree[i].data] = localStorage['webhook_url_' + tree[i].data] || '';
+        }
+        if (tree[i].children) scanWebhooks(tree[i].children);
+      }
+    }
+    scanWebhooks(menus.up);
+    scanWebhooks(menus.down);
+    // LP webhook URLs
+    ['up', 'down', 'select'].forEach(function(which) {
+      var val = parseInt(document.getElementById('hub_lp_' + which).value);
+      if (val >= 16) {
+        var idx = val & 0xF;
+        var urlInput = document.getElementById('lp_webhook_url_' + which);
+        if (urlInput && urlInput.value) {
+          allWebhookUrls[idx] = urlInput.value;
+          localStorage['webhook_url_' + idx] = urlInput.value;
+        }
+      }
+    });
+    options['webhook_urls'] = JSON.stringify(allWebhookUrls);
 
     // Build views string
     var views = ['0'];
@@ -1283,17 +1356,29 @@
     document.getElementById('hub_btn_down_menu').checked = (savedBtnDown === '0');
     document.getElementById('hub_btn_down_widgets').checked = (savedBtnDown === '1');
 
-    document.getElementById('hub_lp_up').value = localStorage['hub_lp_up'] || '16';
-    document.getElementById('hub_lp_down').value = localStorage['hub_lp_down'] || '0';
-    document.getElementById('hub_lp_select').value = localStorage['hub_lp_select'] || '1';
+    // Restore LP selects with migration from old value 16
+    function restoreLp(which, defaultVal) {
+      var stored = localStorage['hub_lp_' + which];
+      var newValMap = { up: '26', down: '27', select: '28' };
+      if (stored === '16') {
+        stored = newValMap[which];
+        // Migrate old webhook URL to new LP-specific index
+        if (localStorage['webhook_url'] && !localStorage['webhook_url_' + (parseInt(stored) & 0xF)]) {
+          localStorage['webhook_url_' + (parseInt(stored) & 0xF)] = localStorage['webhook_url'];
+        }
+      }
+      document.getElementById('hub_lp_' + which).value = stored || String(defaultVal);
+      onLpChange(which);
+    }
+    restoreLp('up', 26);
+    restoreLp('down', 0);
+    restoreLp('select', 1);
 
     var savedViews = localStorage['hub_views'] || '0,1,2,3';
     var viewIds = savedViews.split(',');
     document.getElementById('hub_view_1').checked = viewIds.indexOf('1') >= 0;
     document.getElementById('hub_view_2').checked = viewIds.indexOf('2') >= 0;
     document.getElementById('hub_view_3').checked = viewIds.indexOf('3') >= 0;
-
-    document.getElementById('webhook_url').value = localStorage['webhook_url'] || '';
   })();
 </script>
 
