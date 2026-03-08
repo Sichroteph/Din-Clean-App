@@ -1154,8 +1154,8 @@ Pebble.addEventListener('webviewclosed', function (e) {
   // --- Hub configuration ---
   var hub_timeout = parseInt(configData['hub_timeout']) || 30;
   var hub_anim = (configData['hub_anim'] !== undefined) ? parseInt(configData['hub_anim']) : 1;
-  var hub_btn_up = parseInt(configData['hub_btn_up']) || 1;  // 0=menu, 1=widgets
-  var hub_btn_down = parseInt(configData['hub_btn_down']) || 0; // 0=menu, 1=widgets
+  var hub_btn_up = (configData['hub_btn_up'] !== undefined) ? parseInt(configData['hub_btn_up']) : 1;  // 0=menu, 1=widgets
+  var hub_btn_down = (configData['hub_btn_down'] !== undefined) ? parseInt(configData['hub_btn_down']) : 0; // 0=menu, 1=widgets
 
   // Long press: encode as (type << 4) | data
   // type: 0=pseudoapp, 1=webhook
