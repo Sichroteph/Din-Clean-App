@@ -54,8 +54,8 @@ static void action_window_load(Window *window) {
   text_layer_set_text_color(ctx->text_layer, GColorWhite);
   layer_add_child(root, text_layer_get_layer(ctx->text_layer));
 
-  // Auto-close and return to watchface after 2 seconds
-  ctx->close_timer = app_timer_register(2000, action_close_timer_cb, ctx);
+  // Auto-close and return to watchface after 1 second
+  ctx->close_timer = app_timer_register(1000, action_close_timer_cb, ctx);
 }
 
 static void action_close_timer_cb(void *context) {
