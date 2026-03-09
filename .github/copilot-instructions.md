@@ -95,4 +95,4 @@ git checkout main
 
 ### Physical watch logs
 - `pebble logs --phone 192.168.1.170` works on the physical watch. Always use `timeout 30` to cap collection: `timeout 30 pebble logs --phone 192.168.1.170`
-- Watch IP is 192.168.1.170 (may change if DHCP reassigns; check Pebble app → Settings → Developer Mode if connection refused).
+- Watch IP is 192.168.1.157 (may change if DHCP reassigns; check Pebble app → Settings → Developer Mode if connection refused).
