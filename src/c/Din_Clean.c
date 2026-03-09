@@ -1005,6 +1005,7 @@ static void inbox_received_callback(DictionaryIterator *iterator,
     persist_write_bool(KEY_TOGGLE_VIBRATION, flags.is_vibration);
 
     APP_LOG(APP_LOG_LEVEL_INFO, "CONFIG: applying, is_metric=%d, vibrating", (int)flags.is_metric);
+    light_enable_interaction(); // visual confirmation: backlight flashes on config receive
     vibes_double_pulse();
 
     // Request immediate weather update to apply new units

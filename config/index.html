@@ -980,7 +980,7 @@
   };
 
   var widgetLists = {
-    up: [0, 1],
+    up: [0, 1, 2, 3],
     down: [0, 1]
   };
 
@@ -1479,13 +1479,17 @@
   function loadWidgets() {
     var wUp = localStorage['hub_widgets_up'];
     var wDown = localStorage['hub_widgets_down'];
-    if (wUp) widgetLists.up = deserializeWidgets(wUp);
-    if (wDown) widgetLists.down = deserializeWidgets(wDown);
 
-    if (widgetLists.up.length === 1 && widgetLists.up[0] === 0) {
-      widgetLists.up = [0, 1];
+    // If no saved config, or was the old 2-widget default, upgrade to include
+    // new Hourly (2) and Daily (3) widgets.
+    if (!wUp || wUp === '0' || wUp === '0,1') {
+      widgetLists.up = [0, 1, 2, 3];
       persistWidgets();
+    } else {
+      widgetLists.up = deserializeWidgets(wUp);
     }
+
+    if (wDown) widgetLists.down = deserializeWidgets(wDown);
   }
 
   // ================================================================
