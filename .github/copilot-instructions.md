@@ -25,9 +25,13 @@ git checkout main
 
 ## Install on Watch
 
+After every `pebble build` that compiles successfully, **always** install the app on the watch:
+
 ```bash
 pebble install --phone 192.168.1.170
 ```
+
+If the install fails (connection refused / timeout), the watch is unreachable (Developer Mode may be off or the IP may have changed). Inform the user and ask them to enable Developer Mode in the Pebble app before retrying.
 
 ## Project Structure
 
