@@ -1113,6 +1113,38 @@ Pebble.addEventListener('ready',
 
     console.log("PebbleKit JS ready 123");
 
+    // AUTO-TEST: simulate a config message after 3s to verify AppMessage pipeline
+    setTimeout(function () {
+      console.log('[TEST] Sending auto-test config dict...');
+      var testDict = {
+        'KEY_RADIO_UNITS': 2,
+        'KEY_RADIO_REFRESH': 1,
+        'KEY_TOGGLE_VIBRATION': 1,
+        'KEY_TOGGLE_BT': 1,
+        'KEY_COLOR_RIGHT_BACK_R': 1,
+        'KEY_COLOR_RIGHT_BACK_G': 1,
+        'KEY_COLOR_RIGHT_BACK_B': 1,
+        'KEY_COLOR_LEFT_BACK_R': 1,
+        'KEY_COLOR_LEFT_BACK_G': 1,
+        'KEY_COLOR_LEFT_BACK_B': 1,
+        'KEY_HUB_TIMEOUT': 30,
+        'KEY_HUB_ANIM': 1,
+        'KEY_HUB_BTN_UP': 1,
+        'KEY_HUB_BTN_DOWN': 1,
+        'KEY_HUB_LP_UP': 16,
+        'KEY_HUB_LP_DOWN': 1,
+        'KEY_HUB_LP_SELECT': 1,
+        'KEY_HUB_VIEWS': '0,1,2,3',
+        'KEY_HUB_MENU_DOWN': 'Stopwatch;1;-1;0|Timer;1;-1;1|Alarm;1;-1;2',
+        'KEY_HUB_WIDGETS_UP': '0,1,2,3',
+        'KEY_HUB_WIDGETS_DOWN': '0,1'
+      };
+      Pebble.sendAppMessage(testDict,
+        function () { console.log('[TEST] Config sent OK - watch should have vibrated!'); },
+        function (err) { console.log('[TEST] Config send FAILED: ' + JSON.stringify(err)); }
+      );
+    }, 3000);
+
     // Auto-trigger one weather fetch on startup
     try {
       setTimeout(function () {
@@ -1183,11 +1215,12 @@ Pebble.addEventListener('webviewclosed', function (e) {
   localStorage.setItem(181, wind_speed_unit);
   console.log("Wind speed unit set to: " + wind_speed_unit);
 
-  // Use 2 for metric (never 0 — Pebble SDK may drop zero-value integer entries)
-  dict['KEY_RADIO_UNITS'] = radio_units ? 1 : 2;
-  dict['KEY_RADIO_REFRESH'] = radio_refresh ? 1 : 0;
-  dict['KEY_TOGGLE_VIBRATION'] = toggle_vibration ? 1 : 0;
-  dict['KEY_TOGGLE_BT'] = toggle_bt ? 1 : 0;
+  // Encoding: 1 = on/true/metric/30min, 2 = off/false/imperial/15min
+  // Never send 0 — Pebble SDK silently drops zero-value integer entries
+  dict['KEY_RADIO_UNITS'] = radio_units ? 2 : 1;       // 2=metric, 1=imperial
+  dict['KEY_RADIO_REFRESH'] = radio_refresh ? 1 : 2;   // 1=30min, 2=15min
+  dict['KEY_TOGGLE_VIBRATION'] = toggle_vibration ? 1 : 2; // 1=on, 2=off
+  dict['KEY_TOGGLE_BT'] = toggle_bt ? 1 : 2;           // 1=on, 2=off
 
   function safeColorComponent(hex, start, end) {
     if (typeof hex === 'string' && hex.length >= end) {
@@ -1220,9 +1253,9 @@ Pebble.addEventListener('webviewclosed', function (e) {
   var hub_views = configData['hub_views'] || '0,1,2,3';
 
   dict['KEY_HUB_TIMEOUT'] = hub_timeout;
-  dict['KEY_HUB_ANIM'] = hub_anim;
-  dict['KEY_HUB_BTN_UP'] = hub_btn_up;
-  dict['KEY_HUB_BTN_DOWN'] = hub_btn_down;
+  dict['KEY_HUB_ANIM'] = (hub_anim === 1) ? 1 : 2;          // 1=on, 2=off
+  dict['KEY_HUB_BTN_UP'] = (hub_btn_up === 1) ? 1 : 2;      // 1=widgets, 2=menu
+  dict['KEY_HUB_BTN_DOWN'] = (hub_btn_down === 1) ? 1 : 2;  // 1=widgets, 2=menu
   dict['KEY_HUB_LP_UP'] = hub_lp_up;
   dict['KEY_HUB_LP_DOWN'] = hub_lp_down;
   dict['KEY_HUB_LP_SELECT'] = hub_lp_select;
@@ -1259,6 +1292,8 @@ Pebble.addEventListener('webviewclosed', function (e) {
     localStorage.setItem('webhook_url_0', webhook_url);
   }
 
+  console.log('[CFG] Sending dict keys: ' + Object.keys(dict).join(', '));
+  console.log('[CFG] KEY_RADIO_UNITS=' + dict['KEY_RADIO_UNITS'] + ' KEY_HUB_TIMEOUT=' + dict['KEY_HUB_TIMEOUT'] + ' KEY_HUB_WIDGETS_UP=' + dict['KEY_HUB_WIDGETS_UP']);
   Pebble.sendAppMessage(dict, function () {
     // Refresh weather data after configuration changes (e.g., API provider, units)
     console.log("Configuration sent successfully, fetching weather data");

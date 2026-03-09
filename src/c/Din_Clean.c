@@ -614,6 +614,13 @@ static void inbox_received_callback(DictionaryIterator *iterator,
   Tuple *radio_tuple = dict_find(iterator, KEY_RADIO_UNITS);
   Tuple *temp_tuple = dict_find(iterator, KEY_TEMPERATURE);
 
+  APP_LOG(APP_LOG_LEVEL_INFO, "INBOX: radio=%s(%d) temp=%s hub_tmo=%s wgt_up=%s",
+          radio_tuple ? "OK" : "NULL",
+          radio_tuple ? (int)radio_tuple->value->int32 : -1,
+          temp_tuple ? "OK" : "NULL",
+          dict_find(iterator, KEY_HUB_TIMEOUT) ? "OK" : "NULL",
+          dict_find(iterator, KEY_HUB_WIDGETS_UP) ? "OK" : "NULL");
+
   // If all data is available, use it
   if (temp_tuple) {
 
@@ -961,12 +968,12 @@ static void inbox_received_callback(DictionaryIterator *iterator,
     int green;
     int blue;
 
-    flags.is_bt = bt_tuple ? bt_tuple->value->int32 : flags.is_bt;
+    flags.is_bt = bt_tuple ? (bt_tuple->value->int32 == 1) : flags.is_bt;
     flags.is_metric =
         radio_tuple ? (radio_tuple->value->int32 != 1) : flags.is_metric;
-    flags.is_30mn = refresh_tuple ? refresh_tuple->value->int32 : flags.is_30mn;
+    flags.is_30mn = refresh_tuple ? (refresh_tuple->value->int32 == 1) : flags.is_30mn;
     flags.is_vibration =
-        vibration_tuple ? vibration_tuple->value->int32 : flags.is_vibration;
+        vibration_tuple ? (vibration_tuple->value->int32 == 1) : flags.is_vibration;
 
     if (color_right_r_tuple && color_right_g_tuple && color_right_b_tuple) {
       red = color_right_r_tuple->value->int32;
@@ -997,13 +1004,16 @@ static void inbox_received_callback(DictionaryIterator *iterator,
     persist_write_bool(KEY_TOGGLE_BT, flags.is_bt);
     persist_write_bool(KEY_TOGGLE_VIBRATION, flags.is_vibration);
 
+    APP_LOG(APP_LOG_LEVEL_INFO, "CONFIG: applying, is_metric=%d, vibrating", (int)flags.is_metric);
     vibes_double_pulse();
 
     // Request immediate weather update to apply new units
     DictionaryIterator *iter;
-    app_message_outbox_begin(&iter);
-    dict_write_uint8(iter, 0, 0);
-    app_message_outbox_send();
+    AppMessageResult outbox_result = app_message_outbox_begin(&iter);
+    if (outbox_result == APP_MSG_OK) {
+      dict_write_uint8(iter, 0, 0);
+      app_message_outbox_send();
+    }
   }
 
   // Hub config message (sent alongside regular config, or separately)
@@ -1013,9 +1023,9 @@ static void inbox_received_callback(DictionaryIterator *iterator,
 
     Tuple *t;
     if ((t = dict_find(iterator, KEY_HUB_BTN_UP)))
-      g_hub_config.btn_up_type = (uint8_t)t->value->int32;
+      g_hub_config.btn_up_type = (t->value->int32 == 1) ? HUB_OBJ_WIDGETS : HUB_OBJ_MENU;
     if ((t = dict_find(iterator, KEY_HUB_BTN_DOWN)))
-      g_hub_config.btn_down_type = (uint8_t)t->value->int32;
+      g_hub_config.btn_down_type = (t->value->int32 == 1) ? HUB_OBJ_WIDGETS : HUB_OBJ_MENU;
     if ((t = dict_find(iterator, KEY_HUB_LP_UP))) {
       uint8_t v = (uint8_t)t->value->int32;
       g_hub_config.lp_up_type = v >> 4;
@@ -1051,7 +1061,7 @@ static void inbox_received_callback(DictionaryIterator *iterator,
     if ((t = dict_find(iterator, KEY_HUB_WIDGETS_DOWN)))
       hub_config_parse_widgets(t->value->cstring, false);
     if ((t = dict_find(iterator, KEY_HUB_ANIM)))
-      g_hub_config.anim_enabled = (uint8_t)t->value->int32;
+      g_hub_config.anim_enabled = (t->value->int32 == 1) ? 1 : 0;
 
     hub_config_save();
     hub_timeout_reset();
