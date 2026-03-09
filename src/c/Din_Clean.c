@@ -1448,7 +1448,8 @@ static void init() {
   app_message_register_outbox_failed(outbox_failed_callback);
   app_message_register_outbox_sent(outbox_sent_callback);
 
-  app_message_open(1024, 50);
+  AppMessageResult msg_result = app_message_open(1024, 64);
+  APP_LOG(APP_LOG_LEVEL_INFO, "app_message_open: %d (0=OK)", (int)msg_result);
   app_focus_service_subscribe_handlers((AppFocusHandlers){
       .did_focus = app_focus_changed, .will_focus = app_focus_changing});
 

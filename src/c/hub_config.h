@@ -24,10 +24,10 @@
 #define KEY_HUB_ANIM         362
 
 // Limits
-#define HUB_MAX_MENU_ITEMS  12
+#define HUB_MAX_MENU_ITEMS   8  // Reduced from 12 to save 152 bytes BSS on APLITE
 #define HUB_MAX_WIDGETS      6
 #define HUB_MAX_VIEWS        4
-#define HUB_MAX_LABEL       16
+#define HUB_MAX_LABEL       12  // Reduced from 16 to save 64 bytes BSS on APLITE
 #define HUB_MAX_MENU_DEPTH   3
 
 // --- Enums ---
