@@ -79,6 +79,12 @@
 #define KEY_FORECAST_RAIN41 132
 #define KEY_FORECAST_RAIN42 133
 
+// Extended hourly forecast: temps for h+15, h+18, h+21, h+24
+#define KEY_FORECAST_TEMP6 212
+#define KEY_FORECAST_TEMP7 213
+#define KEY_FORECAST_TEMP8 214
+#define KEY_FORECAST_TEMP9 215
+
 #define KEY_RADIO_UNITS 36
 #define KEY_RADIO_REFRESH 54
 #define KEY_TOGGLE_VIBRATION 37
@@ -213,8 +219,8 @@ static char icon3[20] = " ";
 static char location[16] = " ";
 static char rain_ico_val;
 
-// Hourly forecast data (5 temps, 12 rain bars, 4 winds/hours for 0-12h)
-int8_t graph_temps[5] = {10, 10, 10, 10, 10};
+// Hourly forecast data (9 temps for 0-24h, 12 rain bars, 4 winds/hours for 0-12h)
+int8_t graph_temps[9] = {10, 10, 10, 10, 10, 10, 10, 10, 10};
 uint8_t graph_rains[12] = {0};
 uint8_t graph_wind_val[4] = {0};
 uint8_t graph_hours[4] = {0, 3, 6, 9};
@@ -810,6 +816,16 @@ static void inbox_received_callback(DictionaryIterator *iterator,
       snprintf(days_wind[1], sizeof(days_wind[1]), "%s", t->value->cstring);
     if ((t = dict_find(iterator, KEY_DAY3_WIND)))
       snprintf(days_wind[2], sizeof(days_wind[2]), "%s", t->value->cstring);
+
+    // Extended hourly temps (h+15 to h+24 for page 2 of hourly widget)
+    if ((t = dict_find(iterator, KEY_FORECAST_TEMP6)))
+      graph_temps[5] = (int)t->value->int32;
+    if ((t = dict_find(iterator, KEY_FORECAST_TEMP7)))
+      graph_temps[6] = (int)t->value->int32;
+    if ((t = dict_find(iterator, KEY_FORECAST_TEMP8)))
+      graph_temps[7] = (int)t->value->int32;
+    if ((t = dict_find(iterator, KEY_FORECAST_TEMP9)))
+      graph_temps[8] = (int)t->value->int32;
 
     persist_write_string(KEY_FORECAST_ICON1, icon1);
     persist_write_string(KEY_FORECAST_ICON2, icon2);

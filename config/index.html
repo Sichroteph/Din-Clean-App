@@ -1649,10 +1649,10 @@
     document.getElementById('color_right_back').value = localStorage['color_right_back'] || '0x000000';
     document.getElementById('color_left_back').value = localStorage['color_left_back'] || '0x000000';
 
-    // Units (radio_units: checked = metric)
-    var savedUnits = JSON.parse(localStorage['radio_units'] || 'false');
-    document.getElementById('radio_units').checked = !savedUnits; // false=metric(checked), true=imperial
-    restoreSeg('radio_units', savedUnits ? 'a' : 'b');
+    // Units (radio_units: true=metric, false=imperial)
+    var savedUnits = JSON.parse(localStorage['radio_units'] === undefined || localStorage['radio_units'] === null ? 'true' : (localStorage['radio_units'] || 'true'));
+    document.getElementById('radio_units').checked = savedUnits; // true=metric checked
+    restoreSeg('radio_units', savedUnits ? 'b' : 'a'); // 'b'=metric, 'a'=imperial
 
     // Refresh
     var savedRefresh = JSON.parse(localStorage['radio_refresh'] || 'false');

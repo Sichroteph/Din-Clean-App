@@ -206,7 +206,7 @@ static void widget_back_handler(ClickRecognizerRef rec, void *context) {
 
 static uint8_t widget_weather_page_count(void) { return 3; }
 static uint8_t widget_stocks_page_count(void) { return 2; }
-static uint8_t widget_hourly_page_count(void) { return 1; }
+static uint8_t widget_hourly_page_count(void) { return 2; }
 static uint8_t widget_daily_page_count(void) { return 2; }
 
 static void widget_weather_draw(GContext *ctx, GRect bounds, uint8_t page) {
@@ -288,7 +288,6 @@ static int hourly_temp_to_y(int8_t temp, int8_t tmin, int8_t tmax) {
 }
 
 static void widget_hourly_draw(GContext *ctx, GRect bounds, uint8_t page) {
-  (void)page; // single page
   graphics_context_set_text_color(ctx, GColorWhite);
   graphics_context_set_stroke_color(ctx, GColorWhite);
   graphics_context_set_fill_color(ctx, GColorWhite);
@@ -296,20 +295,31 @@ static void widget_hourly_draw(GContext *ctx, GRect bounds, uint8_t page) {
   // X positions for 5 temperature points across the screen
   static const int tx[5] = {4, 38, 72, 106, 140};
 
-  // --- Hour labels ---
+  // Select the right 5 temps: page 0 → temps[0..4], page 1 → temps[4..8]
+  int8_t *temps = &graph_temps[page * 4];
+
   GFont font14 = fonts_get_system_font(FONT_KEY_GOTHIC_14);
+
+  // --- Hour labels ---
   for (int i = 0; i < 4; i++) {
     char hbuf[5];
-    snprintf(hbuf, sizeof(hbuf), "%dh", graph_hours[i]);
+    int h;
+    if (page == 0) {
+      h = graph_hours[i];
+    } else {
+      // Compute hours 12-21 from the base hour
+      h = (graph_hours[0] + 12 + i * 3) % 24;
+    }
+    snprintf(hbuf, sizeof(hbuf), "%dh", h);
     graphics_draw_text(ctx, hbuf, font14, GRect(i * 36, HOURLY_LABEL_Y, 36, 16),
                        GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter,
                        NULL);
   }
 
-  // --- Find min/max temps ---
+  // --- Find min/max temps for the current page ---
   int8_t ptmin = 127, ptmax = -128;
   for (int i = 0; i <= 4; i++) {
-    int8_t t = graph_temps[i];
+    int8_t t = temps[i];
     if (t < ptmin)
       ptmin = t;
     if (t > ptmax)
@@ -339,22 +349,24 @@ static void widget_hourly_draw(GContext *ctx, GRect bounds, uint8_t page) {
     }
   }
 
-  // --- Rain bars (dithered) ---
-  for (int i = 0; i < 12; i++) {
-    uint8_t rain = graph_rains[i];
-    if (rain == 0)
-      continue;
-    int bar_h = (int)rain * 30 / HOURLY_MAXRAIN;
-    if (bar_h > 30)
-      bar_h = 30;
-    if (bar_h < 1)
-      bar_h = 1;
-    int bar_x = i * 12;
-    int bar_y = HOURLY_GRAPH_BOT - bar_h;
-    for (int y = bar_y; y < HOURLY_GRAPH_BOT; y++) {
-      for (int x = bar_x; x < bar_x + 10 && x < bounds.size.w; x++) {
-        if ((x + y) % 2 == 0)
-          graphics_draw_pixel(ctx, GPoint(x, y));
+  // --- Rain bars (dithered) — page 0 only ---
+  if (page == 0) {
+    for (int i = 0; i < 12; i++) {
+      uint8_t rain = graph_rains[i];
+      if (rain == 0)
+        continue;
+      int bar_h = (int)rain * 30 / HOURLY_MAXRAIN;
+      if (bar_h > 30)
+        bar_h = 30;
+      if (bar_h < 1)
+        bar_h = 1;
+      int bar_x = i * 12;
+      int bar_y = HOURLY_GRAPH_BOT - bar_h;
+      for (int y = bar_y; y < HOURLY_GRAPH_BOT; y++) {
+        for (int x = bar_x; x < bar_x + 10 && x < bounds.size.w; x++) {
+          if ((x + y) % 2 == 0)
+            graphics_draw_pixel(ctx, GPoint(x, y));
+        }
       }
     }
   }
@@ -362,12 +374,12 @@ static void widget_hourly_draw(GContext *ctx, GRect bounds, uint8_t page) {
   // --- Temperature line ---
   graphics_context_set_stroke_width(ctx, 2);
   for (int i = 0; i < 4; i++) {
-    int y1 = hourly_temp_to_y(graph_temps[i], ptmin, ptmax);
-    int y2 = hourly_temp_to_y(graph_temps[i + 1], ptmin, ptmax);
+    int y1 = hourly_temp_to_y(temps[i], ptmin, ptmax);
+    int y2 = hourly_temp_to_y(temps[i + 1], ptmin, ptmax);
     graphics_draw_line(ctx, GPoint(tx[i], y1), GPoint(tx[i + 1], y2));
   }
   for (int i = 0; i <= 4; i++) {
-    int y = hourly_temp_to_y(graph_temps[i], ptmin, ptmax);
+    int y = hourly_temp_to_y(temps[i], ptmin, ptmax);
     graphics_fill_circle(ctx, GPoint(tx[i], y), 3);
   }
   graphics_context_set_stroke_width(ctx, 1);
@@ -375,8 +387,8 @@ static void widget_hourly_draw(GContext *ctx, GRect bounds, uint8_t page) {
   // --- Temperature labels ---
   for (int i = 0; i <= 4; i++) {
     char tbuf[6];
-    snprintf(tbuf, sizeof(tbuf), "%d°", graph_temps[i]);
-    int y = hourly_temp_to_y(graph_temps[i], ptmin, ptmax);
+    snprintf(tbuf, sizeof(tbuf), "%d\xc2\xb0", temps[i]);
+    int y = hourly_temp_to_y(temps[i], ptmin, ptmax);
     int ly = (y < HOURLY_GRAPH_TOP + 16) ? y + 5 : y - 15;
     int lx = tx[i] - 15;
     if (lx < 0)
@@ -388,23 +400,27 @@ static void widget_hourly_draw(GContext *ctx, GRect bounds, uint8_t page) {
                        NULL);
   }
 
-  // --- Wind label ---
-  char wind_label[14];
-  snprintf(wind_label, sizeof(wind_label), "Wind (%s)", wind_unit_str);
-  graphics_draw_text(ctx, wind_label, font14, GRect(0, HOURLY_WINDLABEL_Y, bounds.size.w, 16),
-                     GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
-
-  // --- Wind values ---
-  for (int i = 0; i < 4; i++) {
-    char wbuf[5];
-    snprintf(wbuf, sizeof(wbuf), "%d", graph_wind_val[i]);
-    graphics_draw_text(ctx, wbuf, font14, GRect(i * 36, HOURLY_WIND_Y, 36, 16),
+  // --- Wind section — page 0 only ---
+  if (page == 0) {
+    char wind_label[14];
+    snprintf(wind_label, sizeof(wind_label), "Wind (%s)", wind_unit_str);
+    graphics_draw_text(ctx, wind_label, font14,
+                       GRect(0, HOURLY_WINDLABEL_Y, bounds.size.w, 16),
                        GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter,
                        NULL);
+
+    for (int i = 0; i < 4; i++) {
+      char wbuf[5];
+      snprintf(wbuf, sizeof(wbuf), "%d", graph_wind_val[i]);
+      graphics_draw_text(ctx, wbuf, font14, GRect(i * 36, HOURLY_WIND_Y, 36, 16),
+                         GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter,
+                         NULL);
+    }
   }
 
   // --- Page label ---
-  graphics_draw_text(ctx, "0-12h", font14, GRect(0, HOURLY_PAGE_Y, 60, 14),
+  const char *page_label = (page == 0) ? "0-12h" : "12-24h";
+  graphics_draw_text(ctx, page_label, font14, GRect(0, HOURLY_PAGE_Y, 60, 14),
                      GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft,
                      NULL);
 }

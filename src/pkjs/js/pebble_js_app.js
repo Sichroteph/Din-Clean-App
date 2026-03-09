@@ -413,6 +413,10 @@ function processOpenMeteoResponse(responseText) {
     "KEY_DAY3_ICON": day_icons[2],
     "KEY_DAY3_RAIN": day_rains[2],
     "KEY_DAY3_WIND": day_winds[2],
+    "KEY_FORECAST_TEMP6": hourlyTemperatures.hour15,
+    "KEY_FORECAST_TEMP7": hourlyTemperatures.hour18,
+    "KEY_FORECAST_TEMP8": hourlyTemperatures.hour21,
+    "KEY_FORECAST_TEMP9": hourlyTemperatures.hour24,
   };
 
   Pebble.sendAppMessage(dict1, function () {
@@ -773,6 +777,10 @@ function processWeatherResponse(responseText) {
     "KEY_DAY3_ICON": day_icons[2],
     "KEY_DAY3_RAIN": day_rains[2],
     "KEY_DAY3_WIND": day_winds[2],
+    "KEY_FORECAST_TEMP6": hourlyTemperatures.hour15,
+    "KEY_FORECAST_TEMP7": hourlyTemperatures.hour18,
+    "KEY_FORECAST_TEMP8": hourlyTemperatures.hour21,
+    "KEY_FORECAST_TEMP9": hourlyTemperatures.hour24,
   };
 
   Pebble.sendAppMessage(wdict1, function () {
@@ -1124,7 +1132,7 @@ Pebble.addEventListener('webviewclosed', function (e) {
     localStorage.setItem(180, weather_api);
     console.log("Weather API set to: " + weather_api);
 
-    localStorage.setItem(152, radio_units ? 1 : 0);
+    localStorage.setItem(152, radio_units ? 0 : 1); // 0=metric (no Fahrenheit), 1=imperial (Fahrenheit)
     localStorage.setItem(158, input_iopool_token);
 
     // Wind speed unit for metric mode (kmh or ms)
