@@ -83,7 +83,17 @@
             "KEY_HUB_MENU_DOWN": 359,
             "KEY_HUB_WIDGETS_UP": 360,
             "KEY_HUB_WIDGETS_DOWN": 361,
-            "KEY_HUB_ANIM": 362
+            "KEY_HUB_ANIM": 362,
+            "KEY_EXT_TEMPS": 400,
+            "KEY_EXT_RAINS": 401,
+            "KEY_EXT_WINDS": 402,
+            "KEY_EXT_HOURS": 403,
+            "KEY_EXT_WMO": 404,
+            "KEY_EXT_DAY_TEMPS": 405,
+            "KEY_EXT_DAY_WMO": 406,
+            "KEY_EXT_DAY_RAIN": 407,
+            "KEY_EXT_DAY_WIND": 408,
+            "KEY_ALL_DAY_WMO": 409
         },
         "projectType": "native",
         "resources": {

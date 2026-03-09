@@ -1,10 +1,31 @@
 #include "hub_widgets.h"
+#include "weather_utils.h"
+
+// Weather data from Din_Clean.c
+extern int8_t graph_temps[];
+extern uint8_t graph_rains[];
+extern uint8_t graph_wind_val[];
+extern uint8_t graph_hours[];
+extern uint8_t graph_wmo[];
+extern char days_temp[][8];
+extern char days_icon[][20];
+extern char days_rain[][5];
+extern char days_wind[][5];
+extern int8_t ext_day_temp[];
+extern uint8_t ext_day_wmo[];
+extern uint8_t ext_day_rain[];
+extern uint8_t ext_day_wind[];
+extern uint8_t days_wmo[];
 
 // --- Widget draw/page functions ---
 static void widget_weather_draw(GContext *ctx, GRect bounds, uint8_t page);
 static void widget_stocks_draw(GContext *ctx, GRect bounds, uint8_t page);
+static void widget_hourly_draw(GContext *ctx, GRect bounds, uint8_t page);
+static void widget_daily_draw(GContext *ctx, GRect bounds, uint8_t page);
 static uint8_t widget_weather_page_count(void);
 static uint8_t widget_stocks_page_count(void);
+static uint8_t widget_hourly_page_count(void);
+static uint8_t widget_daily_page_count(void);
 
 typedef struct {
   void (*draw)(GContext *ctx, GRect bounds, uint8_t page);
@@ -13,8 +34,10 @@ typedef struct {
 } WidgetDef;
 
 static const WidgetDef s_widget_defs[] = {
-  [HUB_WIDGET_WEATHER] = { widget_weather_draw, widget_weather_page_count, "Weather" },
-  [HUB_WIDGET_STOCKS]  = { widget_stocks_draw,  widget_stocks_page_count,  "Stocks" },
+  [HUB_WIDGET_WEATHER]        = { widget_weather_draw, widget_weather_page_count, "Weather" },
+  [HUB_WIDGET_STOCKS]         = { widget_stocks_draw,  widget_stocks_page_count,  "Stocks" },
+  [HUB_WIDGET_WEATHER_HOURLY] = { widget_hourly_draw,  widget_hourly_page_count,  "Hourly" },
+  [HUB_WIDGET_WEATHER_DAILY]  = { widget_daily_draw,   widget_daily_page_count,   "Daily" },
 };
 
 typedef struct {
@@ -183,6 +206,8 @@ static void widget_back_handler(ClickRecognizerRef rec, void *context) {
 
 static uint8_t widget_weather_page_count(void) { return 3; }
 static uint8_t widget_stocks_page_count(void) { return 2; }
+static uint8_t widget_hourly_page_count(void) { return 4; }
+static uint8_t widget_daily_page_count(void) { return 4; }
 
 static void widget_weather_draw(GContext *ctx, GRect bounds, uint8_t page) {
   graphics_context_set_text_color(ctx, GColorWhite);
@@ -237,4 +262,254 @@ static void widget_stocks_draw(GContext *ctx, GRect bounds, uint8_t page) {
                      fonts_get_system_font(FONT_KEY_GOTHIC_18),
                      stub_rect, GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentCenter, NULL);
+}
+
+// ========== Hourly Weather Widget ==========
+
+#define HOURLY_LABEL_Y    0
+#define HOURLY_GRAPH_TOP  16
+#define HOURLY_GRAPH_BOT  88
+#define HOURLY_TEMP_Y     88
+#define HOURLY_ICON_Y     104
+#define HOURLY_WIND_Y     140
+#define HOURLY_PAGE_Y     156
+#define HOURLY_MAXRAIN    40
+
+static int hourly_temp_to_y(int8_t temp, int8_t tmin, int8_t tmax) {
+  int range = tmax - tmin;
+  if (range <= 0) range = 1;
+  return HOURLY_GRAPH_TOP + (tmax - temp) * (HOURLY_GRAPH_BOT - HOURLY_GRAPH_TOP) / range;
+}
+
+static void widget_hourly_draw(GContext *ctx, GRect bounds, uint8_t page) {
+  graphics_context_set_text_color(ctx, GColorWhite);
+  graphics_context_set_stroke_color(ctx, GColorWhite);
+  graphics_context_set_fill_color(ctx, GColorWhite);
+
+  int temp_base = page * 4;   // 5 temp points: [base..base+4]
+  int rain_base = page * 12;  // 12 rain bars
+  int block_base = page * 4;  // 4 wind/hour/wmo values
+
+  // X positions for 5 temperature points across the screen
+  static const int tx[5] = {4, 38, 72, 106, 140};
+
+  // --- Hour labels ---
+  GFont font14 = fonts_get_system_font(FONT_KEY_GOTHIC_14);
+  for (int i = 0; i < 4; i++) {
+    char hbuf[5];
+    snprintf(hbuf, sizeof(hbuf), "%dh", graph_hours[block_base + i]);
+    graphics_draw_text(ctx, hbuf, font14,
+      GRect(i * 36, HOURLY_LABEL_Y, 36, 16),
+      GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
+  }
+
+  // --- Find min/max temps for this page ---
+  int8_t ptmin = 127, ptmax = -128;
+  for (int i = 0; i <= 4; i++) {
+    int8_t t = graph_temps[temp_base + i];
+    if (t < ptmin) ptmin = t;
+    if (t > ptmax) ptmax = t;
+  }
+  int range = ptmax - ptmin;
+  if (range < 4) {
+    int pad = (4 - range + 1) / 2;
+    ptmin -= pad;
+    ptmax += pad;
+  } else {
+    ptmin -= 1;
+    ptmax += 1;
+  }
+
+  // --- Dotted grid lines ---
+  // 2 horizontal reference lines
+  int y_ref_top = HOURLY_GRAPH_TOP + 8;
+  int y_ref_bot = HOURLY_GRAPH_BOT - 8;
+  for (int x = 0; x < bounds.size.w; x += 4) {
+    graphics_draw_pixel(ctx, GPoint(x, y_ref_top));
+    graphics_draw_pixel(ctx, GPoint(x, y_ref_bot));
+  }
+  // 3 vertical separator lines
+  for (int col = 1; col <= 3; col++) {
+    int vx = col * 36;
+    for (int y = HOURLY_GRAPH_TOP; y < HOURLY_GRAPH_BOT; y += 4) {
+      graphics_draw_pixel(ctx, GPoint(vx, y));
+    }
+  }
+
+  // --- Rain bars (dithered) ---
+  for (int i = 0; i < 12; i++) {
+    uint8_t rain = graph_rains[rain_base + i];
+    if (rain == 0) continue;
+    int bar_h = (int)rain * 30 / HOURLY_MAXRAIN;
+    if (bar_h > 30) bar_h = 30;
+    if (bar_h < 1) bar_h = 1;
+    int bar_x = i * 12;
+    int bar_y = HOURLY_GRAPH_BOT - bar_h;
+    for (int y = bar_y; y < HOURLY_GRAPH_BOT; y++) {
+      for (int x = bar_x; x < bar_x + 10 && x < bounds.size.w; x++) {
+        if ((x + y) % 2 == 0)
+          graphics_draw_pixel(ctx, GPoint(x, y));
+      }
+    }
+  }
+
+  // --- Temperature line ---
+  graphics_context_set_stroke_width(ctx, 2);
+  for (int i = 0; i < 4; i++) {
+    int y1 = hourly_temp_to_y(graph_temps[temp_base + i], ptmin, ptmax);
+    int y2 = hourly_temp_to_y(graph_temps[temp_base + i + 1], ptmin, ptmax);
+    graphics_draw_line(ctx, GPoint(tx[i], y1), GPoint(tx[i + 1], y2));
+  }
+  // Dots at each point
+  for (int i = 0; i <= 4; i++) {
+    int y = hourly_temp_to_y(graph_temps[temp_base + i], ptmin, ptmax);
+    graphics_fill_circle(ctx, GPoint(tx[i], y), 3);
+  }
+  graphics_context_set_stroke_width(ctx, 1);
+
+  // --- Temperature labels ---
+  for (int i = 0; i <= 4; i++) {
+    char tbuf[6];
+    snprintf(tbuf, sizeof(tbuf), "%d°", graph_temps[temp_base + i]);
+    int y = hourly_temp_to_y(graph_temps[temp_base + i], ptmin, ptmax);
+    int ly = (y < HOURLY_GRAPH_TOP + 16) ? y + 5 : y - 15;
+    int lx = tx[i] - 15;
+    if (lx < 0) lx = 0;
+    if (lx > bounds.size.w - 30) lx = bounds.size.w - 30;
+    graphics_draw_text(ctx, tbuf, font14,
+      GRect(lx, ly, 30, 16),
+      GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
+  }
+
+  // --- Weather icons (4 across) ---
+  for (int i = 0; i < 4; i++) {
+    uint8_t wmo = graph_wmo[block_base + i];
+    uint8_t hr = graph_hours[block_base + i];
+    bool night = (hr >= 21 || hr < 6);
+    int icon_id = weather_utils_build_icon_from_wmo(wmo, night);
+    GBitmap *bmp = gbitmap_create_with_resource(icon_id);
+    if (bmp) {
+      graphics_draw_bitmap_in_rect(ctx, bmp, GRect(i * 36 + 1, HOURLY_ICON_Y, 35, 35));
+      gbitmap_destroy(bmp);
+    }
+  }
+
+  // --- Wind values ---
+  for (int i = 0; i < 4; i++) {
+    char wbuf[5];
+    snprintf(wbuf, sizeof(wbuf), "%d", graph_wind_val[block_base + i]);
+    graphics_draw_text(ctx, wbuf, font14,
+      GRect(i * 36, HOURLY_WIND_Y, 36, 16),
+      GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
+  }
+
+  // --- Page label ---
+  char pbuf[10];
+  int h_start = page * 12;
+  snprintf(pbuf, sizeof(pbuf), "%d-%dh", h_start, h_start + 12);
+  graphics_draw_text(ctx, pbuf, font14,
+    GRect(0, HOURLY_PAGE_Y, 60, 14),
+    GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+}
+
+// ========== Daily Weather Widget ==========
+
+static void draw_daily_row(GContext *ctx, int y, int day_index, int bounds_w) {
+  graphics_context_set_text_color(ctx, GColorWhite);
+
+  // Day abbreviation (compute from current weekday + offset)
+  time_t now_t = time(NULL);
+  struct tm *now_tm = localtime(&now_t);
+  int wday = (now_tm->tm_wday + day_index + 1) % 7;
+  const char *locale = i18n_get_system_locale();
+  const char *dayn = weather_utils_get_weekday_abbrev(locale, wday);
+
+  GFont font18b = fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
+  GFont font24b = fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD);
+  GFont font14 = fonts_get_system_font(FONT_KEY_GOTHIC_14);
+
+  // Day name (top-left)
+  graphics_draw_text(ctx, dayn, font18b,
+    GRect(2, y, 42, 22),
+    GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+
+  // Weather icon (center-left)
+  int icon_id;
+  if (day_index < 7) {
+    icon_id = weather_utils_build_icon_from_wmo(days_wmo[day_index], false);
+  } else {
+    icon_id = weather_utils_build_icon_from_wmo(0, false);
+  }
+  GBitmap *bmp = gbitmap_create_with_resource(icon_id);
+  if (bmp) {
+    graphics_draw_bitmap_in_rect(ctx, bmp, GRect(46, y + 2, 35, 35));
+    gbitmap_destroy(bmp);
+  }
+
+  // Temperature (right of icon)
+  char temp_buf[8];
+  if (day_index < 3) {
+    snprintf(temp_buf, sizeof(temp_buf), "%s", days_temp[day_index]);
+  } else {
+    snprintf(temp_buf, sizeof(temp_buf), "%d°", ext_day_temp[day_index - 3]);
+  }
+  graphics_draw_text(ctx, temp_buf, font24b,
+    GRect(84, y - 2, 58, 28),
+    GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
+
+  // Rain (below temp, right side)
+  char rain_buf[8];
+  if (day_index < 3) {
+    snprintf(rain_buf, sizeof(rain_buf), "%s", days_rain[day_index]);
+  } else {
+    snprintf(rain_buf, sizeof(rain_buf), "%dmm", ext_day_rain[day_index - 3]);
+  }
+  graphics_draw_text(ctx, rain_buf, font14,
+    GRect(84, y + 24, 58, 16),
+    GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
+
+  // Wind (below rain, right side)
+  char wind_buf[8];
+  if (day_index < 3) {
+    snprintf(wind_buf, sizeof(wind_buf), "%s", days_wind[day_index]);
+  } else {
+    snprintf(wind_buf, sizeof(wind_buf), "%d", ext_day_wind[day_index - 3]);
+  }
+  graphics_draw_text(ctx, wind_buf, font14,
+    GRect(84, y + 38, 58, 16),
+    GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
+}
+
+static void widget_daily_draw(GContext *ctx, GRect bounds, uint8_t page) {
+  graphics_context_set_text_color(ctx, GColorWhite);
+  graphics_context_set_stroke_color(ctx, GColorWhite);
+
+  int first_day = page * 2; // 0-based day index
+
+  // Draw first day row
+  if (first_day < 7) {
+    draw_daily_row(ctx, 8, first_day, bounds.size.w);
+  }
+
+  // Dotted separator line
+  for (int x = 4; x < bounds.size.w - 4; x += 3) {
+    graphics_draw_pixel(ctx, GPoint(x, 78));
+  }
+
+  // Draw second day row
+  if (first_day + 1 < 7) {
+    draw_daily_row(ctx, 84, first_day + 1, bounds.size.w);
+  }
+
+  // Page label (bottom-left)
+  char pbuf[16];
+  GFont font14 = fonts_get_system_font(FONT_KEY_GOTHIC_14);
+  if (first_day + 1 < 7) {
+    snprintf(pbuf, sizeof(pbuf), "J+%d J+%d", first_day + 1, first_day + 2);
+  } else {
+    snprintf(pbuf, sizeof(pbuf), "J+%d", first_day + 1);
+  }
+  graphics_draw_text(ctx, pbuf, font14,
+    GRect(2, bounds.size.h - 16, 80, 14),
+    GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
 }

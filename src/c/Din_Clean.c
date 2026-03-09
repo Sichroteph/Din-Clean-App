@@ -121,6 +121,18 @@
 #define KEY_DAY3_RAIN 210
 #define KEY_DAY3_WIND 211
 
+// Extended forecast keys (byte arrays)
+#define KEY_EXT_TEMPS     400
+#define KEY_EXT_RAINS     401
+#define KEY_EXT_WINDS     402
+#define KEY_EXT_HOURS     403
+#define KEY_EXT_WMO       404
+#define KEY_EXT_DAY_TEMPS 405
+#define KEY_EXT_DAY_WMO   406
+#define KEY_EXT_DAY_RAIN  407
+#define KEY_EXT_DAY_WIND  408
+#define KEY_ALL_DAY_WMO   409
+
 //******************************************************************
 
 #define WIDTH 144
@@ -206,10 +218,10 @@ static int8_t weather_temp = 0;
 static time_t t;
 static struct tm now;
 
-static int8_t tmin_val = 0;
-static int8_t tmax_val = 0;
-static uint8_t wind_speed_val = 0;
-static uint8_t humidity = 0;
+int8_t tmin_val = 0;
+int8_t tmax_val = 0;
+uint8_t wind_speed_val = 0;
+uint8_t humidity = 0;
 time_t last_refresh = 0;
 int duration = 3600;
 int offline_delay = 3600;
@@ -225,19 +237,27 @@ static char location[16] = " ";
 static char rain_ico_val;
 
 // Extended hourly forecast data (kept for future features and persistence)
-static int8_t graph_temps[5] = {10, 10, 10, 10, 10};
-static uint8_t graph_rains[12] = {0};
+int8_t graph_temps[17] = {10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10};
+uint8_t graph_rains[48] = {0};
 static char graph_icon1[20] = "";
 static char graph_icon2[20] = "";
 static char graph_icon3[20] = "";
-static uint8_t graph_wind_val[4] = {0, 0, 0, 0};
-static uint8_t graph_hours[4] = {0, 3, 6, 9};
+uint8_t graph_wind_val[16] = {0};
+uint8_t graph_hours[16] = {0, 3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36, 39, 42, 45};
+uint8_t graph_wmo[16] = {0};
 
 // 3-day forecast data
-static char days_temp[3][8] = {"--", "--", "--"};
-static char days_icon[3][20] = {"", "", ""};
-static char days_rain[3][5] = {"0mm", "0mm", "0mm"};
-static char days_wind[3][5] = {"0km", "0km", "0km"};
+char days_temp[3][8] = {"--", "--", "--"};
+char days_icon[3][20] = {"", "", ""};
+char days_rain[3][5] = {"0mm", "0mm", "0mm"};
+char days_wind[3][5] = {"0km", "0km", "0km"};
+
+// Extended daily forecast data (days 4-7)
+int8_t ext_day_temp[4] = {0};
+uint8_t ext_day_wmo[4] = {0};
+uint8_t ext_day_rain[4] = {0};
+uint8_t ext_day_wind[4] = {0};
+uint8_t days_wmo[7] = {0};
 
 // Weather retry protection
 static bool s_weather_request_pending = false;
@@ -790,6 +810,60 @@ static void inbox_received_callback(DictionaryIterator *iterator,
       snprintf(days_wind[2], sizeof(days_wind[2]), "%s",
                day3_wind_tuple->value->cstring);
 
+    // Extended hourly data (byte arrays from JS)
+    Tuple *ext_temps_tuple = dict_find(iterator, KEY_EXT_TEMPS);
+    if (ext_temps_tuple && ext_temps_tuple->length >= 12) {
+      for (int i = 0; i < 12; i++)
+        graph_temps[5 + i] = (int8_t)ext_temps_tuple->value->data[i];
+    }
+    Tuple *ext_rains_tuple = dict_find(iterator, KEY_EXT_RAINS);
+    if (ext_rains_tuple && ext_rains_tuple->length >= 36) {
+      for (int i = 0; i < 36; i++)
+        graph_rains[12 + i] = ext_rains_tuple->value->data[i];
+    }
+    Tuple *ext_winds_tuple = dict_find(iterator, KEY_EXT_WINDS);
+    if (ext_winds_tuple && ext_winds_tuple->length >= 12) {
+      for (int i = 0; i < 12; i++)
+        graph_wind_val[4 + i] = ext_winds_tuple->value->data[i];
+    }
+    Tuple *ext_hours_tuple = dict_find(iterator, KEY_EXT_HOURS);
+    if (ext_hours_tuple && ext_hours_tuple->length >= 12) {
+      for (int i = 0; i < 12; i++)
+        graph_hours[4 + i] = ext_hours_tuple->value->data[i];
+    }
+    Tuple *ext_wmo_tuple = dict_find(iterator, KEY_EXT_WMO);
+    if (ext_wmo_tuple && ext_wmo_tuple->length >= 16) {
+      for (int i = 0; i < 16; i++)
+        graph_wmo[i] = ext_wmo_tuple->value->data[i];
+    }
+
+    // Extended daily data (days 4-7, byte arrays)
+    Tuple *ext_day_temps_tuple = dict_find(iterator, KEY_EXT_DAY_TEMPS);
+    if (ext_day_temps_tuple && ext_day_temps_tuple->length >= 4) {
+      for (int i = 0; i < 4; i++)
+        ext_day_temp[i] = (int8_t)ext_day_temps_tuple->value->data[i];
+    }
+    Tuple *ext_day_wmo_tuple = dict_find(iterator, KEY_EXT_DAY_WMO);
+    if (ext_day_wmo_tuple && ext_day_wmo_tuple->length >= 4) {
+      for (int i = 0; i < 4; i++)
+        ext_day_wmo[i] = ext_day_wmo_tuple->value->data[i];
+    }
+    Tuple *ext_day_rain_tuple = dict_find(iterator, KEY_EXT_DAY_RAIN);
+    if (ext_day_rain_tuple && ext_day_rain_tuple->length >= 4) {
+      for (int i = 0; i < 4; i++)
+        ext_day_rain[i] = ext_day_rain_tuple->value->data[i];
+    }
+    Tuple *ext_day_wind_tuple = dict_find(iterator, KEY_EXT_DAY_WIND);
+    if (ext_day_wind_tuple && ext_day_wind_tuple->length >= 4) {
+      for (int i = 0; i < 4; i++)
+        ext_day_wind[i] = ext_day_wind_tuple->value->data[i];
+    }
+    Tuple *all_day_wmo_tuple = dict_find(iterator, KEY_ALL_DAY_WMO);
+    if (all_day_wmo_tuple && all_day_wmo_tuple->length >= 7) {
+      for (int i = 0; i < 7; i++)
+        days_wmo[i] = all_day_wmo_tuple->value->data[i];
+    }
+
     last_refresh = mktime(&now);
 
     persist_write_string(KEY_ICON, icon);
@@ -853,6 +927,18 @@ static void inbox_received_callback(DictionaryIterator *iterator,
     persist_write_string(KEY_DAY1_WIND, days_wind[0]);
     persist_write_string(KEY_DAY2_WIND, days_wind[1]);
     persist_write_string(KEY_DAY3_WIND, days_wind[2]);
+
+    // Persist extended data (byte arrays)
+    persist_write_data(KEY_EXT_TEMPS, &graph_temps[5], 12);
+    persist_write_data(KEY_EXT_RAINS, &graph_rains[12], 36);
+    persist_write_data(KEY_EXT_WINDS, &graph_wind_val[4], 12);
+    persist_write_data(KEY_EXT_HOURS, &graph_hours[4], 12);
+    persist_write_data(KEY_EXT_WMO, graph_wmo, 16);
+    persist_write_data(KEY_EXT_DAY_TEMPS, ext_day_temp, 4);
+    persist_write_data(KEY_EXT_DAY_WMO, ext_day_wmo, 4);
+    persist_write_data(KEY_EXT_DAY_RAIN, ext_day_rain, 4);
+    persist_write_data(KEY_EXT_DAY_WIND, ext_day_wind, 4);
+    persist_write_data(KEY_ALL_DAY_WMO, days_wmo, 7);
 
     layer_mark_dirty(layer);
   }
@@ -1155,6 +1241,28 @@ static void init_var() {
       persist_read_string(KEY_DAY3_WIND, days_wind[2], sizeof(days_wind[2]));
     }
 
+    // Restore extended data (byte arrays)
+    if (persist_exists(KEY_EXT_TEMPS))
+      persist_read_data(KEY_EXT_TEMPS, &graph_temps[5], 12);
+    if (persist_exists(KEY_EXT_RAINS))
+      persist_read_data(KEY_EXT_RAINS, &graph_rains[12], 36);
+    if (persist_exists(KEY_EXT_WINDS))
+      persist_read_data(KEY_EXT_WINDS, &graph_wind_val[4], 12);
+    if (persist_exists(KEY_EXT_HOURS))
+      persist_read_data(KEY_EXT_HOURS, &graph_hours[4], 12);
+    if (persist_exists(KEY_EXT_WMO))
+      persist_read_data(KEY_EXT_WMO, graph_wmo, 16);
+    if (persist_exists(KEY_EXT_DAY_TEMPS))
+      persist_read_data(KEY_EXT_DAY_TEMPS, ext_day_temp, 4);
+    if (persist_exists(KEY_EXT_DAY_WMO))
+      persist_read_data(KEY_EXT_DAY_WMO, ext_day_wmo, 4);
+    if (persist_exists(KEY_EXT_DAY_RAIN))
+      persist_read_data(KEY_EXT_DAY_RAIN, ext_day_rain, 4);
+    if (persist_exists(KEY_EXT_DAY_WIND))
+      persist_read_data(KEY_EXT_DAY_WIND, ext_day_wind, 4);
+    if (persist_exists(KEY_ALL_DAY_WMO))
+      persist_read_data(KEY_ALL_DAY_WMO, days_wmo, 7);
+
   } else {
     last_refresh = 0;
     wind_speed_val = 0;
@@ -1169,22 +1277,35 @@ static void init_var() {
     snprintf(icon3, sizeof(icon3), " ");
     snprintf(location, sizeof(location), " ");
 
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 17; i++) {
       graph_temps[i] = 10;
     }
-    for (int i = 0; i < 12; i++) {
+    for (int i = 0; i < 48; i++) {
       graph_rains[i] = 0;
     }
     snprintf(graph_icon1, sizeof(graph_icon1), " ");
     snprintf(graph_icon2, sizeof(graph_icon2), " ");
     snprintf(graph_icon3, sizeof(graph_icon3), " ");
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 16; i++) {
       graph_wind_val[i] = 0;
+      graph_wmo[i] = 0;
     }
     graph_hours[0] = 0;
     graph_hours[1] = 3;
     graph_hours[2] = 6;
     graph_hours[3] = 9;
+    for (int i = 4; i < 16; i++) {
+      graph_hours[i] = i * 3;
+    }
+    for (int i = 0; i < 4; i++) {
+      ext_day_temp[i] = 0;
+      ext_day_wmo[i] = 0;
+      ext_day_rain[i] = 0;
+      ext_day_wind[i] = 0;
+    }
+    for (int i = 0; i < 7; i++) {
+      days_wmo[i] = 0;
+    }
 
     snprintf(days_icon[0], sizeof(days_icon[0]), " ");
     snprintf(days_icon[1], sizeof(days_icon[1]), " ");

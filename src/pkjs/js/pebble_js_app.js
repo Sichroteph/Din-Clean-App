@@ -217,27 +217,30 @@ function processOpenMeteoResponse(responseText) {
   var hourOffset = currentHour; // Start from current hour in API data
 
   var hourlyTemperatures = {
-    hour0: 0, hour3: 0, hour6: 0, hour9: 0, hour12: 0, hour15: 0, hour18: 0, hour21: 0, hour24: 0
+    hour0: 0, hour3: 0, hour6: 0, hour9: 0, hour12: 0, hour15: 0, hour18: 0, hour21: 0, hour24: 0,
+    hour27: 0, hour30: 0, hour33: 0, hour36: 0, hour39: 0, hour42: 0, hour45: 0, hour48: 0
   };
   var hourly_time = {
-    hour0: 0, hour3: 0, hour6: 0, hour9: 0, hour12: 0, hour15: 0, hour18: 0, hour21: 0, hour24: 0
+    hour0: 0, hour3: 0, hour6: 0, hour9: 0, hour12: 0, hour15: 0, hour18: 0, hour21: 0, hour24: 0,
+    hour27: 0, hour30: 0, hour33: 0, hour36: 0, hour39: 0, hour42: 0, hour45: 0, hour48: 0
   };
   var hourly_icons = {
-    hour0: "", hour3: "", hour6: "", hour9: "", hour12: "", hour15: "", hour18: "", hour21: "", hour24: ""
+    hour0: "", hour3: "", hour6: "", hour9: "", hour12: "", hour15: "", hour18: "", hour21: "", hour24: "",
+    hour27: "", hour30: "", hour33: "", hour36: "", hour39: "", hour42: "", hour45: "", hour48: ""
   };
   var hourlyWind = {
-    hour0: "", hour3: "", hour6: "", hour9: "", hour12: "", hour15: "", hour18: "", hour21: "", hour24: ""
+    hour0: "", hour3: "", hour6: "", hour9: "", hour12: "", hour15: "", hour18: "", hour21: "", hour24: "",
+    hour27: "", hour30: "", hour33: "", hour36: "", hour39: "", hour42: "", hour45: "", hour48: ""
   };
-  var hourlyRain = {
-    hour0: 0, hour1: 0, hour2: 0, hour3: 0, hour4: 0, hour5: 0, hour6: 0, hour7: 0, hour8: 0, hour9: 0,
-    hour10: 0, hour11: 0, hour12: 0, hour13: 0, hour14: 0, hour15: 0, hour16: 0, hour17: 0, hour18: 0,
-    hour19: 0, hour20: 0, hour21: 0, hour22: 0, hour23: 0
-  };
+  var hourlyRain = {};
+  for (var ri = 0; ri < 48; ri++) { hourlyRain['hour' + ri] = 0; }
+  var hourlyWmoCode = {};
+  for (var wi = 0; wi < 16; wi++) { hourlyWmoCode['block' + wi] = 0; }
 
   var units_setting = localStorage.getItem(152);
 
-  // Extract hourly data starting from current hour
-  for (var j = 0; j <= 24; j++) {
+  // Extract hourly data starting from current hour (extended to 48h)
+  for (var j = 0; j <= 48; j++) {
     var apiIndex = hourOffset + j; // Index in API data (current hour + offset)
     if (apiIndex >= hourly.time.length) break;
 
@@ -269,92 +272,91 @@ function processOpenMeteoResponse(responseText) {
       // Icon for this hour
       var hourIsNight = isNightTime(localHour);
       hourly_icons['hour' + j] = wmoCodeToSymbolCode(hourly.weather_code[apiIndex], hourIsNight);
+
+      // Store WMO code for this 3h block
+      var blockIdx = j / 3;
+      if (blockIdx < 16) {
+        hourlyWmoCode['block' + blockIdx] = hourly.weather_code[apiIndex];
+      }
     }
 
     // Precipitation for each hour (scaled same as MET Norway processing)
-    if (j < 24) {
+    if (j < 48) {
       hourlyRain['hour' + j] = Math.round((hourly.precipitation[apiIndex] || 0) * 20);
     }
   }
 
-  // --- 3-day forecast data extraction using DAILY data ---
-  // Use daily forecast data for accurate day-by-day predictions
-  // Index 1 = tomorrow, 2 = day after tomorrow, 3 = J+3 (index 0 = today, skip it)
+  // --- 7-day forecast data extraction using DAILY data ---
   var day_temps = ["", "", ""];
   var day_icons = ["", "", ""];
   var day_rains = ["", "", ""];
   var day_winds = ["", "", ""];
+  var ext_day_temps_arr = [0, 0, 0, 0]; // days 4-7 as int8
+  var ext_day_wmo_arr = [0, 0, 0, 0];   // days 4-7 WMO codes
+  var ext_day_rain_arr = [0, 0, 0, 0];  // days 4-7 rain mm
+  var ext_day_wind_arr = [0, 0, 0, 0];  // days 4-7 wind
+  var all_day_wmo_arr = [0, 0, 0, 0, 0, 0, 0]; // all 7 days WMO
 
   var daily = json.daily;
-  if (daily && daily.time && daily.time.length > 3) {
-    // Use daily data (more accurate for multi-day forecast)
-    for (var d = 0; d < 3; d++) {
-      var dayIdx = d + 1; // Skip today (index 0), start from tomorrow (index 1)
-      if (dayIdx < daily.time.length) {
-        // Temperature (average of max and min)
-        var tempMax = daily.temperature_2m_max[dayIdx];
-        var tempMin = daily.temperature_2m_min[dayIdx];
-        var dayTemp = (tempMax + tempMin) / 2;
-        if (units == 1) {
-          dayTemp = celsiusToFahrenheit(dayTemp);
-        } else {
-          dayTemp = Math.round(dayTemp);
-        }
-        day_temps[d] = Math.round(dayTemp) + "°";
+  if (daily && daily.time && daily.time.length > 1) {
+    var maxDays = Math.min(daily.time.length - 1, 7); // up to 7 days (skip today)
+    for (var d = 0; d < maxDays; d++) {
+      var dayIdx = d + 1; // Skip today (index 0)
+      if (dayIdx >= daily.time.length) break;
 
-        // Icon from daily weather code (daytime)
-        var wmoCode = daily.weather_code[dayIdx];
-        var rainSum = daily.precipitation_sum[dayIdx] || 0;
+      var tempMax = daily.temperature_2m_max[dayIdx];
+      var tempMin = daily.temperature_2m_min[dayIdx];
+      var dayTemp = (tempMax + tempMin) / 2;
+      var wmoCode = daily.weather_code[dayIdx];
+      var rainSum = daily.precipitation_sum[dayIdx] || 0;
+      var dayWindKmh = daily.wind_gusts_10m_max[dayIdx];
 
-        // Smart icon selection: if WMO code is "overcast" (3) but significant rain is expected,
-        // override to show rain icon instead of cloudy
+      // Store WMO code for all days
+      all_day_wmo_arr[d] = wmoCode;
+
+      // Convert temperature
+      var dayTempConverted;
+      if (units == 1) {
+        dayTempConverted = celsiusToFahrenheit(dayTemp);
+      } else {
+        dayTempConverted = Math.round(dayTemp);
+      }
+      dayTempConverted = Math.round(dayTempConverted);
+
+      // Convert wind
+      var dayWind;
+      if (units == 1) {
+        dayWind = Math.round(dayWindKmh * 0.621371);
+      } else if (windSpeedUnit === 'ms') {
+        dayWind = Math.round(dayWindKmh / 3.6);
+      } else {
+        dayWind = Math.round(dayWindKmh);
+      }
+
+      if (d < 3) {
+        // Days 1-3: string format (backward compatible)
+        day_temps[d] = dayTempConverted + "°";
         if (wmoCode === 3 && rainSum > 2) {
           day_icons[d] = 'rain';
         } else {
           day_icons[d] = wmoCodeToSymbolCode(wmoCode, false);
         }
-
         day_rains[d] = Math.round(rainSum) + "mm";
-
-        // Wind gusts max for the day
-        var dayWindKmh = daily.wind_gusts_10m_max[dayIdx];
-        var dayWind;
         if (units == 1) {
-          dayWind = Math.round(dayWindKmh * 0.621371);
           day_winds[d] = dayWind + "mph";
         } else if (windSpeedUnit === 'ms') {
-          dayWind = Math.round(dayWindKmh / 3.6);
           day_winds[d] = dayWind + "m/s";
         } else {
-          dayWind = Math.round(dayWindKmh);
           day_winds[d] = dayWind + "kmh";
         }
-      }
-    }
-  } else {
-    // Fallback to hourly data if daily not available
-    var dayOffsets = [24, 48, 72];
-    for (var d = 0; d < 3; d++) {
-      var idx = dayOffsets[d];
-      if (idx < hourly.temperature_2m.length) {
-        var dayTemp = hourly.temperature_2m[idx];
-        if (units == 1) {
-          dayTemp = celsiusToFahrenheit(dayTemp);
-        } else {
-          dayTemp = Math.round(dayTemp);
-        }
-        day_temps[d] = Math.round(dayTemp) + "°";
-        day_icons[d] = wmoCodeToSymbolCode(hourly.weather_code[idx], false);
-        var rainSum = 0;
-        for (var r = 0; r < 6 && (idx + r) < hourly.precipitation.length; r++) {
-          rainSum += (hourly.precipitation[idx + r] || 0);
-        }
-        day_rains[d] = Math.round(rainSum) + "mm";
-        var dayWind = Math.round(hourly.wind_speed_10m[idx]);
-        if (units == 1) {
-          dayWind = Math.round(hourly.wind_speed_10m[idx] * 0.621371);
-        }
-        day_winds[d] = dayWind + (units == 1 ? "mph" : "km/h");
+      } else {
+        // Days 4-7: compact byte arrays
+        var ei = d - 3;
+        // Clamp temp to int8 range
+        ext_day_temps_arr[ei] = Math.max(-128, Math.min(127, dayTempConverted));
+        ext_day_wmo_arr[ei] = wmoCode;
+        ext_day_rain_arr[ei] = Math.min(255, Math.round(rainSum));
+        ext_day_wind_arr[ei] = Math.min(255, dayWind);
       }
     }
   }
@@ -372,6 +374,41 @@ function processOpenMeteoResponse(responseText) {
     h1 = h1 % 12; if (h1 === 0) h1 = 12;
     h2 = h2 % 12; if (h2 === 0) h2 = 12;
     h3 = h3 % 12; if (h3 === 0) h3 = 12;
+  }
+
+  // Build byte arrays for extended hourly data (hours 15-48, every 3h = 12 values)
+  var ext_temps_bytes = [];
+  var ext_winds_bytes = [];
+  var ext_hours_bytes = [];
+  for (var bi = 0; bi < 12; bi++) {
+    var hkey = 15 + bi * 3; // 15,18,21,...,48
+    var t = hourlyTemperatures['hour' + hkey] || 0;
+    t = Math.max(-128, Math.min(127, Math.round(t)));
+    ext_temps_bytes.push(t < 0 ? t + 256 : t);
+    var w = parseInt(hourlyWind['hour' + hkey]) || 0;
+    ext_winds_bytes.push(Math.min(255, w));
+    var lh = hourly_time['hour' + hkey] || 0;
+    if (units_setting == 1) { lh = lh % 12; if (lh === 0) lh = 12; }
+    ext_hours_bytes.push(lh);
+  }
+
+  // Extended rain bytes (hours 12-47 = 36 values)
+  var ext_rains_bytes = [];
+  for (var bi = 12; bi < 48; bi++) {
+    ext_rains_bytes.push(Math.min(255, hourlyRain['hour' + bi] || 0));
+  }
+
+  // WMO codes for all 16 3h blocks
+  var ext_wmo_bytes = [];
+  for (var bi = 0; bi < 16; bi++) {
+    ext_wmo_bytes.push(hourlyWmoCode['block' + bi] || 0);
+  }
+
+  // Convert ext_day_temps to uint8 (int8 encoding)
+  var ext_day_temps_bytes = [];
+  for (var bi = 0; bi < 4; bi++) {
+    var t = ext_day_temps_arr[bi];
+    ext_day_temps_bytes.push(t < 0 ? t + 256 : t);
   }
 
   var dictionary = {
@@ -425,6 +462,16 @@ function processOpenMeteoResponse(responseText) {
     "KEY_DAY3_ICON": day_icons[2],
     "KEY_DAY3_RAIN": day_rains[2],
     "KEY_DAY3_WIND": day_winds[2],
+    "KEY_EXT_TEMPS": ext_temps_bytes,
+    "KEY_EXT_RAINS": ext_rains_bytes,
+    "KEY_EXT_WINDS": ext_winds_bytes,
+    "KEY_EXT_HOURS": ext_hours_bytes,
+    "KEY_EXT_WMO": ext_wmo_bytes,
+    "KEY_EXT_DAY_TEMPS": ext_day_temps_bytes,
+    "KEY_EXT_DAY_WMO": ext_day_wmo_arr,
+    "KEY_EXT_DAY_RAIN": ext_day_rain_arr,
+    "KEY_EXT_DAY_WIND": ext_day_wind_arr,
+    "KEY_ALL_DAY_WMO": all_day_wmo_arr,
   };
 
   Pebble.sendAppMessage(dictionary,
@@ -906,7 +953,7 @@ function getForecast() {
       'latitude=' + current_Latitude + '&longitude=' + current_Longitude +
       '&hourly=temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_gusts_10m' +
       '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,wind_gusts_10m_max' +
-      '&forecast_days=4&timezone=auto';
+      '&forecast_days=7&timezone=auto';
 
     console.log(urlOpenMeteo);
 

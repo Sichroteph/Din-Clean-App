@@ -11,3 +11,4 @@ const char *weather_utils_get_month_abbrev(const char *locale, int month_index);
 void weather_utils_create_date_text(const char *locale, int day_index,
                                     char *out_buffer,
                                     size_t out_buffer_size);
+int weather_utils_build_icon_from_wmo(uint8_t wmo_code, bool is_night);

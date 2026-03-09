@@ -1,6 +1,6 @@
 #include "hub_menu.h"
-#include "hub_pseudoapp.h"
 #include "hub_actions.h"
+#include "hub_pseudoapp.h"
 
 typedef struct {
   Window *window;
@@ -12,13 +12,13 @@ typedef struct {
   int8_t parent_index;
   uint8_t depth;
   HubDirection direction;
-  uint8_t padding;  // empty rows at top for UP-opened root menus with few items
+  uint8_t padding; // empty rows at top for UP-opened root menus with few items
 } MenuCtx;
 
 // Forward declarations
 static uint16_t menu_get_num_rows(MenuLayer *ml, uint16_t section, void *data);
-static void menu_draw_row(GContext *ctx, const Layer *cell,
-                          MenuIndex *idx, void *data);
+static void menu_draw_row(GContext *ctx, const Layer *cell, MenuIndex *idx,
+                          void *data);
 static void menu_select(MenuLayer *ml, MenuIndex *idx, void *data);
 static void menu_selection_changed(MenuLayer *ml, MenuIndex new_index,
                                    MenuIndex old_index, void *data);
@@ -39,7 +39,8 @@ void hub_menu_push(bool is_up_menu, HubDirection direction) {
     items = hub_config_get_down_menu(&count);
   }
 
-  if (!items || count == 0) return;
+  if (!items || count == 0)
+    return;
 
   hub_menu_push_submenu(items, count, -1, 0, direction);
 }
@@ -47,10 +48,12 @@ void hub_menu_push(bool is_up_menu, HubDirection direction) {
 void hub_menu_push_submenu(const HubMenuItem *items, uint8_t count,
                            int8_t parent_index, uint8_t depth,
                            HubDirection direction) {
-  if (depth >= HUB_MAX_MENU_DEPTH) return;
+  if (depth >= HUB_MAX_MENU_DEPTH)
+    return;
 
   MenuCtx *ctx = malloc(sizeof(MenuCtx));
-  if (!ctx) return;
+  if (!ctx)
+    return;
 
   ctx->all_items = items;
   ctx->all_count = count;
@@ -60,7 +63,7 @@ void hub_menu_push_submenu(const HubMenuItem *items, uint8_t count,
 
   // Find visible items (children of parent_index)
   ctx->visible_count = hub_menu_get_children(
-    items, count, parent_index, ctx->visible_indices, HUB_MAX_MENU_ITEMS);
+      items, count, parent_index, ctx->visible_indices, HUB_MAX_MENU_ITEMS);
 
   if (ctx->visible_count == 0) {
     free(ctx);
@@ -69,10 +72,10 @@ void hub_menu_push_submenu(const HubMenuItem *items, uint8_t count,
 
   ctx->window = window_create();
   window_set_user_data(ctx->window, ctx);
-  window_set_window_handlers(ctx->window, (WindowHandlers) {
-    .load = menu_window_load,
-    .unload = menu_window_unload,
-  });
+  window_set_window_handlers(ctx->window, (WindowHandlers){
+                                              .load = menu_window_load,
+                                              .unload = menu_window_unload,
+                                          });
 
   window_stack_push(ctx->window, true);
 }
@@ -87,7 +90,8 @@ static void menu_window_load(Window *window) {
 
   // Calculate padding for UP-opened root menus with few items
   ctx->padding = 0;
-  if (ctx->depth == 0 && ctx->direction == HUB_DIR_UP && ctx->visible_count < 4) {
+  if (ctx->depth == 0 && ctx->direction == HUB_DIR_UP &&
+      ctx->visible_count < 4) {
     ctx->padding = 4 - ctx->visible_count;
   }
 
@@ -95,22 +99,26 @@ static void menu_window_load(Window *window) {
   GRect bounds = layer_get_bounds(root);
 
   ctx->menu = menu_layer_create(bounds);
-  menu_layer_set_callbacks(ctx->menu, ctx, (MenuLayerCallbacks) {
-    .get_num_rows = menu_get_num_rows,
-    .draw_row = menu_draw_row,
-    .select_click = menu_select,
-    .selection_changed = menu_selection_changed,
-  });
-  window_set_click_config_provider_with_context(window, menu_click_config_provider, ctx);
+  menu_layer_set_callbacks(ctx->menu, ctx,
+                           (MenuLayerCallbacks){
+                               .get_num_rows = menu_get_num_rows,
+                               .draw_row = menu_draw_row,
+                               .select_click = menu_select,
+                               .selection_changed = menu_selection_changed,
+                           });
+  window_set_click_config_provider_with_context(
+      window, menu_click_config_provider, ctx);
   layer_add_child(root, menu_layer_get_layer(ctx->menu));
 
-  if (ctx->depth == 0 && ctx->direction == HUB_DIR_UP && ctx->visible_count > 0) {
+  if (ctx->depth == 0 && ctx->direction == HUB_DIR_UP &&
+      ctx->visible_count > 0) {
     // Start at last real item (after padding), aligned to bottom for continuity
-    MenuIndex last = { .section = 0, .row = ctx->padding + ctx->visible_count - 1 };
+    MenuIndex last = {.section = 0,
+                      .row = ctx->padding + ctx->visible_count - 1};
     menu_layer_set_selected_index(ctx->menu, last, MenuRowAlignBottom, false);
   } else if (ctx->depth > 0) {
     // Submenus: always start at first item, aligned to top
-    MenuIndex first = { .section = 0, .row = 0 };
+    MenuIndex first = {.section = 0, .row = 0};
     menu_layer_set_selected_index(ctx->menu, first, MenuRowAlignTop, false);
   }
 
@@ -129,12 +137,13 @@ static uint16_t menu_get_num_rows(MenuLayer *ml, uint16_t section, void *data) {
   return ctx->visible_count + ctx->padding;
 }
 
-static void menu_draw_row(GContext *gctx, const Layer *cell,
-                          MenuIndex *idx, void *data) {
+static void menu_draw_row(GContext *gctx, const Layer *cell, MenuIndex *idx,
+                          void *data) {
   MenuCtx *ctx = data;
 
   // Padding rows are empty
-  if (idx->row < ctx->padding) return;
+  if (idx->row < ctx->padding)
+    return;
 
   uint8_t real_row = idx->row - ctx->padding;
   uint8_t item_idx = ctx->visible_indices[real_row];
@@ -156,47 +165,46 @@ static void menu_draw_row(GContext *gctx, const Layer *cell,
   int icon_y = (bounds.size.h - ICON_W) / 2;
 
   switch (item->type) {
-    case HUB_MI_FOLDER:
-      // Tab: 5×2 at top-left of icon area
-      graphics_fill_rect(gctx, GRect(ICON_X, icon_y, 5, 2), 0, GCornerNone);
-      // Body: outline rectangle, 1 px below the tab
-      graphics_draw_rect(gctx, GRect(ICON_X, icon_y + 1, ICON_W, ICON_W - 1));
-      break;
+  case HUB_MI_FOLDER:
+    // Tab: 5×2 at top-left of icon area
+    graphics_fill_rect(gctx, GRect(ICON_X, icon_y, 5, 2), 0, GCornerNone);
+    // Body: outline rectangle, 1 px below the tab
+    graphics_draw_rect(gctx, GRect(ICON_X, icon_y + 1, ICON_W, ICON_W - 1));
+    break;
 
-    case HUB_MI_PSEUDOAPP:
-      // App icon: rounded-square outline with a filled centre mark
-      graphics_draw_round_rect(gctx, GRect(ICON_X, icon_y, ICON_W, ICON_W), 3);
-      graphics_fill_rect(gctx, GRect(ICON_X + 5, icon_y + 5, 4, 4), 0, GCornerNone);
-      break;
+  case HUB_MI_PSEUDOAPP:
+    // App icon: rounded-square outline with a filled centre mark
+    graphics_draw_round_rect(gctx, GRect(ICON_X, icon_y, ICON_W, ICON_W), 3);
+    graphics_fill_rect(gctx, GRect(ICON_X + 5, icon_y + 5, 4, 4), 0,
+                       GCornerNone);
+    break;
 
-    case HUB_MI_ACTION:
-      // Quick action: right-pointing filled triangle (▶)
-      // Each column drawn as a vertical segment that shrinks toward the tip
-      for (int col = 0; col < ICON_W / 2; col++) {
-        graphics_draw_line(gctx,
-          GPoint(ICON_X + col, icon_y + col),
-          GPoint(ICON_X + col, icon_y + ICON_W - 1 - col));
-      }
-      break;
+  case HUB_MI_ACTION:
+    // Quick action: right-pointing filled triangle (▶)
+    // Each column drawn as a vertical segment that shrinks toward the tip
+    for (int col = 0; col < ICON_W / 2; col++) {
+      graphics_draw_line(gctx, GPoint(ICON_X + col, icon_y + col),
+                         GPoint(ICON_X + col, icon_y + ICON_W - 1 - col));
+    }
+    break;
   }
 
   // Label text, offset to the right of the icon, vertically centred
   int text_x = ICON_X + ICON_W + 4;
-  GRect text_rect = GRect(text_x, (bounds.size.h - 22) / 2,
-                          bounds.size.w - text_x, 26);
+  GRect text_rect =
+      GRect(text_x, (bounds.size.h - 22) / 2, bounds.size.w - text_x, 26);
   graphics_context_set_text_color(gctx, fg);
-  graphics_draw_text(gctx, item->label,
-                     fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
-                     text_rect,
-                     GTextOverflowModeTrailingEllipsis,
-                     GTextAlignmentLeft, NULL);
+  graphics_draw_text(
+      gctx, item->label, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
+      text_rect, GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
 }
 
 static void menu_select(MenuLayer *ml, MenuIndex *idx, void *data) {
   MenuCtx *ctx = data;
 
   // Ignore padding rows
-  if (idx->row < ctx->padding) return;
+  if (idx->row < ctx->padding)
+    return;
 
   uint8_t real_row = idx->row - ctx->padding;
   uint8_t item_idx = ctx->visible_indices[real_row];
@@ -205,18 +213,18 @@ static void menu_select(MenuLayer *ml, MenuIndex *idx, void *data) {
   hub_timeout_reset();
 
   switch (item->type) {
-    case HUB_MI_FOLDER:
-      hub_menu_push_submenu(ctx->all_items, ctx->all_count,
-                            item_idx, ctx->depth + 1, ctx->direction);
-      break;
-    case HUB_MI_PSEUDOAPP:
-      vibes_double_pulse();
-      hub_pseudoapp_push(item->data);
-      break;
-    case HUB_MI_ACTION:
-      vibes_double_pulse();
-      hub_action_execute(item->data);
-      break;
+  case HUB_MI_FOLDER:
+    hub_menu_push_submenu(ctx->all_items, ctx->all_count, item_idx,
+                          ctx->depth + 1, ctx->direction);
+    break;
+  case HUB_MI_PSEUDOAPP:
+    vibes_double_pulse();
+    hub_pseudoapp_push(item->data);
+    break;
+  case HUB_MI_ACTION:
+    vibes_double_pulse();
+    hub_action_execute(item->data);
+    break;
   }
 }
 
@@ -245,7 +253,7 @@ static void handle_up_click(ClickRecognizerRef recognizer, void *context) {
   }
   // Navigate up, but not past first real row
   if (current.row > first_real_row) {
-    MenuIndex prev = { .section = 0, .row = current.row - 1 };
+    MenuIndex prev = {.section = 0, .row = current.row - 1};
     menu_layer_set_selected_index(ctx->menu, prev, MenuRowAlignCenter, true);
   }
 }
@@ -265,7 +273,7 @@ static void handle_down_click(ClickRecognizerRef recognizer, void *context) {
   }
   // Navigate down, but not past last real row
   if (current.row < last_real_row) {
-    MenuIndex next = { .section = 0, .row = current.row + 1 };
+    MenuIndex next = {.section = 0, .row = current.row + 1};
     menu_layer_set_selected_index(ctx->menu, next, MenuRowAlignCenter, true);
   }
 }

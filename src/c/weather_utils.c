@@ -162,3 +162,38 @@ int weather_utils_build_icon(const char *text_icon, bool is_bw_icon) {
 
   return RESOURCE_ID_BT;
 }
+
+int weather_utils_build_icon_from_wmo(uint8_t wmo_code, bool is_night) {
+  switch (wmo_code) {
+    case 0:
+      return is_night ? RESOURCE_ID_NUIT_CLAIRE_W : RESOURCE_ID_ENSOLEILLE_W;
+    case 1:
+      return is_night ? RESOURCE_ID_NUIT_BIEN_DEGAGEE_W
+                      : RESOURCE_ID_FAIBLES_PASSAGES_NUAGEUX_W;
+    case 2:
+      return is_night ? RESOURCE_ID_NUIT_AVEC_DEVELOPPEMENT_NUAGEUX_W
+                      : RESOURCE_ID_DEVELOPPEMENT_NUAGEUX_W;
+    case 3:
+      return RESOURCE_ID_FORTEMENT_NUAGEUX_W;
+    case 45:
+    case 48:
+      return RESOURCE_ID_BROUILLARD_W;
+    case 51: case 53: case 55:
+      return RESOURCE_ID_AVERSES_DE_PLUIE_FORTE_W;
+    case 56: case 57:
+      return RESOURCE_ID_NEIGE_FORTE_W;
+    case 61: case 63: case 80: case 81:
+      return is_night ? RESOURCE_ID_NUIT_AVEC_AVERSES_W
+                      : RESOURCE_ID_AVERSES_DE_PLUIE_FORTE_W;
+    case 65: case 82:
+      return RESOURCE_ID_AVERSES_DE_PLUIE_FORTE_W;
+    case 66: case 67:
+      return RESOURCE_ID_NEIGE_FORTE_W;
+    case 71: case 73: case 75: case 77: case 85: case 86:
+      return RESOURCE_ID_NEIGE_FORTE_W;
+    case 95: case 96: case 99:
+      return RESOURCE_ID_FORTEMENT_ORAGEUX_W;
+    default:
+      return is_night ? RESOURCE_ID_NUIT_CLAIRE_W : RESOURCE_ID_ENSOLEILLE_W;
+  }
+}
