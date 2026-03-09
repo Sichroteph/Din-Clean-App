@@ -2,36 +2,45 @@
 
 ## Build & Deploy Workflow
 
-After modifying any source file (`src/`, `package.json`, `resources/`):
+**Whenever a change touches any source file (`src/`, `package.json`, `resources/`) OR the configuration page (`config/index.html`), you MUST complete ALL of the following steps — no exceptions:**
 
+### 1. Build
 ```bash
 cd "/home/christophe/pebble-projects/Din Clean/App"
 pebble build
 ```
+Verify that the build succeeds and that "Free RAM available (heap)" for aplite is above 3 KB.
 
-After modifying `config/index.html`, always deploy to GitHub Pages so the live config page is updated:
-
+### 2. Commit & push to main
 ```bash
-cd "/home/christophe/pebble-projects/Din Clean/App"
 git add -A
 git commit -m "<descriptive message>"
 git push origin main
+```
+
+### 3. Install on watch and check logs
+```bash
+pebble install --phone 192.168.1.170
+timeout 30 pebble logs --phone 192.168.1.170
+```
+- Inspect logs for crashes, `APP_LOG` errors, or bitmap allocation failures.
+- If the watch is unreachable (connection refused), try the emulator instead:
+  ```bash
+  pebble install --emulator aplite
+  timeout 20 pebble logs --emulator aplite
+  ```
+- Confirm the app launched correctly (no crash, JS ready, weather/stock fetched).
+
+### 4. Publish config page to GitHub Pages
+After **every** change — whether or not `config/index.html` was modified — keep gh-pages in sync:
+```bash
 git checkout gh-pages
 git checkout main -- config/
 git commit -m "gh-pages: <short description>"
 git push origin gh-pages
 git checkout main
 ```
-
-## Install on Watch
-
-After every `pebble build` that compiles successfully, **always** install the app on the watch:
-
-```bash
-pebble install --phone 192.168.1.170
-```
-
-If the install fails (connection refused / timeout), the watch is unreachable (Developer Mode may be off or the IP may have changed). Inform the user and ask them to enable Developer Mode in the Pebble app before retrying.
+(If `config/` is unchanged compared to gh-pages HEAD, the commit will be empty — that's fine, skip it.)
 
 ## Project Structure
 

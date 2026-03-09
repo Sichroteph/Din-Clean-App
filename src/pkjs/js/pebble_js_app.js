@@ -1310,6 +1310,7 @@ Pebble.addEventListener('appmessage',
     if ((navigator.onLine) || (b_force_internet)) {
       console.log("Appel météo !!");
       getWeather();
+      fetchStockData();
     }
   }
 );
