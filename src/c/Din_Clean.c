@@ -963,7 +963,7 @@ static void inbox_received_callback(DictionaryIterator *iterator,
 
     flags.is_bt = bt_tuple ? bt_tuple->value->int32 : flags.is_bt;
     flags.is_metric =
-        radio_tuple ? !(radio_tuple->value->int32) : flags.is_metric;
+        radio_tuple ? (radio_tuple->value->int32 != 1) : flags.is_metric;
     flags.is_30mn = refresh_tuple ? refresh_tuple->value->int32 : flags.is_30mn;
     flags.is_vibration =
         vibration_tuple ? vibration_tuple->value->int32 : flags.is_vibration;

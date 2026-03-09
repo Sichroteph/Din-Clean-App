@@ -1152,6 +1152,11 @@ Pebble.addEventListener('showConfiguration', function () {
 
 
 Pebble.addEventListener('webviewclosed', function (e) {
+  try {
+  if (!e.response || e.response === 'CANCELLED') {
+    console.log('Webview closed without submitting config (response: ' + e.response + ')');
+    return;
+  }
   var configData = JSON.parse(decodeURIComponent(e.response));
   console.log('Configuration page returned: ' + JSON.stringify(configData));
 
@@ -1178,7 +1183,8 @@ Pebble.addEventListener('webviewclosed', function (e) {
   localStorage.setItem(181, wind_speed_unit);
   console.log("Wind speed unit set to: " + wind_speed_unit);
 
-  dict['KEY_RADIO_UNITS'] = radio_units ? 1 : 0;
+  // Use 2 for metric (never 0 — Pebble SDK may drop zero-value integer entries)
+  dict['KEY_RADIO_UNITS'] = radio_units ? 1 : 2;
   dict['KEY_RADIO_REFRESH'] = radio_refresh ? 1 : 0;
   dict['KEY_TOGGLE_VIBRATION'] = toggle_vibration ? 1 : 0;
   dict['KEY_TOGGLE_BT'] = toggle_bt ? 1 : 0;
@@ -1262,4 +1268,7 @@ Pebble.addEventListener('webviewclosed', function (e) {
   }, function () {
     console.log("Failed to send configuration");
   });
+  } catch (err) {
+    console.error('webviewclosed error: ' + (err && err.message ? err.message : err));
+  }
 });
