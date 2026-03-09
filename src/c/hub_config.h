@@ -23,6 +23,24 @@
 #define KEY_HUB_WIDGETS_DOWN 361
 #define KEY_HUB_ANIM         362
 
+// Stock widget message keys & persist
+#define KEY_STOCK_DATA       370
+#define KEY_STOCK_COUNT      371
+#define HUB_PERSIST_STOCKS   310
+
+// Stock widget limits
+#define STOCK_MAX_PANELS     5
+#define STOCK_HISTORY_POINTS 10
+
+// Stock panel data (pre-formatted by JS, no float math on watch)
+typedef struct {
+  char symbol[10];               // Display name: "DJIA", "EUR/CHF", "BTC"
+  char price[12];                // Pre-formatted: "42,531", "0.9385"
+  char change[8];                // "+0.8%", "-1.2%"
+  uint8_t history[STOCK_HISTORY_POINTS]; // 0-100 normalized
+  bool positive;                 // true if change >= 0 (for trend indicator)
+} StockPanel;
+
 // Limits
 #define HUB_MAX_MENU_ITEMS   8  // Reduced from 12 to save 152 bytes BSS on APLITE
 #define HUB_MAX_WIDGETS      6

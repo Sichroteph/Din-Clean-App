@@ -1052,6 +1052,214 @@ function executeWebhook(index) {
   }));
 }
 
+// ================================================================
+// Stock Widget — Yahoo Finance fetch + AppMessage send
+// ================================================================
+var stockXhrPending = false;
+
+// Default stock panels if none configured
+var DEFAULT_STOCK_SYMBOLS = ['^DJI', 'EURCHF=X', 'BTC-USD'];
+var DEFAULT_STOCK_NAMES = ['DJIA', 'EUR/CHF', 'BTC'];
+
+function getStockConfig() {
+  var symbols, names, period;
+  try {
+    symbols = JSON.parse(localStorage.getItem('stock_symbols'));
+    names = JSON.parse(localStorage.getItem('stock_names'));
+  } catch (e) { symbols = null; names = null; }
+  if (!symbols || !symbols.length) {
+    symbols = DEFAULT_STOCK_SYMBOLS;
+    names = DEFAULT_STOCK_NAMES;
+  }
+  if (!names) names = symbols.slice();
+  period = localStorage.getItem('stock_period') || '5d';
+  return { symbols: symbols, names: names, period: period };
+}
+
+// Format a price for the Pebble display (max 11 chars)
+function formatStockPrice(price) {
+  if (price >= 10000) return Math.round(price).toLocaleString('en-US');
+  if (price >= 100) return price.toFixed(1);
+  if (price >= 1) return price.toFixed(2);
+  return price.toFixed(4);
+}
+
+// Sample an array to exactly n evenly-spaced points
+function sampleArray(arr, n) {
+  if (arr.length <= n) {
+    // Pad or return as-is
+    var out = arr.slice();
+    while (out.length < n) out.push(out[out.length - 1]);
+    return out;
+  }
+  var result = [];
+  for (var i = 0; i < n; i++) {
+    var idx = Math.round(i * (arr.length - 1) / (n - 1));
+    result.push(arr[idx]);
+  }
+  return result;
+}
+
+// Normalize values to 0-100 range
+function normalizeHistory(values) {
+  var min = values[0], max = values[0];
+  for (var i = 1; i < values.length; i++) {
+    if (values[i] < min) min = values[i];
+    if (values[i] > max) max = values[i];
+  }
+  var range = max - min;
+  if (range < 0.0001) range = 1; // flat line → all 50
+  var result = [];
+  for (var j = 0; j < values.length; j++) {
+    var v = Math.round((values[j] - min) / range * 100);
+    if (v < 0) v = 0;
+    if (v > 100) v = 100;
+    result.push(v);
+  }
+  return result;
+}
+
+// Build fake stock data for emulator testing
+function buildFakeStockData() {
+  return [
+    { symbol: 'DJIA', price: '42,531', change: '+0.8%', positive: true,
+      history: [30, 35, 42, 50, 48, 55, 62, 70, 78, 85] },
+    { symbol: 'EUR/CHF', price: '0.9385', change: '-0.3%', positive: false,
+      history: [80, 75, 70, 65, 60, 55, 50, 48, 45, 40] },
+    { symbol: 'BTC', price: '97,500', change: '+2.1%', positive: true,
+      history: [10, 20, 15, 30, 45, 40, 60, 55, 80, 95] }
+  ];
+}
+
+// Send stock panels to watch via chained AppMessages
+function sendStockPanels(panels) {
+  if (!panels || panels.length === 0) return;
+
+  // Send count first
+  Pebble.sendAppMessage({ 'KEY_STOCK_COUNT': panels.length }, function () {
+    console.log('Stock count sent: ' + panels.length);
+    // Chain-send each panel
+    sendStockPanel(panels, 0);
+  }, function () {
+    console.log('Error sending stock count');
+  });
+}
+
+function sendStockPanel(panels, idx) {
+  if (idx >= panels.length) {
+    console.log('All stock panels sent successfully');
+    stockXhrPending = false;
+    return;
+  }
+  var p = panels[idx];
+  var histStr = normalizeHistory(p.history).join(',');
+  var dataStr = idx + '|' + p.symbol + '|' + p.price + '|' +
+                (p.positive ? '+' : '') + p.change + '|' + histStr;
+
+  Pebble.sendAppMessage({ 'KEY_STOCK_DATA': dataStr }, function () {
+    console.log('Stock panel ' + idx + ' sent: ' + p.symbol);
+    sendStockPanel(panels, idx + 1);
+  }, function () {
+    console.log('Error sending stock panel ' + idx);
+    stockXhrPending = false;
+  });
+}
+
+// Fetch stock data from Yahoo Finance for all configured symbols
+function fetchStockData() {
+  if (stockXhrPending) {
+    console.log('Stock fetch already pending, skipping');
+    return;
+  }
+
+  if (bFakeData == 1) {
+    console.log('Using fake stock data');
+    sendStockPanels(buildFakeStockData());
+    return;
+  }
+
+  stockXhrPending = true;
+  var config = getStockConfig();
+  var panels = [];
+  var remaining = config.symbols.length;
+
+  // Period → Yahoo Finance range/interval
+  var range = config.period;
+  var interval;
+  if (range === '1mo') interval = '1d';
+  else if (range === '3mo') interval = '1wk';
+  else { range = '5d'; interval = '1h'; }
+
+  for (var i = 0; i < config.symbols.length; i++) {
+    (function (idx) {
+      var symbol = config.symbols[idx];
+      var displayName = config.names[idx] || symbol;
+      var url = 'https://query1.finance.yahoo.com/v8/finance/chart/' +
+                encodeURIComponent(symbol) +
+                '?range=' + range + '&interval=' + interval;
+
+      console.log('Fetching stock: ' + symbol + ' → ' + url);
+
+      xhrRequest(url, 'GET', function (responseText) {
+        try {
+          var json = JSON.parse(responseText);
+          var result = json.chart.result[0];
+          var closes = result.indicators.quote[0].close;
+
+          // Filter out null values
+          var validCloses = [];
+          for (var c = 0; c < closes.length; c++) {
+            if (closes[c] !== null) validCloses.push(closes[c]);
+          }
+
+          if (validCloses.length < 2) {
+            console.log('Not enough data for ' + symbol);
+            remaining--;
+            if (remaining === 0) sendStockPanels(panels);
+            return;
+          }
+
+          var sampled = sampleArray(validCloses, 10);
+          var lastPrice = validCloses[validCloses.length - 1];
+          var firstPrice = validCloses[0];
+          var changePct = ((lastPrice - firstPrice) / firstPrice * 100);
+          var changeStr = changePct.toFixed(1) + '%';
+
+          panels[idx] = {
+            symbol: displayName.substring(0, 9),
+            price: formatStockPrice(lastPrice),
+            change: changeStr,
+            positive: changePct >= 0,
+            history: sampled
+          };
+        } catch (e) {
+          console.error('Error parsing stock data for ' + symbol + ': ' + e);
+        }
+        remaining--;
+        if (remaining === 0) {
+          // Remove null entries (failed fetches)
+          var validPanels = [];
+          for (var p = 0; p < panels.length; p++) {
+            if (panels[p]) validPanels.push(panels[p]);
+          }
+          sendStockPanels(validPanels);
+        }
+      }, function (err) {
+        console.error('Stock fetch failed for ' + symbol + ': ' + err);
+        remaining--;
+        if (remaining === 0) {
+          var validPanels = [];
+          for (var p = 0; p < panels.length; p++) {
+            if (panels[p]) validPanels.push(panels[p]);
+          }
+          if (validPanels.length > 0) sendStockPanels(validPanels);
+          else stockXhrPending = false;
+        }
+      });
+    })(i);
+  }
+}
+
 // Listen for when the app is opened
 Pebble.addEventListener('ready',
   function () {
@@ -1076,6 +1284,11 @@ Pebble.addEventListener('ready',
         console.log('Auto weather fetch on startup');
         getWeather();
       }, 500);
+      // Fetch stock data after weather (delayed to avoid message collision)
+      setTimeout(function () {
+        console.log('Auto stock fetch on startup');
+        fetchStockData();
+      }, 5000);
       console.log('JS: startup timer scheduled');
     } catch (err) {
       console.error('JS: startup timer failed', err && err.message ? err.message : err);
@@ -1217,6 +1430,14 @@ Pebble.addEventListener('webviewclosed', function (e) {
       localStorage.setItem('webhook_url_0', webhook_url);
     }
 
+    // Stock configuration (stored in JS localStorage only)
+    var stock_symbols_str = configData['stock_symbols'];
+    var stock_names_str = configData['stock_names'];
+    var stock_period = configData['stock_period'];
+    if (stock_symbols_str) localStorage.setItem('stock_symbols', stock_symbols_str);
+    if (stock_names_str) localStorage.setItem('stock_names', stock_names_str);
+    if (stock_period) localStorage.setItem('stock_period', stock_period);
+
     console.log('[CFG] Sending dict keys: ' + Object.keys(dict).join(', '));
     console.log('[CFG] KEY_RADIO_UNITS=' + dict['KEY_RADIO_UNITS'] + ' KEY_HUB_TIMEOUT=' + dict['KEY_HUB_TIMEOUT'] + ' KEY_HUB_WIDGETS_UP=' + dict['KEY_HUB_WIDGETS_UP']);
     Pebble.sendAppMessage(dict, function () {
@@ -1225,6 +1446,10 @@ Pebble.addEventListener('webviewclosed', function (e) {
       setTimeout(function () {
         getWeather();
       }, 500);
+      // Refresh stock data after configuration changes
+      setTimeout(function () {
+        fetchStockData();
+      }, 3000);
     }, function () {
       console.log("Failed to send configuration");
     });

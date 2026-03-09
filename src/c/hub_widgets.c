@@ -13,6 +13,10 @@ extern char days_rain[][5];
 extern char days_wind[][5];
 extern uint8_t days_wmo[];
 
+// Stock data from Din_Clean.c
+extern StockPanel stock_panels[];
+extern uint8_t stock_panel_count;
+
 // --- Widget draw/page functions ---
 static void widget_weather_draw(GContext *ctx, GRect bounds, uint8_t page);
 static void widget_stocks_draw(GContext *ctx, GRect bounds, uint8_t page);
@@ -205,7 +209,9 @@ static void widget_back_handler(ClickRecognizerRef rec, void *context) {
 // ========== Widget implementations (stubs) ==========
 
 static uint8_t widget_weather_page_count(void) { return 3; }
-static uint8_t widget_stocks_page_count(void) { return 2; }
+static uint8_t widget_stocks_page_count(void) {
+  return stock_panel_count > 0 ? stock_panel_count : 1;
+}
 static uint8_t widget_hourly_page_count(void) { return 2; }
 static uint8_t widget_daily_page_count(void) { return 2; }
 
@@ -247,24 +253,107 @@ static void widget_weather_draw(GContext *ctx, GRect bounds, uint8_t page) {
 
 static void widget_stocks_draw(GContext *ctx, GRect bounds, uint8_t page) {
   graphics_context_set_text_color(ctx, GColorWhite);
+  graphics_context_set_stroke_color(ctx, GColorWhite);
+  graphics_context_set_fill_color(ctx, GColorWhite);
 
-  char label[16];
-  snprintf(label, sizeof(label), "Stock %d", page + 1);
+  if (stock_panel_count == 0 || page >= stock_panel_count) {
+    GRect msg_rect = GRect(0, 60, bounds.size.w, 30);
+    graphics_draw_text(ctx, "No stocks",
+                       fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD), msg_rect,
+                       GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter,
+                       NULL);
+    return;
+  }
 
-  GRect title_rect = GRect(0, 40, bounds.size.w, 34);
-  graphics_draw_text(
-      ctx, "Stocks", fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD), title_rect,
-      GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
+  StockPanel *p = &stock_panels[page];
+  GFont font14 = fonts_get_system_font(FONT_KEY_GOTHIC_14);
 
-  GRect page_rect = GRect(0, 78, bounds.size.w, 28);
-  graphics_draw_text(ctx, label, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD),
-                     page_rect, GTextOverflowModeTrailingEllipsis,
-                     GTextAlignmentCenter, NULL);
+  // --- Header: symbol (left) + price (right) ---
+  GRect sym_rect = GRect(2, -2, bounds.size.w - 4, 26);
+  graphics_draw_text(ctx, p->symbol,
+                     fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD), sym_rect,
+                     GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+  GRect price_rect = GRect(2, 0, bounds.size.w - 4, 20);
+  graphics_draw_text(ctx, p->price,
+                     fonts_get_system_font(FONT_KEY_GOTHIC_18), price_rect,
+                     GTextOverflowModeTrailingEllipsis, GTextAlignmentRight,
+                     NULL);
 
-  GRect stub_rect = GRect(0, 112, bounds.size.w, 22);
-  graphics_draw_text(ctx, "(stub)", fonts_get_system_font(FONT_KEY_GOTHIC_18),
-                     stub_rect, GTextOverflowModeTrailingEllipsis,
-                     GTextAlignmentCenter, NULL);
+  // --- Change line with trend indicator ---
+  char change_buf[12];
+  snprintf(change_buf, sizeof(change_buf), "%s %s",
+           p->positive ? "\xe2\x96\xb2" : "\xe2\x96\xbc", p->change);
+  GRect chg_rect = GRect(2, 20, bounds.size.w - 4, 18);
+  graphics_draw_text(ctx, change_buf, font14, chg_rect,
+                     GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft,
+                     NULL);
+
+  // Panel indicator (e.g., "1/3")
+  if (stock_panel_count > 1) {
+    char ind[6];
+    snprintf(ind, sizeof(ind), "%d/%d", page + 1, stock_panel_count);
+    GRect ind_rect = GRect(bounds.size.w - 36, 20, 34, 18);
+    graphics_draw_text(ctx, ind, font14, ind_rect,
+                       GTextOverflowModeTrailingEllipsis, GTextAlignmentRight,
+                       NULL);
+  }
+
+  // --- Graph area ---
+  #define STOCK_GRAPH_TOP 42
+  #define STOCK_GRAPH_BOT 148
+  #define STOCK_GRAPH_LEFT 2
+  #define STOCK_GRAPH_RIGHT 142
+
+  int graph_h = STOCK_GRAPH_BOT - STOCK_GRAPH_TOP;
+
+  // Dotted horizontal grid (3 lines)
+  for (int g = 1; g <= 3; g++) {
+    int gy = STOCK_GRAPH_TOP + g * graph_h / 4;
+    for (int x = STOCK_GRAPH_LEFT; x < STOCK_GRAPH_RIGHT; x += 4) {
+      graphics_draw_pixel(ctx, GPoint(x, gy));
+    }
+  }
+
+  // X positions for 10 history points, evenly spaced
+  int px[STOCK_HISTORY_POINTS];
+  for (int i = 0; i < STOCK_HISTORY_POINTS; i++) {
+    px[i] = STOCK_GRAPH_LEFT +
+            i * (STOCK_GRAPH_RIGHT - STOCK_GRAPH_LEFT) /
+                (STOCK_HISTORY_POINTS - 1);
+  }
+
+  // Map history (0-100) to y coordinates
+  int py[STOCK_HISTORY_POINTS];
+  for (int i = 0; i < STOCK_HISTORY_POINTS; i++) {
+    // 100 → top, 0 → bottom
+    py[i] = STOCK_GRAPH_BOT - (int)p->history[i] * graph_h / 100;
+  }
+
+  // Filled area under curve (dithered)
+  for (int i = 0; i < STOCK_HISTORY_POINTS - 1; i++) {
+    int x1 = px[i], x2 = px[i + 1];
+    int y1 = py[i], y2 = py[i + 1];
+    for (int x = x1; x <= x2; x++) {
+      // Interpolate y at this x
+      int dy = y1 + (y2 - y1) * (x - x1) / (x2 - x1 > 0 ? x2 - x1 : 1);
+      for (int y = dy; y < STOCK_GRAPH_BOT; y++) {
+        if ((x + y) % 3 == 0)
+          graphics_draw_pixel(ctx, GPoint(x, y));
+      }
+    }
+  }
+
+  // Line graph (2px stroke)
+  graphics_context_set_stroke_width(ctx, 2);
+  for (int i = 0; i < STOCK_HISTORY_POINTS - 1; i++) {
+    graphics_draw_line(ctx, GPoint(px[i], py[i]), GPoint(px[i + 1], py[i + 1]));
+  }
+  graphics_context_set_stroke_width(ctx, 1);
+
+  // Circles at first and last points
+  graphics_fill_circle(ctx, GPoint(px[0], py[0]), 3);
+  graphics_fill_circle(ctx, GPoint(px[STOCK_HISTORY_POINTS - 1],
+                                   py[STOCK_HISTORY_POINTS - 1]), 3);
 }
 
 // ========== Hourly Weather Widget ==========

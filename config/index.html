@@ -880,7 +880,50 @@
   </div>
 
   <!-- ==========================================================
-       SECTION 6: INTEGRATIONS
+       SECTION 6: STOCKS
+       ========================================================== -->
+  <div class="section" data-section>
+    <div class="section-header" onclick="toggleSection(this)">
+      <div class="icon">&#128200;</div>
+      <div class="label">Stocks</div>
+      <svg class="chevron" viewBox="0 0 20 20" fill="currentColor"><path d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"/></svg>
+    </div>
+    <div class="section-body"><div class="section-body-inner">
+      <div class="card">
+        <div class="card-header">Stock Panels</div>
+        <div class="card-footer" style="margin-bottom: 8px">Configure up to 5 panels. Press Select on the watch to cycle between panels.</div>
+        <div id="stock_panel_list"></div>
+        <div class="row" style="justify-content: space-between; padding: 8px 12px;">
+          <button class="seg-btn" id="stock_add_btn" onclick="addStockPanel()" style="flex: 0 0 auto; padding: 6px 14px;">+ Add Panel</button>
+          <select id="stock_suggest" onchange="addStockFromSuggestion(this)" style="flex: 0 0 auto; padding: 6px 8px; background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 0.75rem;">
+            <option value="">Quick add...</option>
+            <option value="^DJI|DJIA">Dow Jones (DJIA)</option>
+            <option value="EURCHF=X|EUR/CHF">EUR/CHF</option>
+            <option value="BTC-USD|BTC">Bitcoin (BTC)</option>
+            <option value="^GSPC|S&P500">S&P 500</option>
+            <option value="^IXIC|NASDAQ">NASDAQ</option>
+            <option value="EURUSD=X|EUR/USD">EUR/USD</option>
+            <option value="GC=F|Gold">Gold</option>
+            <option value="ETH-USD|ETH">Ethereum (ETH)</option>
+          </select>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">History Period</div>
+        <div class="row">
+          <div class="seg-group">
+            <button class="seg-btn active" data-val="5d" onclick="setStockPeriod(this)">1 Week</button>
+            <button class="seg-btn" data-val="1mo" onclick="setStockPeriod(this)">1 Month</button>
+            <button class="seg-btn" data-val="3mo" onclick="setStockPeriod(this)">3 Months</button>
+          </div>
+        </div>
+        <input type="hidden" id="stock_period" value="5d">
+      </div>
+    </div></div>
+  </div>
+
+  <!-- ==========================================================
+       SECTION 7: INTEGRATIONS
        ========================================================== -->
   <div class="section" data-section>
     <div class="section-header" onclick="toggleSection(this)">
@@ -994,7 +1037,7 @@
 
   var AVAILABLE_WIDGETS = [
     { id: 0, name: 'Weather', desc: '3 pages: 0-12h, 12-24h, 24-36h' },
-    { id: 1, name: 'Stocks', desc: '2 pages' },
+    { id: 1, name: 'Stocks', desc: 'Configurable panels with price graph' },
     { id: 2, name: 'Hourly Weather', desc: '4 pages of 12h (48h forecast)' },
     { id: 3, name: 'Daily Weather', desc: '7-day forecast, 2 days per page' }
   ];
@@ -1557,6 +1600,140 @@
   });
 
   // ================================================================
+  document.addEventListener('DOMContentLoaded', function () {
+    loadMenus();
+    loadWidgets();
+    loadStockPanels();
+    renderMenuTree('up');
+    renderMenuTree('down');
+    renderWidgetEditor('up');
+    renderWidgetEditor('down');
+    updateEditorVisibility();
+    updateWindUnitVisibility();
+  });
+
+  // ================================================================
+  // Stock Panel Editor
+  // ================================================================
+  var stockPanels = []; // [{symbol: '^DJI', name: 'DJIA'}, ...]
+
+  function loadStockPanels() {
+    try {
+      var syms = JSON.parse(localStorage['stock_symbols'] || 'null');
+      var names = JSON.parse(localStorage['stock_names'] || 'null');
+      if (syms && syms.length) {
+        stockPanels = [];
+        for (var i = 0; i < syms.length; i++) {
+          stockPanels.push({ symbol: syms[i], name: (names && names[i]) || syms[i] });
+        }
+      } else {
+        stockPanels = [
+          { symbol: '^DJI', name: 'DJIA' },
+          { symbol: 'EURCHF=X', name: 'EUR/CHF' },
+          { symbol: 'BTC-USD', name: 'BTC' }
+        ];
+      }
+    } catch (e) {
+      stockPanels = [
+        { symbol: '^DJI', name: 'DJIA' },
+        { symbol: 'EURCHF=X', name: 'EUR/CHF' },
+        { symbol: 'BTC-USD', name: 'BTC' }
+      ];
+    }
+    // Period
+    var period = localStorage['stock_period'] || '5d';
+    document.getElementById('stock_period').value = period;
+    var btns = document.querySelectorAll('[onclick^="setStockPeriod"]');
+    for (var b = 0; b < btns.length; b++) {
+      if (btns[b].getAttribute('data-val') === period) btns[b].classList.add('active');
+      else btns[b].classList.remove('active');
+    }
+    renderStockPanels();
+  }
+
+  function renderStockPanels() {
+    var container = document.getElementById('stock_panel_list');
+    container.innerHTML = '';
+    for (var i = 0; i < stockPanels.length; i++) {
+      var row = document.createElement('div');
+      row.className = 'widget-item-row';
+      row.innerHTML =
+        '<input type="text" class="input-field" value="' + escapeHtml(stockPanels[i].name) + '" ' +
+        'style="flex:1; margin-right:6px; max-width:80px; font-size:0.8rem;" ' +
+        'maxlength="9" placeholder="Name" onchange="updateStockName(' + i + ',this.value)">' +
+        '<input type="text" class="input-field" value="' + escapeHtml(stockPanels[i].symbol) + '" ' +
+        'style="flex:2; margin-right:6px; font-size:0.75rem;" ' +
+        'maxlength="12" placeholder="Yahoo symbol" onchange="updateStockSymbol(' + i + ',this.value)">' +
+        '<button class="menu-item-btn" onclick="moveStockPanel(' + i + ',-1)" title="Move up">&#x25B2;</button>' +
+        '<button class="menu-item-btn" onclick="moveStockPanel(' + i + ',1)" title="Move down">&#x25BC;</button>' +
+        '<button class="menu-item-btn" onclick="removeStockPanel(' + i + ')" title="Delete" style="color:#e55;">&#x2716;</button>';
+      container.appendChild(row);
+    }
+    document.getElementById('stock_add_btn').disabled = (stockPanels.length >= 5);
+    persistStockPanels();
+  }
+
+  function addStockPanel() {
+    if (stockPanels.length >= 5) return;
+    stockPanels.push({ symbol: '', name: '' });
+    renderStockPanels();
+  }
+
+  function addStockFromSuggestion(select) {
+    if (!select.value || stockPanels.length >= 5) { select.selectedIndex = 0; return; }
+    var parts = select.value.split('|');
+    stockPanels.push({ symbol: parts[0], name: parts[1] || parts[0] });
+    select.selectedIndex = 0;
+    renderStockPanels();
+  }
+
+  function removeStockPanel(idx) {
+    stockPanels.splice(idx, 1);
+    renderStockPanels();
+  }
+
+  function moveStockPanel(idx, dir) {
+    var newIdx = idx + dir;
+    if (newIdx < 0 || newIdx >= stockPanels.length) return;
+    var tmp = stockPanels[idx];
+    stockPanels[idx] = stockPanels[newIdx];
+    stockPanels[newIdx] = tmp;
+    renderStockPanels();
+  }
+
+  function updateStockSymbol(idx, val) {
+    stockPanels[idx].symbol = val;
+    persistStockPanels();
+  }
+
+  function updateStockName(idx, val) {
+    stockPanels[idx].name = val;
+    persistStockPanels();
+  }
+
+  function setStockPeriod(btn) {
+    var parent = btn.parentNode;
+    var siblings = parent.querySelectorAll('.seg-btn');
+    for (var i = 0; i < siblings.length; i++) siblings[i].classList.remove('active');
+    btn.classList.add('active');
+    document.getElementById('stock_period').value = btn.getAttribute('data-val');
+    persistStockPanels();
+  }
+
+  function persistStockPanels() {
+    var syms = [], names = [];
+    for (var i = 0; i < stockPanels.length; i++) {
+      if (stockPanels[i].symbol) {
+        syms.push(stockPanels[i].symbol);
+        names.push(stockPanels[i].name || stockPanels[i].symbol);
+      }
+    }
+    localStorage['stock_symbols'] = JSON.stringify(syms);
+    localStorage['stock_names'] = JSON.stringify(names);
+    localStorage['stock_period'] = document.getElementById('stock_period').value;
+  }
+
+  // ================================================================
   // Config data collection
   // ================================================================
   function getConfigData() {
@@ -1612,6 +1789,12 @@
     if (document.getElementById('hub_view_2').checked) views.push('2');
     if (document.getElementById('hub_view_3').checked) views.push('3');
     options['hub_views'] = views.join(',');
+
+    // Stock panels
+    persistStockPanels();
+    options['stock_symbols'] = localStorage['stock_symbols'] || '[]';
+    options['stock_names'] = localStorage['stock_names'] || '[]';
+    options['stock_period'] = document.getElementById('stock_period').value;
 
     for (var key in options) {
       localStorage[key] = options[key];
