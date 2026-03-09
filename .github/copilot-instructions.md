@@ -20,8 +20,8 @@ git push origin main
 
 ### 3. Install on watch and check logs
 ```bash
-pebble install --phone 192.168.1.170
-timeout 30 pebble logs --phone 192.168.1.170
+pebble install --phone 192.168.1.133
+timeout 30 pebble logs --phone 192.168.1.133
 ```
 - Inspect logs for crashes, `APP_LOG` errors, or bitmap allocation failures.
 - If the watch is unreachable (connection refused), try the emulator instead:
@@ -94,5 +94,6 @@ git checkout main
 - To dismiss a menu window with UP/DOWN at boundary: attach a custom `ClickConfigProvider` to the window (not the MenuLayer), detect UP when `menu_layer_get_selected_index()` row == 0, and pop the window manually. Same for DOWN at last item.
 
 ### Physical watch logs
-- `pebble logs --phone 192.168.1.170` works on the physical watch. Always use `timeout 30` to cap collection: `timeout 30 pebble logs --phone 192.168.1.170`
-- Watch IP is 192.168.1.157 (may change if DHCP reassigns; check Pebble app → Settings → Developer Mode if connection refused).
+- `pebble logs --phone 192.168.1.133` works on the physical watch. Always use `timeout 30` to cap collection: `timeout 30 pebble logs --phone 192.168.1.133`
+- **Priority IP order to try for `pebble install --phone`**: `192.168.1.133` → `192.168.1.157` → `192.168.1.170`
+- Phone IP can change if DHCP reassigns; check Pebble app → Settings → Developer Mode if connection refused.
