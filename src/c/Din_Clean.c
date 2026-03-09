@@ -360,13 +360,7 @@ float my_sqrt(float num) {
 
 static void update_proc(Layer *layer, GContext *ctx) {
   // Static locals for large structs to avoid stack overflow on real hardware
-  // (Pebble watch has ~2KB app stack; 300+ bytes of GRect/IconBarData would
-  // overflow).
-  static GRect rect_text_day, rect_text_dayw, rect_temp, rect_tmin, rect_tmax;
-  static GRect rect_screen, rect_icon, rect_icon6;
-  static GRect rect_icon_hum1, rect_icon_hum2, rect_icon_hum3, rect_icon_leaf;
-  static GRect rect_bt_disconect;
-  static GRect rect_hour_id1, rect_hour_id2, rect_minute_id1, rect_minute_id2;
+  // (Pebble watch has ~2KB app stack; IconBarData/TimeRenderData would overflow).
   static TimeRenderData time_data;
   static IconBarData icon_data;
 
@@ -383,32 +377,32 @@ static void update_proc(Layer *layer, GContext *ctx) {
   segment_thickness = 3;
 
   // DRAW DIAL
-  rect_text_day = (GRect){{TEXT_DAY_STATUS_OFFSET_X + status_offset_x,
-                           TEXT_DAY_STATUS_OFFSET_Y + status_offset_y},
-                          {RULER_XOFFSET, 150}};
-  rect_text_dayw = (GRect){{TEXT_DAYW_STATUS_OFFSET_X + status_offset_x,
-                            TEXT_DAYW_STATUS_OFFSET_Y + status_offset_y},
-                           {RULER_XOFFSET, 150}};
-  rect_temp = (GRect){{TEXT_TEMP_OFFSET_X + status_offset_x,
-                       TEXT_TEMP_OFFSET_Y + status_offset_y},
-                      {60, 60}};
+  icon_data.rect_text_day = (GRect){{TEXT_DAY_STATUS_OFFSET_X + status_offset_x,
+                                     TEXT_DAY_STATUS_OFFSET_Y + status_offset_y},
+                                    {RULER_XOFFSET, 150}};
+  icon_data.rect_text_dayw = (GRect){{TEXT_DAYW_STATUS_OFFSET_X + status_offset_x,
+                                      TEXT_DAYW_STATUS_OFFSET_Y + status_offset_y},
+                                     {RULER_XOFFSET, 150}};
+  icon_data.rect_temp = (GRect){{TEXT_TEMP_OFFSET_X + status_offset_x,
+                                 TEXT_TEMP_OFFSET_Y + status_offset_y},
+                                {60, 60}};
 
-  rect_tmin = (GRect){
+  icon_data.rect_tmin = (GRect){
       {TEXT_TMIN_OFFSET_X, TEXT_TMIN_OFFSET_Y + status_offset_y}, {45, 35}};
-  rect_tmax = (GRect){
+  icon_data.rect_tmax = (GRect){
       {TEXT_TMAX_OFFSET_X, TEXT_TMAX_OFFSET_Y + status_offset_y}, {45, 35}};
 
-  rect_screen = (GRect){{0, 0}, {144, 168}};
+  icon_data.rect_screen = (GRect){{0, 0}, {144, 168}};
 
-  rect_icon = (GRect){{ICON_X, ICON_Y + 9}, {35, 35}};
-  rect_icon6 = (GRect){{ICON6_X, ICON6_Y + 9}, {35, 35}};
+  icon_data.rect_icon = (GRect){{ICON_X, ICON_Y + 9}, {35, 35}};
+  icon_data.rect_icon6 = (GRect){{ICON6_X, ICON6_Y + 9}, {35, 35}};
 
-  rect_icon_hum1 = (GRect){{5, 116}, {7, 10}};
-  rect_icon_hum2 = (GRect){{14, 116}, {7, 10}};
-  rect_icon_hum3 = (GRect){{23, 116}, {7, 10}};
-  rect_icon_leaf = (GRect){{12, 116}, {11, 10}};
+  icon_data.rect_icon_hum1 = (GRect){{5, 116}, {7, 10}};
+  icon_data.rect_icon_hum2 = (GRect){{14, 116}, {7, 10}};
+  icon_data.rect_icon_hum3 = (GRect){{23, 116}, {7, 10}};
+  icon_data.rect_icon_leaf = (GRect){{12, 116}, {11, 10}};
 
-  rect_bt_disconect = (GRect){
+  icon_data.rect_bt_disconect = (GRect){
       {ICON_BT_X + status_offset_x, ICON_BT_Y + status_offset_y}, {35, 17}};
 
   int icon_id;
@@ -433,7 +427,7 @@ static void update_proc(Layer *layer, GContext *ctx) {
 
   snprintf(mday, sizeof(mday), "%i", now.tm_mday);
   graphics_context_set_text_color(ctx, color_temp);
-  rect_text_dayw.origin.x += 2;
+  icon_data.rect_text_dayw.origin.x += 2;
 
   bool has_fresh_weather =
       ((mktime(&now) - last_refresh) < duration + offline_delay);
@@ -462,15 +456,10 @@ static void update_proc(Layer *layer, GContext *ctx) {
   int num_x = 60;
   int num_y = 1;
 
-  rect_hour_id1 = (GRect){{num_x, num_y}, {46, 81}};
-  rect_hour_id2 = (GRect){{num_x + offset_x, num_y}, {46, 81}};
-  rect_minute_id1 = (GRect){{num_x, num_y + offset_y}, {46, 81}};
-  rect_minute_id2 = (GRect){{num_x + offset_x, num_y + offset_y}, {46, 81}};
-
-  time_data.digit_rects[0] = rect_hour_id1;
-  time_data.digit_rects[1] = rect_hour_id2;
-  time_data.digit_rects[2] = rect_minute_id1;
-  time_data.digit_rects[3] = rect_minute_id2;
+  time_data.digit_rects[0] = (GRect){{num_x, num_y}, {46, 81}};
+  time_data.digit_rects[1] = (GRect){{num_x + offset_x, num_y}, {46, 81}};
+  time_data.digit_rects[2] = (GRect){{num_x, num_y + offset_y}, {46, 81}};
+  time_data.digit_rects[3] = (GRect){{num_x + offset_x, num_y + offset_y}, {46, 81}};
   snprintf(time_data.digits, sizeof(time_data.digits), "%s", heure);
   ui_draw_time(ctx, &time_data);
 
@@ -495,20 +484,6 @@ static void update_proc(Layer *layer, GContext *ctx) {
   icon_data.met_unit = flags.is_metric ? 20 : 25;
   icon_data.icon_id = icon_id;
   icon_data.icon_id6 = icon_id6;
-  icon_data.rect_text_day = rect_text_day;
-  icon_data.rect_text_dayw = rect_text_dayw;
-  icon_data.rect_temp = rect_temp;
-  icon_data.rect_tmin = rect_tmin;
-  icon_data.rect_tmax = rect_tmax;
-  icon_data.rect_icon = rect_icon;
-  icon_data.rect_icon6 = rect_icon6;
-  icon_data.rect_icon_hum1 = rect_icon_hum1;
-  icon_data.rect_icon_hum2 = rect_icon_hum2;
-  icon_data.rect_icon_hum3 = rect_icon_hum3;
-  icon_data.rect_icon_leaf = rect_icon_leaf;
-  icon_data.rect_bt_disconect = rect_bt_disconect;
-  icon_data.rect_screen = rect_screen;
-
   ui_draw_icon_bar(ctx, &icon_data);
 
   // Draw view label for non-main views (stubs)

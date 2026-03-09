@@ -71,6 +71,10 @@ void hub_menu_push_submenu(const HubMenuItem *items, uint8_t count,
   }
 
   ctx->window = window_create();
+  if (!ctx->window) {
+    free(ctx);
+    return;
+  }
   window_set_user_data(ctx->window, ctx);
   window_set_window_handlers(ctx->window, (WindowHandlers){
                                               .load = menu_window_load,
@@ -99,6 +103,10 @@ static void menu_window_load(Window *window) {
   GRect bounds = layer_get_bounds(root);
 
   ctx->menu = menu_layer_create(bounds);
+  if (!ctx->menu) {
+    window_stack_pop(false);
+    return;
+  }
   menu_layer_set_callbacks(ctx->menu, ctx,
                            (MenuLayerCallbacks){
                                .get_num_rows = menu_get_num_rows,
@@ -230,7 +238,7 @@ static void menu_select(MenuLayer *ml, MenuIndex *idx, void *data) {
 
 static void menu_selection_changed(MenuLayer *ml, MenuIndex new_index,
                                    MenuIndex old_index, void *data) {
-  MenuCtx *ctx = data;
+  (void)data;
   hub_timeout_reset();
 }
 
