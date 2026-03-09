@@ -26,6 +26,10 @@ void hub_action_execute(uint8_t webhook_index) {
 
   ctx->close_timer = NULL;
   ctx->window = window_create();
+  if (!ctx->window) {
+    free(ctx);
+    return;
+  }
   window_set_user_data(ctx->window, ctx);
   window_set_window_handlers(ctx->window, (WindowHandlers){
                                               .load = action_window_load,

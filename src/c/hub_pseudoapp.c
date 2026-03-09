@@ -55,6 +55,10 @@ void hub_pseudoapp_push(uint8_t app_id) {
 
   ctx->app_id = app_id;
   ctx->window = window_create();
+  if (!ctx->window) {
+    free(ctx);
+    return;
+  }
   window_set_user_data(ctx->window, ctx);
   window_set_window_handlers(ctx->window, (WindowHandlers) {
     .load = pa_window_load,

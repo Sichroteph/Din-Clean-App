@@ -262,7 +262,7 @@ static void handle_up_click(ClickRecognizerRef recognizer, void *context) {
   // Navigate up, but not past first real row
   if (current.row > first_real_row) {
     MenuIndex prev = {.section = 0, .row = current.row - 1};
-    menu_layer_set_selected_index(ctx->menu, prev, MenuRowAlignCenter, true);
+    menu_layer_set_selected_index(ctx->menu, prev, MenuRowAlignCenter, false);
   }
 }
 
@@ -282,7 +282,7 @@ static void handle_down_click(ClickRecognizerRef recognizer, void *context) {
   // Navigate down, but not past last real row
   if (current.row < last_real_row) {
     MenuIndex next = {.section = 0, .row = current.row + 1};
-    menu_layer_set_selected_index(ctx->menu, next, MenuRowAlignCenter, true);
+    menu_layer_set_selected_index(ctx->menu, next, MenuRowAlignCenter, false);
   }
 }
 
