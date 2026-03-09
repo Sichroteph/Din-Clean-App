@@ -116,49 +116,32 @@ int weather_utils_build_icon(const char *text_icon, bool is_bw_icon) {
     return RESOURCE_ID_ENSOLEILLE_W;
   }
 
-  if (strcmp(text_icon, "clearsky_day") == 0) {
-    return RESOURCE_ID_ENSOLEILLE_W;
+  // Compact lookup table: exact matches
+  static const struct { const char *name; uint16_t id; } exact[] = {
+    {"clearsky_day",    RESOURCE_ID_ENSOLEILLE_W},
+    {"clearsky_night",  RESOURCE_ID_NUIT_CLAIRE_W},
+    {"fair_day",        RESOURCE_ID_FAIBLES_PASSAGES_NUAGEUX_W},
+    {"fair_polartwilight", RESOURCE_ID_FAIBLES_PASSAGES_NUAGEUX_W},
+    {"fair_night",      RESOURCE_ID_NUIT_BIEN_DEGAGEE_W},
+    {"wind",            RESOURCE_ID_WIND},
+    {"partlycloudy_night", RESOURCE_ID_NUIT_AVEC_DEVELOPPEMENT_NUAGEUX_W},
+    {"cloudy",          RESOURCE_ID_FORTEMENT_NUAGEUX_W},
+    {"rainshowers_night", RESOURCE_ID_NUIT_AVEC_AVERSES_W},
+    {"fog",             RESOURCE_ID_BROUILLARD_W},
+  };
+  for (unsigned i = 0; i < sizeof(exact)/sizeof(exact[0]); i++) {
+    if (strcmp(text_icon, exact[i].name) == 0) return exact[i].id;
   }
-  if (strcmp(text_icon, "clearsky_night") == 0) {
-    return RESOURCE_ID_NUIT_CLAIRE_W;
-  }
-  if ((strcmp(text_icon, "fair_day") == 0) ||
-      (strcmp(text_icon, "fair_polartwilight") == 0)) {
-    return RESOURCE_ID_FAIBLES_PASSAGES_NUAGEUX_W;
-  }
-  if (strcmp(text_icon, "fair_night") == 0) {
-    return RESOURCE_ID_NUIT_BIEN_DEGAGEE_W;
-  }
-  if (strcmp(text_icon, "wind") == 0) {
-    return RESOURCE_ID_WIND;
-  }
-  if ((strcmp(text_icon, "partlycloudy_day") == 0) ||
-      (strcmp(text_icon, "partlycloudy_polartwilight") == 0) ||
-      (strncmp(text_icon, "partlycloudy_ni", 15) == 0)) {
+
+  // Prefix / substring matches (order matters: check before generic "rain")
+  if (strncmp(text_icon, "partlycloudy_", 13) == 0)
     return RESOURCE_ID_DEVELOPPEMENT_NUAGEUX_W;
-  }
-  if (strcmp(text_icon, "partlycloudy_night") == 0) {
-    return RESOURCE_ID_NUIT_AVEC_DEVELOPPEMENT_NUAGEUX_W;
-  }
-  if (strcmp(text_icon, "cloudy") == 0) {
-    return RESOURCE_ID_FORTEMENT_NUAGEUX_W;
-  }
-  if (strstr(text_icon, "rain") != NULL) {
-    return RESOURCE_ID_AVERSES_DE_PLUIE_FORTE_W;
-  }
-  if (strcmp(text_icon, "rainshowers_night") == 0) {
-    return RESOURCE_ID_NUIT_AVEC_AVERSES_W;
-  }
-  if (strstr(text_icon, "thunder") != NULL) {
+  if (strstr(text_icon, "thunder") != NULL)
     return RESOURCE_ID_FORTEMENT_ORAGEUX_W;
-  }
-  if ((strstr(text_icon, "snow") != NULL) ||
-      (strstr(text_icon, "sleet") != NULL)) {
+  if (strstr(text_icon, "snow") != NULL || strstr(text_icon, "sleet") != NULL)
     return RESOURCE_ID_NEIGE_FORTE_W;
-  }
-  if (strcmp(text_icon, "fog") == 0) {
-    return RESOURCE_ID_BROUILLARD_W;
-  }
+  if (strstr(text_icon, "rain") != NULL)
+    return RESOURCE_ID_AVERSES_DE_PLUIE_FORTE_W;
 
   return RESOURCE_ID_BT;
 }

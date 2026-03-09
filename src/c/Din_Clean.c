@@ -383,9 +383,13 @@ static void update_proc(Layer *layer, GContext *ctx) {
     return;
   }
 
-  if (!flags.first_draw_logged) {
-    flags.first_draw_logged = true;
+  // Skip rendering when a hub window is on top (menu/widgets/actions) —
+  // avoids loading bitmaps that would be hidden anyway.
+  if (window_stack_get_top_window() != s_main_window) {
+    return;
   }
+
+  APP_LOG(APP_LOG_LEVEL_INFO, "HEAP pre-render: %zu", heap_bytes_free());
 
   line_interval = 5;
   segment_thickness = 3;
@@ -500,6 +504,7 @@ static void update_proc(Layer *layer, GContext *ctx) {
   icon_data.icon_id6 = icon_id6;
   ui_draw_icon_bar(ctx, &icon_data);
 
+  APP_LOG(APP_LOG_LEVEL_INFO, "HEAP post-render: %zu", heap_bytes_free());
   // Draw view label for non-main views (stubs)
   if (g_hub_config.view_count > 0 &&
       current_view_index < g_hub_config.view_count) {
@@ -625,35 +630,6 @@ static void inbox_received_callback(DictionaryIterator *iterator,
     Tuple *tmax_tuple = dict_find(iterator, KEY_TMAX);
     Tuple *icon_tuple = dict_find(iterator, KEY_ICON);
 
-    Tuple *h0_tuple = dict_find(iterator, KEY_FORECAST_H0);
-    Tuple *h1_tuple = dict_find(iterator, KEY_FORECAST_H1);
-    Tuple *h2_tuple = dict_find(iterator, KEY_FORECAST_H2);
-    Tuple *h3_tuple = dict_find(iterator, KEY_FORECAST_H3);
-    Tuple *wind0_tuple = dict_find(iterator, KEY_FORECAST_WIND0);
-    Tuple *wind1_tuple = dict_find(iterator, KEY_FORECAST_WIND1);
-    Tuple *wind2_tuple = dict_find(iterator, KEY_FORECAST_WIND2);
-    Tuple *wind3_tuple = dict_find(iterator, KEY_FORECAST_WIND3);
-    Tuple *temp1_tuple = dict_find(iterator, KEY_FORECAST_TEMP1);
-    Tuple *temp2_tuple = dict_find(iterator, KEY_FORECAST_TEMP2);
-    Tuple *temp3_tuple = dict_find(iterator, KEY_FORECAST_TEMP3);
-    Tuple *temp4_tuple = dict_find(iterator, KEY_FORECAST_TEMP4);
-    Tuple *temp5_tuple = dict_find(iterator, KEY_FORECAST_TEMP5);
-    Tuple *icon1_tuple = dict_find(iterator, KEY_FORECAST_ICON1);
-    Tuple *icon2_tuple = dict_find(iterator, KEY_FORECAST_ICON2);
-    Tuple *icon3_tuple = dict_find(iterator, KEY_FORECAST_ICON3);
-    Tuple *rain1_tuple = dict_find(iterator, KEY_FORECAST_RAIN1);
-    Tuple *rain2_tuple = dict_find(iterator, KEY_FORECAST_RAIN2);
-    Tuple *rain3_tuple = dict_find(iterator, KEY_FORECAST_RAIN3);
-    Tuple *rain4_tuple = dict_find(iterator, KEY_FORECAST_RAIN4);
-    Tuple *rain11_tuple = dict_find(iterator, KEY_FORECAST_RAIN11);
-    Tuple *rain12_tuple = dict_find(iterator, KEY_FORECAST_RAIN12);
-    Tuple *rain21_tuple = dict_find(iterator, KEY_FORECAST_RAIN21);
-    Tuple *rain22_tuple = dict_find(iterator, KEY_FORECAST_RAIN22);
-    Tuple *rain31_tuple = dict_find(iterator, KEY_FORECAST_RAIN31);
-    Tuple *rain32_tuple = dict_find(iterator, KEY_FORECAST_RAIN32);
-    Tuple *rain41_tuple = dict_find(iterator, KEY_FORECAST_RAIN41);
-    Tuple *rain42_tuple = dict_find(iterator, KEY_FORECAST_RAIN42);
-
     // Pool tuples
     Tuple *poolTemp_tuple = dict_find(iterator, KEY_POOLTEMP);
     Tuple *poolPH_tuple = dict_find(iterator, KEY_POOLPH);
@@ -678,71 +654,37 @@ static void inbox_received_callback(DictionaryIterator *iterator,
     wind_speed_val = (int)wind_speed_tuple->value->int32;
     humidity = (int)humidity_tuple->value->int32;
 
-    // Hourly temps (5 points for 0-12h)
-    if (temp1_tuple)
-      graph_temps[0] = (int)temp1_tuple->value->int32;
-    if (temp2_tuple)
-      graph_temps[1] = (int)temp2_tuple->value->int32;
-    if (temp3_tuple)
-      graph_temps[2] = (int)temp3_tuple->value->int32;
-    if (temp4_tuple)
-      graph_temps[3] = (int)temp4_tuple->value->int32;
-    if (temp5_tuple)
-      graph_temps[4] = (int)temp5_tuple->value->int32;
+    // Hourly temps, hours, rain, icons, winds — compact loops
+    Tuple *t;
+    for (int i = 0; i < 5; i++)
+      if ((t = dict_find(iterator, KEY_FORECAST_TEMP1 + i)))
+        graph_temps[i] = (int)t->value->int32;
 
-    // Hours
-    if (h0_tuple)
-      graph_hours[0] = (int)h0_tuple->value->int32;
-    if (h1_tuple)
-      graph_hours[1] = (int)h1_tuple->value->int32;
-    if (h2_tuple)
-      graph_hours[2] = (int)h2_tuple->value->int32;
-    if (h3_tuple)
-      graph_hours[3] = (int)h3_tuple->value->int32;
+    if ((t = dict_find(iterator, KEY_FORECAST_H0)))
+      graph_hours[0] = (int)t->value->int32;
+    for (int i = 0; i < 3; i++)
+      if ((t = dict_find(iterator, KEY_FORECAST_H1 + i)))
+        graph_hours[1 + i] = (int)t->value->int32;
 
-    // Rain (12 segments)
-    if (rain1_tuple)
-      graph_rains[0] = (int)rain1_tuple->value->int32;
-    if (rain11_tuple)
-      graph_rains[1] = (int)rain11_tuple->value->int32;
-    if (rain12_tuple)
-      graph_rains[2] = (int)rain12_tuple->value->int32;
-    if (rain2_tuple)
-      graph_rains[3] = (int)rain2_tuple->value->int32;
-    if (rain21_tuple)
-      graph_rains[4] = (int)rain21_tuple->value->int32;
-    if (rain22_tuple)
-      graph_rains[5] = (int)rain22_tuple->value->int32;
-    if (rain3_tuple)
-      graph_rains[6] = (int)rain3_tuple->value->int32;
-    if (rain31_tuple)
-      graph_rains[7] = (int)rain31_tuple->value->int32;
-    if (rain32_tuple)
-      graph_rains[8] = (int)rain32_tuple->value->int32;
-    if (rain4_tuple)
-      graph_rains[9] = (int)rain4_tuple->value->int32;
-    if (rain41_tuple)
-      graph_rains[10] = (int)rain41_tuple->value->int32;
-    if (rain42_tuple)
-      graph_rains[11] = (int)rain42_tuple->value->int32;
+    for (int b = 0; b < 4; b++) {
+      if ((t = dict_find(iterator, KEY_FORECAST_RAIN1 + b)))
+        graph_rains[b * 3] = (int)t->value->int32;
+      if ((t = dict_find(iterator, KEY_FORECAST_RAIN11 + b * 2)))
+        graph_rains[b * 3 + 1] = (int)t->value->int32;
+      if ((t = dict_find(iterator, KEY_FORECAST_RAIN11 + b * 2 + 1)))
+        graph_rains[b * 3 + 2] = (int)t->value->int32;
+    }
 
-    // Icons
-    if (icon1_tuple)
-      snprintf(icon1, sizeof(icon1), "%s", icon1_tuple->value->cstring);
-    if (icon2_tuple)
-      snprintf(icon2, sizeof(icon2), "%s", icon2_tuple->value->cstring);
-    if (icon3_tuple)
-      snprintf(icon3, sizeof(icon3), "%s", icon3_tuple->value->cstring);
+    char *icon_ptrs[] = {icon1, icon2, icon3};
+    for (int i = 0; i < 3; i++)
+      if ((t = dict_find(iterator, KEY_FORECAST_ICON1 + i)))
+        snprintf(icon_ptrs[i], sizeof(icon1), "%s", t->value->cstring);
 
-    // Winds
-    if (wind0_tuple)
-      graph_wind_val[0] = atoi(wind0_tuple->value->cstring);
-    if (wind1_tuple)
-      graph_wind_val[1] = atoi(wind1_tuple->value->cstring);
-    if (wind2_tuple)
-      graph_wind_val[2] = atoi(wind2_tuple->value->cstring);
-    if (wind3_tuple)
-      graph_wind_val[3] = atoi(wind3_tuple->value->cstring);
+    if ((t = dict_find(iterator, KEY_FORECAST_WIND0)))
+      graph_wind_val[0] = atoi(t->value->cstring);
+    for (int i = 0; i < 3; i++)
+      if ((t = dict_find(iterator, KEY_FORECAST_WIND1 + i)))
+        graph_wind_val[1 + i] = atoi(t->value->cstring);
 
     last_refresh = mktime(&now);
 
@@ -771,79 +713,38 @@ static void inbox_received_callback(DictionaryIterator *iterator,
   Tuple *icon1_check = dict_find(iterator, KEY_FORECAST_ICON1);
   if (!temp_tuple && icon1_check) {
     Tuple *t;
-    if ((t = dict_find(iterator, KEY_FORECAST_ICON1)))
-      snprintf(icon1, sizeof(icon1), "%s", t->value->cstring);
-    if ((t = dict_find(iterator, KEY_FORECAST_ICON2)))
-      snprintf(icon2, sizeof(icon2), "%s", t->value->cstring);
-    if ((t = dict_find(iterator, KEY_FORECAST_ICON3)))
-      snprintf(icon3, sizeof(icon3), "%s", t->value->cstring);
-    if ((t = dict_find(iterator, KEY_DAY1_TEMP)))
-      snprintf(days_temp[0], sizeof(days_temp[0]), "%s", t->value->cstring);
-    if ((t = dict_find(iterator, KEY_DAY2_TEMP)))
-      snprintf(days_temp[1], sizeof(days_temp[1]), "%s", t->value->cstring);
-    if ((t = dict_find(iterator, KEY_DAY3_TEMP)))
-      snprintf(days_temp[2], sizeof(days_temp[2]), "%s", t->value->cstring);
-    if ((t = dict_find(iterator, KEY_DAY1_ICON)))
-      snprintf(days_icon[0], sizeof(days_icon[0]), "%s", t->value->cstring);
-    if ((t = dict_find(iterator, KEY_DAY2_ICON)))
-      snprintf(days_icon[1], sizeof(days_icon[1]), "%s", t->value->cstring);
-    if ((t = dict_find(iterator, KEY_DAY3_ICON)))
-      snprintf(days_icon[2], sizeof(days_icon[2]), "%s", t->value->cstring);
-    if ((t = dict_find(iterator, KEY_DAY1_RAIN)))
-      snprintf(days_rain[0], sizeof(days_rain[0]), "%s", t->value->cstring);
-    if ((t = dict_find(iterator, KEY_DAY2_RAIN)))
-      snprintf(days_rain[1], sizeof(days_rain[1]), "%s", t->value->cstring);
-    if ((t = dict_find(iterator, KEY_DAY3_RAIN)))
-      snprintf(days_rain[2], sizeof(days_rain[2]), "%s", t->value->cstring);
-    if ((t = dict_find(iterator, KEY_DAY1_WIND))) {
-      const char *raw_wind = t->value->cstring;
-      snprintf(days_wind[0], sizeof(days_wind[0]), "%s", raw_wind);
-      const char *p = raw_wind;
-      while (*p >= '0' && *p <= '9') p++;
-      if (strncmp(p, "m/s", 3) == 0) snprintf(wind_unit_str, sizeof(wind_unit_str), "m/s");
-      else if (strncmp(p, "mph", 3) == 0) snprintf(wind_unit_str, sizeof(wind_unit_str), "mph");
-      else snprintf(wind_unit_str, sizeof(wind_unit_str), "km/h");
+    char *ic_ptrs[] = {icon1, icon2, icon3};
+    for (int i = 0; i < 3; i++)
+      if ((t = dict_find(iterator, KEY_FORECAST_ICON1 + i)))
+        snprintf(ic_ptrs[i], sizeof(icon1), "%s", t->value->cstring);
+    // 5-day forecast: days 1-3 base=200+d*4, days 4-5 base=204+d*4
+    for (int d = 0; d < 5; d++) {
+      uint32_t base = (d < 3 ? 200 : 204) + d * 4;
+      if ((t = dict_find(iterator, base)))
+        snprintf(days_temp[d], sizeof(days_temp[d]), "%s", t->value->cstring);
+      if ((t = dict_find(iterator, base + 1)))
+        snprintf(days_icon[d], sizeof(days_icon[d]), "%s", t->value->cstring);
+      if ((t = dict_find(iterator, base + 2)))
+        snprintf(days_rain[d], sizeof(days_rain[d]), "%s", t->value->cstring);
+      if ((t = dict_find(iterator, base + 3))) {
+        snprintf(days_wind[d], sizeof(days_wind[d]), "%s", t->value->cstring);
+        if (d == 0) {
+          const char *p = t->value->cstring;
+          while (*p >= '0' && *p <= '9') p++;
+          if (strncmp(p, "m/s", 3) == 0) snprintf(wind_unit_str, sizeof(wind_unit_str), "m/s");
+          else if (strncmp(p, "mph", 3) == 0) snprintf(wind_unit_str, sizeof(wind_unit_str), "mph");
+          else snprintf(wind_unit_str, sizeof(wind_unit_str), "km/h");
+        }
+      }
     }
-    if ((t = dict_find(iterator, KEY_DAY2_WIND)))
-      snprintf(days_wind[1], sizeof(days_wind[1]), "%s", t->value->cstring);
-    if ((t = dict_find(iterator, KEY_DAY3_WIND)))
-      snprintf(days_wind[2], sizeof(days_wind[2]), "%s", t->value->cstring);
-    if ((t = dict_find(iterator, KEY_DAY4_TEMP)))
-      snprintf(days_temp[3], sizeof(days_temp[3]), "%s", t->value->cstring);
-    if ((t = dict_find(iterator, KEY_DAY5_TEMP)))
-      snprintf(days_temp[4], sizeof(days_temp[4]), "%s", t->value->cstring);
-    if ((t = dict_find(iterator, KEY_DAY4_ICON)))
-      snprintf(days_icon[3], sizeof(days_icon[3]), "%s", t->value->cstring);
-    if ((t = dict_find(iterator, KEY_DAY5_ICON)))
-      snprintf(days_icon[4], sizeof(days_icon[4]), "%s", t->value->cstring);
-    if ((t = dict_find(iterator, KEY_DAY4_RAIN)))
-      snprintf(days_rain[3], sizeof(days_rain[3]), "%s", t->value->cstring);
-    if ((t = dict_find(iterator, KEY_DAY5_RAIN)))
-      snprintf(days_rain[4], sizeof(days_rain[4]), "%s", t->value->cstring);
-    if ((t = dict_find(iterator, KEY_DAY4_WIND)))
-      snprintf(days_wind[3], sizeof(days_wind[3]), "%s", t->value->cstring);
-    if ((t = dict_find(iterator, KEY_DAY5_WIND)))
-      snprintf(days_wind[4], sizeof(days_wind[4]), "%s", t->value->cstring);
 
-    // Extended hourly temps (h+15 to h+24 for page 2 of hourly widget)
-    if ((t = dict_find(iterator, KEY_FORECAST_TEMP6)))
-      graph_temps[5] = (int)t->value->int32;
-    if ((t = dict_find(iterator, KEY_FORECAST_TEMP7)))
-      graph_temps[6] = (int)t->value->int32;
-    if ((t = dict_find(iterator, KEY_FORECAST_TEMP8)))
-      graph_temps[7] = (int)t->value->int32;
-    if ((t = dict_find(iterator, KEY_FORECAST_TEMP9)))
-      graph_temps[8] = (int)t->value->int32;
-
-    // Extended hourly winds (h+12 to h+21 for page 2 of hourly widget)
-    if ((t = dict_find(iterator, KEY_FORECAST_WIND4)))
-      graph_wind_val[4] = atoi(t->value->cstring);
-    if ((t = dict_find(iterator, KEY_FORECAST_WIND5)))
-      graph_wind_val[5] = atoi(t->value->cstring);
-    if ((t = dict_find(iterator, KEY_FORECAST_WIND6)))
-      graph_wind_val[6] = atoi(t->value->cstring);
-    if ((t = dict_find(iterator, KEY_FORECAST_WIND7)))
-      graph_wind_val[7] = atoi(t->value->cstring);
+    // Extended hourly temps + winds (page 2)
+    for (int i = 0; i < 4; i++) {
+      if ((t = dict_find(iterator, KEY_FORECAST_TEMP6 + i)))
+        graph_temps[5 + i] = (int)t->value->int32;
+      if ((t = dict_find(iterator, KEY_FORECAST_WIND4 + i)))
+        graph_wind_val[4 + i] = atoi(t->value->cstring);
+    }
 
     persist_write_string(KEY_FORECAST_ICON1, icon1);
     persist_write_string(KEY_FORECAST_ICON2, icon2);
@@ -1334,11 +1235,12 @@ static void init() {
   app_message_register_outbox_sent(outbox_sent_callback);
   AppMessageResult msg_result = app_message_open(512, 64);
   s_appmsg_open = (msg_result == APP_MSG_OK);
-  APP_LOG(APP_LOG_LEVEL_INFO, "app_message_open(512,64): %d s_appmsg_open=%d",
-          (int)msg_result, (int)s_appmsg_open);
+  APP_LOG(APP_LOG_LEVEL_INFO, "app_message_open: %d heap=%zu",
+          (int)msg_result, heap_bytes_free());
 
   init_var();
   hub_config_init();
+  APP_LOG(APP_LOG_LEVEL_INFO, "post-cfg heap=%zu", heap_bytes_free());
   s_main_window = window_create();
   window_stack_push(s_main_window, true);
   window_set_click_config_provider(s_main_window, click_config_provider);
@@ -1359,6 +1261,7 @@ static void init() {
   // Mark init complete — callbacks (focus, tick) may now safely send
   // AppMessages.
   s_init_done = true;
+  APP_LOG(APP_LOG_LEVEL_INFO, "HEAP post-init: %zu", heap_bytes_free());
   // Trigger a redraw now that init is done (the initial window_stack_push draw
   // was skipped because s_init_done was false at that point).
   layer_mark_dirty(layer);

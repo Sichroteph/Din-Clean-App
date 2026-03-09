@@ -52,9 +52,9 @@ static void draw_humidity_icons(GContext *ctx, const IconBarData *d) {
   }
 }
 
+// Load each wind overlay POURTOURW1-4 only if wind exceeds threshold
 static void draw_wind_overlays_for_rect(GContext *ctx, int wind_val,
                                         int met_unit, GRect rect) {
-  // Load each wind overlay only if needed, each is a different image
   if (wind_val > met_unit) {
     GBitmap *w1 = gbitmap_create_with_resource(RESOURCE_ID_POURTOURW1);
     if (w1) {
@@ -102,7 +102,7 @@ void ui_draw_icon_bar(GContext *ctx, const IconBarData *d) {
     return;
   }
 
-  // Draw background sized to the resource to avoid stretching
+  // Draw background bitmap (34×168) at sidebar origin
   GBitmap *background = gbitmap_create_with_resource(RESOURCE_ID_BACKGROUND);
   if (background) {
     GRect bounds = gbitmap_get_bounds(background);

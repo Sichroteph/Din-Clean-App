@@ -5,28 +5,17 @@
 
 static int build_number(char number) {
   switch (number) {
-  case '0':
-    return RESOURCE_ID_0;
-  case '1':
-    return RESOURCE_ID_1;
-  case '2':
-    return RESOURCE_ID_2;
-  case '3':
-    return RESOURCE_ID_3;
-  case '4':
-    return RESOURCE_ID_4;
-  case '5':
-    return RESOURCE_ID_5;
-  case '6':
-    return RESOURCE_ID_6;
-  case '7':
-    return RESOURCE_ID_7;
-  case '8':
-    return RESOURCE_ID_8;
-  case '9':
-    return RESOURCE_ID_9;
-  default:
-    return RESOURCE_ID_0;
+  case '0': return RESOURCE_ID_0;
+  case '1': return RESOURCE_ID_1;
+  case '2': return RESOURCE_ID_2;
+  case '3': return RESOURCE_ID_3;
+  case '4': return RESOURCE_ID_4;
+  case '5': return RESOURCE_ID_5;
+  case '6': return RESOURCE_ID_6;
+  case '7': return RESOURCE_ID_7;
+  case '8': return RESOURCE_ID_8;
+  case '9': return RESOURCE_ID_9;
+  default:  return RESOURCE_ID_0;
   }
 }
 
