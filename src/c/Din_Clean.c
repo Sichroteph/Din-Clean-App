@@ -79,16 +79,7 @@
 #define KEY_FORECAST_RAIN41 132
 #define KEY_FORECAST_RAIN42 133
 
-// Graph winds (4 blocks)
-#define KEY_GRAPH_WIND0 240
-#define KEY_GRAPH_WIND1 241
-#define KEY_GRAPH_WIND2 242
-#define KEY_GRAPH_WIND3 243
 
-// Graph hours (3 additional hours, h0 already exists)
-#define KEY_GRAPH_H1 250
-#define KEY_GRAPH_H2 251
-#define KEY_GRAPH_H3 252
 
 #define KEY_RADIO_UNITS 36
 #define KEY_RADIO_REFRESH 54
@@ -121,17 +112,7 @@
 #define KEY_DAY3_RAIN 210
 #define KEY_DAY3_WIND 211
 
-// Extended forecast keys (byte arrays)
-#define KEY_EXT_TEMPS     400
-#define KEY_EXT_RAINS     401
-#define KEY_EXT_WINDS     402
-#define KEY_EXT_HOURS     403
-#define KEY_EXT_WMO       404
-#define KEY_EXT_DAY_TEMPS 405
-#define KEY_EXT_DAY_WMO   406
-#define KEY_EXT_DAY_RAIN  407
-#define KEY_EXT_DAY_WIND  408
-#define KEY_ALL_DAY_WMO   409
+
 
 //******************************************************************
 
@@ -236,28 +217,18 @@ static char icon3[20] = " ";
 static char location[16] = " ";
 static char rain_ico_val;
 
-// Extended hourly forecast data (kept for future features and persistence)
-int8_t graph_temps[17] = {10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10};
-uint8_t graph_rains[48] = {0};
-static char graph_icon1[20] = "";
-static char graph_icon2[20] = "";
-static char graph_icon3[20] = "";
-uint8_t graph_wind_val[16] = {0};
-uint8_t graph_hours[16] = {0, 3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36, 39, 42, 45};
-uint8_t graph_wmo[16] = {0};
+// Hourly forecast data (5 temps, 12 rain bars, 4 winds/hours for 0-12h)
+int8_t graph_temps[5] = {10, 10, 10, 10, 10};
+uint8_t graph_rains[12] = {0};
+uint8_t graph_wind_val[4] = {0};
+uint8_t graph_hours[4] = {0, 3, 6, 9};
 
 // 3-day forecast data
 char days_temp[3][8] = {"--", "--", "--"};
 char days_icon[3][20] = {"", "", ""};
 char days_rain[3][5] = {"0mm", "0mm", "0mm"};
 char days_wind[3][5] = {"0km", "0km", "0km"};
-
-// Extended daily forecast data (days 4-7)
-int8_t ext_day_temp[4] = {0};
-uint8_t ext_day_wmo[4] = {0};
-uint8_t ext_day_rain[4] = {0};
-uint8_t ext_day_wind[4] = {0};
-uint8_t days_wmo[7] = {0};
+uint8_t days_wmo[3] = {0};
 
 // Weather retry protection
 static bool s_weather_request_pending = false;
@@ -646,9 +617,11 @@ static void inbox_received_callback(DictionaryIterator *iterator,
     Tuple *tmax_tuple = dict_find(iterator, KEY_TMAX);
     Tuple *icon_tuple = dict_find(iterator, KEY_ICON);
 
+    Tuple *h0_tuple = dict_find(iterator, KEY_FORECAST_H0);
     Tuple *h1_tuple = dict_find(iterator, KEY_FORECAST_H1);
     Tuple *h2_tuple = dict_find(iterator, KEY_FORECAST_H2);
     Tuple *h3_tuple = dict_find(iterator, KEY_FORECAST_H3);
+    Tuple *wind0_tuple = dict_find(iterator, KEY_FORECAST_WIND0);
     Tuple *wind1_tuple = dict_find(iterator, KEY_FORECAST_WIND1);
     Tuple *wind2_tuple = dict_find(iterator, KEY_FORECAST_WIND2);
     Tuple *wind3_tuple = dict_find(iterator, KEY_FORECAST_WIND3);
@@ -664,8 +637,6 @@ static void inbox_received_callback(DictionaryIterator *iterator,
     Tuple *rain2_tuple = dict_find(iterator, KEY_FORECAST_RAIN2);
     Tuple *rain3_tuple = dict_find(iterator, KEY_FORECAST_RAIN3);
     Tuple *rain4_tuple = dict_find(iterator, KEY_FORECAST_RAIN4);
-
-    // Detailed rain tuples (3 per 3-hour block)
     Tuple *rain11_tuple = dict_find(iterator, KEY_FORECAST_RAIN11);
     Tuple *rain12_tuple = dict_find(iterator, KEY_FORECAST_RAIN12);
     Tuple *rain21_tuple = dict_find(iterator, KEY_FORECAST_RAIN21);
@@ -675,293 +646,113 @@ static void inbox_received_callback(DictionaryIterator *iterator,
     Tuple *rain41_tuple = dict_find(iterator, KEY_FORECAST_RAIN41);
     Tuple *rain42_tuple = dict_find(iterator, KEY_FORECAST_RAIN42);
 
-    Tuple *h0_tuple = dict_find(iterator, KEY_FORECAST_H0);
-    Tuple *wind0_tuple = dict_find(iterator, KEY_FORECAST_WIND0);
-
-    // 3-day forecast tuples
-    Tuple *day1_temp_tuple = dict_find(iterator, KEY_DAY1_TEMP);
-    Tuple *day2_temp_tuple = dict_find(iterator, KEY_DAY2_TEMP);
-    Tuple *day3_temp_tuple = dict_find(iterator, KEY_DAY3_TEMP);
-    Tuple *day1_icon_tuple = dict_find(iterator, KEY_DAY1_ICON);
-    Tuple *day2_icon_tuple = dict_find(iterator, KEY_DAY2_ICON);
-    Tuple *day3_icon_tuple = dict_find(iterator, KEY_DAY3_ICON);
-    Tuple *day1_rain_tuple = dict_find(iterator, KEY_DAY1_RAIN);
-    Tuple *day2_rain_tuple = dict_find(iterator, KEY_DAY2_RAIN);
-    Tuple *day3_rain_tuple = dict_find(iterator, KEY_DAY3_RAIN);
-    Tuple *day1_wind_tuple = dict_find(iterator, KEY_DAY1_WIND);
-    Tuple *day2_wind_tuple = dict_find(iterator, KEY_DAY2_WIND);
-    Tuple *day3_wind_tuple = dict_find(iterator, KEY_DAY3_WIND);
-
     // Pool tuples
     Tuple *poolTemp_tuple = dict_find(iterator, KEY_POOLTEMP);
     Tuple *poolPH_tuple = dict_find(iterator, KEY_POOLPH);
     Tuple *poolORP_tuple = dict_find(iterator, KEY_poolORP);
 
-    // Pool data extraction
-    npoolTemp = (int)poolTemp_tuple->value->int32;
-    npoolPH = (int)poolPH_tuple->value->int32;
-    npoolORP = (int)poolORP_tuple->value->int32;
-
-    int temp_int = npoolTemp / 10;
-    int temp_dec = npoolTemp % 10;
-    int ph_int = npoolPH / 100;
-    int ph_dec = npoolPH % 100;
-
-    snprintf(poolTemp, sizeof(poolTemp), "%d.%d", temp_int, temp_dec);
-    snprintf(poolPH, sizeof(poolPH), "%d.%02d", ph_int, ph_dec);
+    // Pool data
+    if (poolTemp_tuple) npoolTemp = (int)poolTemp_tuple->value->int32;
+    if (poolPH_tuple) npoolPH = (int)poolPH_tuple->value->int32;
+    if (poolORP_tuple) npoolORP = (int)poolORP_tuple->value->int32;
+    snprintf(poolTemp, sizeof(poolTemp), "%d.%d", npoolTemp / 10, npoolTemp % 10);
+    snprintf(poolPH, sizeof(poolPH), "%d.%02d", npoolPH / 100, npoolPH % 100);
     snprintf(poolORP, sizeof(poolORP), "%d", npoolORP);
 
     snprintf(icon, sizeof(icon), "%s", icon_tuple->value->cstring);
-
     weather_temp = (int)temp_tuple->value->int32;
-
     tmin_val = (int)tmin_tuple->value->int32;
     tmax_val = (int)tmax_tuple->value->int32;
-
     wind_speed_val = (int)wind_speed_tuple->value->int32;
     humidity = (int)humidity_tuple->value->int32;
 
-    // Process extended hourly forecast data
-    if (temp1_tuple)
-      graph_temps[0] = (int)temp1_tuple->value->int32;
-    if (temp2_tuple)
-      graph_temps[1] = (int)temp2_tuple->value->int32;
-    if (temp3_tuple)
-      graph_temps[2] = (int)temp3_tuple->value->int32;
-    if (temp4_tuple)
-      graph_temps[3] = (int)temp4_tuple->value->int32;
-    if (temp5_tuple)
-      graph_temps[4] = (int)temp5_tuple->value->int32;
+    // Hourly temps (5 points for 0-12h)
+    if (temp1_tuple) graph_temps[0] = (int)temp1_tuple->value->int32;
+    if (temp2_tuple) graph_temps[1] = (int)temp2_tuple->value->int32;
+    if (temp3_tuple) graph_temps[2] = (int)temp3_tuple->value->int32;
+    if (temp4_tuple) graph_temps[3] = (int)temp4_tuple->value->int32;
+    if (temp5_tuple) graph_temps[4] = (int)temp5_tuple->value->int32;
 
-    if (h0_tuple)
-      graph_hours[0] = (int)h0_tuple->value->int32;
-    if (h1_tuple)
-      graph_hours[1] = (int)h1_tuple->value->int32;
-    if (h2_tuple)
-      graph_hours[2] = (int)h2_tuple->value->int32;
-    if (h3_tuple)
-      graph_hours[3] = (int)h3_tuple->value->int32;
+    // Hours
+    if (h0_tuple) graph_hours[0] = (int)h0_tuple->value->int32;
+    if (h1_tuple) graph_hours[1] = (int)h1_tuple->value->int32;
+    if (h2_tuple) graph_hours[2] = (int)h2_tuple->value->int32;
+    if (h3_tuple) graph_hours[3] = (int)h3_tuple->value->int32;
 
-    // Rain data (12 segments)
-    if (rain1_tuple)
-      graph_rains[0] = (int)rain1_tuple->value->int32;
-    if (rain11_tuple)
-      graph_rains[1] = (int)rain11_tuple->value->int32;
-    if (rain12_tuple)
-      graph_rains[2] = (int)rain12_tuple->value->int32;
-    if (rain2_tuple)
-      graph_rains[3] = (int)rain2_tuple->value->int32;
-    if (rain21_tuple)
-      graph_rains[4] = (int)rain21_tuple->value->int32;
-    if (rain22_tuple)
-      graph_rains[5] = (int)rain22_tuple->value->int32;
-    if (rain3_tuple)
-      graph_rains[6] = (int)rain3_tuple->value->int32;
-    if (rain31_tuple)
-      graph_rains[7] = (int)rain31_tuple->value->int32;
-    if (rain32_tuple)
-      graph_rains[8] = (int)rain32_tuple->value->int32;
-    if (rain4_tuple)
-      graph_rains[9] = (int)rain4_tuple->value->int32;
-    if (rain41_tuple)
-      graph_rains[10] = (int)rain41_tuple->value->int32;
-    if (rain42_tuple)
-      graph_rains[11] = (int)rain42_tuple->value->int32;
+    // Rain (12 segments)
+    if (rain1_tuple) graph_rains[0] = (int)rain1_tuple->value->int32;
+    if (rain11_tuple) graph_rains[1] = (int)rain11_tuple->value->int32;
+    if (rain12_tuple) graph_rains[2] = (int)rain12_tuple->value->int32;
+    if (rain2_tuple) graph_rains[3] = (int)rain2_tuple->value->int32;
+    if (rain21_tuple) graph_rains[4] = (int)rain21_tuple->value->int32;
+    if (rain22_tuple) graph_rains[5] = (int)rain22_tuple->value->int32;
+    if (rain3_tuple) graph_rains[6] = (int)rain3_tuple->value->int32;
+    if (rain31_tuple) graph_rains[7] = (int)rain31_tuple->value->int32;
+    if (rain32_tuple) graph_rains[8] = (int)rain32_tuple->value->int32;
+    if (rain4_tuple) graph_rains[9] = (int)rain4_tuple->value->int32;
+    if (rain41_tuple) graph_rains[10] = (int)rain41_tuple->value->int32;
+    if (rain42_tuple) graph_rains[11] = (int)rain42_tuple->value->int32;
 
     // Icons
-    if (icon1_tuple) {
-      snprintf(graph_icon1, sizeof(graph_icon1), "%s",
-               icon1_tuple->value->cstring);
-      snprintf(icon1, sizeof(icon1), "%s", icon1_tuple->value->cstring);
-    }
-    if (icon2_tuple) {
-      snprintf(graph_icon2, sizeof(graph_icon2), "%s",
-               icon2_tuple->value->cstring);
-      snprintf(icon2, sizeof(icon2), "%s", icon2_tuple->value->cstring);
-    }
-    if (icon3_tuple) {
-      snprintf(graph_icon3, sizeof(graph_icon3), "%s",
-               icon3_tuple->value->cstring);
-      snprintf(icon3, sizeof(icon3), "%s", icon3_tuple->value->cstring);
-    }
+    if (icon1_tuple) snprintf(icon1, sizeof(icon1), "%s", icon1_tuple->value->cstring);
+    if (icon2_tuple) snprintf(icon2, sizeof(icon2), "%s", icon2_tuple->value->cstring);
+    if (icon3_tuple) snprintf(icon3, sizeof(icon3), "%s", icon3_tuple->value->cstring);
 
     // Winds
-    if (wind0_tuple)
-      graph_wind_val[0] = atoi(wind0_tuple->value->cstring);
-    if (wind1_tuple)
-      graph_wind_val[1] = atoi(wind1_tuple->value->cstring);
-    if (wind2_tuple)
-      graph_wind_val[2] = atoi(wind2_tuple->value->cstring);
-    if (wind3_tuple)
-      graph_wind_val[3] = atoi(wind3_tuple->value->cstring);
-
-    // 3-day forecast data
-    if (day1_temp_tuple)
-      snprintf(days_temp[0], sizeof(days_temp[0]), "%s",
-               day1_temp_tuple->value->cstring);
-    if (day2_temp_tuple)
-      snprintf(days_temp[1], sizeof(days_temp[1]), "%s",
-               day2_temp_tuple->value->cstring);
-    if (day3_temp_tuple)
-      snprintf(days_temp[2], sizeof(days_temp[2]), "%s",
-               day3_temp_tuple->value->cstring);
-    if (day1_icon_tuple)
-      snprintf(days_icon[0], sizeof(days_icon[0]), "%s",
-               day1_icon_tuple->value->cstring);
-    if (day2_icon_tuple)
-      snprintf(days_icon[1], sizeof(days_icon[1]), "%s",
-               day2_icon_tuple->value->cstring);
-    if (day3_icon_tuple)
-      snprintf(days_icon[2], sizeof(days_icon[2]), "%s",
-               day3_icon_tuple->value->cstring);
-    if (day1_rain_tuple)
-      snprintf(days_rain[0], sizeof(days_rain[0]), "%s",
-               day1_rain_tuple->value->cstring);
-    if (day2_rain_tuple)
-      snprintf(days_rain[1], sizeof(days_rain[1]), "%s",
-               day2_rain_tuple->value->cstring);
-    if (day3_rain_tuple)
-      snprintf(days_rain[2], sizeof(days_rain[2]), "%s",
-               day3_rain_tuple->value->cstring);
-    if (day1_wind_tuple)
-      snprintf(days_wind[0], sizeof(days_wind[0]), "%s",
-               day1_wind_tuple->value->cstring);
-    if (day2_wind_tuple)
-      snprintf(days_wind[1], sizeof(days_wind[1]), "%s",
-               day2_wind_tuple->value->cstring);
-    if (day3_wind_tuple)
-      snprintf(days_wind[2], sizeof(days_wind[2]), "%s",
-               day3_wind_tuple->value->cstring);
-
-    // Extended hourly data (byte arrays from JS)
-    Tuple *ext_temps_tuple = dict_find(iterator, KEY_EXT_TEMPS);
-    if (ext_temps_tuple && ext_temps_tuple->length >= 12) {
-      for (int i = 0; i < 12; i++)
-        graph_temps[5 + i] = (int8_t)ext_temps_tuple->value->data[i];
-    }
-    Tuple *ext_rains_tuple = dict_find(iterator, KEY_EXT_RAINS);
-    if (ext_rains_tuple && ext_rains_tuple->length >= 36) {
-      for (int i = 0; i < 36; i++)
-        graph_rains[12 + i] = ext_rains_tuple->value->data[i];
-    }
-    Tuple *ext_winds_tuple = dict_find(iterator, KEY_EXT_WINDS);
-    if (ext_winds_tuple && ext_winds_tuple->length >= 12) {
-      for (int i = 0; i < 12; i++)
-        graph_wind_val[4 + i] = ext_winds_tuple->value->data[i];
-    }
-    Tuple *ext_hours_tuple = dict_find(iterator, KEY_EXT_HOURS);
-    if (ext_hours_tuple && ext_hours_tuple->length >= 12) {
-      for (int i = 0; i < 12; i++)
-        graph_hours[4 + i] = ext_hours_tuple->value->data[i];
-    }
-    Tuple *ext_wmo_tuple = dict_find(iterator, KEY_EXT_WMO);
-    if (ext_wmo_tuple && ext_wmo_tuple->length >= 16) {
-      for (int i = 0; i < 16; i++)
-        graph_wmo[i] = ext_wmo_tuple->value->data[i];
-    }
-
-    // Extended daily data (days 4-7, byte arrays)
-    Tuple *ext_day_temps_tuple = dict_find(iterator, KEY_EXT_DAY_TEMPS);
-    if (ext_day_temps_tuple && ext_day_temps_tuple->length >= 4) {
-      for (int i = 0; i < 4; i++)
-        ext_day_temp[i] = (int8_t)ext_day_temps_tuple->value->data[i];
-    }
-    Tuple *ext_day_wmo_tuple = dict_find(iterator, KEY_EXT_DAY_WMO);
-    if (ext_day_wmo_tuple && ext_day_wmo_tuple->length >= 4) {
-      for (int i = 0; i < 4; i++)
-        ext_day_wmo[i] = ext_day_wmo_tuple->value->data[i];
-    }
-    Tuple *ext_day_rain_tuple = dict_find(iterator, KEY_EXT_DAY_RAIN);
-    if (ext_day_rain_tuple && ext_day_rain_tuple->length >= 4) {
-      for (int i = 0; i < 4; i++)
-        ext_day_rain[i] = ext_day_rain_tuple->value->data[i];
-    }
-    Tuple *ext_day_wind_tuple = dict_find(iterator, KEY_EXT_DAY_WIND);
-    if (ext_day_wind_tuple && ext_day_wind_tuple->length >= 4) {
-      for (int i = 0; i < 4; i++)
-        ext_day_wind[i] = ext_day_wind_tuple->value->data[i];
-    }
-    Tuple *all_day_wmo_tuple = dict_find(iterator, KEY_ALL_DAY_WMO);
-    if (all_day_wmo_tuple && all_day_wmo_tuple->length >= 7) {
-      for (int i = 0; i < 7; i++)
-        days_wmo[i] = all_day_wmo_tuple->value->data[i];
-    }
+    if (wind0_tuple) graph_wind_val[0] = atoi(wind0_tuple->value->cstring);
+    if (wind1_tuple) graph_wind_val[1] = atoi(wind1_tuple->value->cstring);
+    if (wind2_tuple) graph_wind_val[2] = atoi(wind2_tuple->value->cstring);
+    if (wind3_tuple) graph_wind_val[3] = atoi(wind3_tuple->value->cstring);
 
     last_refresh = mktime(&now);
 
+    // Persist core weather
     persist_write_string(KEY_ICON, icon);
-    persist_write_string(KEY_LOCATION, location);
-
-    persist_write_string(KEY_FORECAST_ICON1, icon1);
-    persist_write_string(KEY_FORECAST_ICON2, icon2);
-    persist_write_string(KEY_FORECAST_ICON3, icon3);
-
     persist_write_int(KEY_LAST_REFRESH, last_refresh);
     persist_write_int(KEY_TEMPERATURE, weather_temp);
     persist_write_int(KEY_WIND_SPEED, wind_speed_val);
     persist_write_int(KEY_HUMIDITY, humidity);
     persist_write_int(KEY_TMIN, tmin_val);
     persist_write_int(KEY_TMAX, tmax_val);
-
-    persist_write_int(KEY_FORECAST_RAIN1, graph_rains[0]);
-    persist_write_int(KEY_FORECAST_RAIN11, graph_rains[1]);
-    persist_write_int(KEY_FORECAST_RAIN12, graph_rains[2]);
-    persist_write_int(KEY_FORECAST_RAIN2, graph_rains[3]);
-    persist_write_int(KEY_FORECAST_RAIN21, graph_rains[4]);
-    persist_write_int(KEY_FORECAST_RAIN22, graph_rains[5]);
-    persist_write_int(KEY_FORECAST_RAIN3, graph_rains[6]);
-    persist_write_int(KEY_FORECAST_RAIN31, graph_rains[7]);
-    persist_write_int(KEY_FORECAST_RAIN32, graph_rains[8]);
-    persist_write_int(KEY_FORECAST_RAIN4, graph_rains[9]);
-    persist_write_int(KEY_FORECAST_RAIN41, graph_rains[10]);
-    persist_write_int(KEY_FORECAST_RAIN42, graph_rains[11]);
-
-    persist_write_int(KEY_FORECAST_TEMP1, graph_temps[0]);
-    persist_write_int(KEY_FORECAST_TEMP2, graph_temps[1]);
-    persist_write_int(KEY_FORECAST_TEMP3, graph_temps[2]);
-    persist_write_int(KEY_FORECAST_TEMP4, graph_temps[3]);
-    persist_write_int(KEY_FORECAST_TEMP5, graph_temps[4]);
-
-    persist_write_int(KEY_GRAPH_WIND0, graph_wind_val[0]);
-    persist_write_int(KEY_GRAPH_WIND1, graph_wind_val[1]);
-    persist_write_int(KEY_GRAPH_WIND2, graph_wind_val[2]);
-    persist_write_int(KEY_GRAPH_WIND3, graph_wind_val[3]);
-
-    persist_write_int(KEY_GRAPH_H1, graph_hours[1]);
-    persist_write_int(KEY_GRAPH_H2, graph_hours[2]);
-    persist_write_int(KEY_GRAPH_H3, graph_hours[3]);
-
+    persist_write_int(KEY_FORECAST_H0, graph_hours[0]);
     persist_write_int(KEY_POOLTEMP, npoolTemp);
     persist_write_int(KEY_POOLPH, npoolPH);
     persist_write_int(KEY_poolORP, npoolORP);
+    persist_write_data(KEY_FORECAST_TEMP1, graph_temps, sizeof(graph_temps));
+    persist_write_data(KEY_FORECAST_RAIN1, graph_rains, sizeof(graph_rains));
+    persist_write_data(KEY_FORECAST_WIND1, graph_wind_val, sizeof(graph_wind_val));
+    persist_write_data(KEY_FORECAST_H1, graph_hours, sizeof(graph_hours));
 
-    persist_write_int(KEY_FORECAST_H0, graph_hours[0]);
+    layer_mark_dirty(layer);
+  }
 
-    // Persist 3-day forecast data
-    persist_write_string(KEY_DAY1_TEMP, days_temp[0]);
-    persist_write_string(KEY_DAY2_TEMP, days_temp[1]);
-    persist_write_string(KEY_DAY3_TEMP, days_temp[2]);
-    persist_write_string(KEY_DAY1_ICON, days_icon[0]);
-    persist_write_string(KEY_DAY2_ICON, days_icon[1]);
-    persist_write_string(KEY_DAY3_ICON, days_icon[2]);
-    persist_write_string(KEY_DAY1_RAIN, days_rain[0]);
-    persist_write_string(KEY_DAY2_RAIN, days_rain[1]);
-    persist_write_string(KEY_DAY3_RAIN, days_rain[2]);
-    persist_write_string(KEY_DAY1_WIND, days_wind[0]);
-    persist_write_string(KEY_DAY2_WIND, days_wind[1]);
-    persist_write_string(KEY_DAY3_WIND, days_wind[2]);
+  // 3-day forecast message (dict2 from JS — no KEY_TEMPERATURE present)
+  Tuple *icon1_check = dict_find(iterator, KEY_FORECAST_ICON1);
+  if (!temp_tuple && icon1_check) {
+    Tuple *t;
+    if ((t = dict_find(iterator, KEY_FORECAST_ICON1))) snprintf(icon1, sizeof(icon1), "%s", t->value->cstring);
+    if ((t = dict_find(iterator, KEY_FORECAST_ICON2))) snprintf(icon2, sizeof(icon2), "%s", t->value->cstring);
+    if ((t = dict_find(iterator, KEY_FORECAST_ICON3))) snprintf(icon3, sizeof(icon3), "%s", t->value->cstring);
+    if ((t = dict_find(iterator, KEY_DAY1_TEMP))) snprintf(days_temp[0], sizeof(days_temp[0]), "%s", t->value->cstring);
+    if ((t = dict_find(iterator, KEY_DAY2_TEMP))) snprintf(days_temp[1], sizeof(days_temp[1]), "%s", t->value->cstring);
+    if ((t = dict_find(iterator, KEY_DAY3_TEMP))) snprintf(days_temp[2], sizeof(days_temp[2]), "%s", t->value->cstring);
+    if ((t = dict_find(iterator, KEY_DAY1_ICON))) snprintf(days_icon[0], sizeof(days_icon[0]), "%s", t->value->cstring);
+    if ((t = dict_find(iterator, KEY_DAY2_ICON))) snprintf(days_icon[1], sizeof(days_icon[1]), "%s", t->value->cstring);
+    if ((t = dict_find(iterator, KEY_DAY3_ICON))) snprintf(days_icon[2], sizeof(days_icon[2]), "%s", t->value->cstring);
+    if ((t = dict_find(iterator, KEY_DAY1_RAIN))) snprintf(days_rain[0], sizeof(days_rain[0]), "%s", t->value->cstring);
+    if ((t = dict_find(iterator, KEY_DAY2_RAIN))) snprintf(days_rain[1], sizeof(days_rain[1]), "%s", t->value->cstring);
+    if ((t = dict_find(iterator, KEY_DAY3_RAIN))) snprintf(days_rain[2], sizeof(days_rain[2]), "%s", t->value->cstring);
+    if ((t = dict_find(iterator, KEY_DAY1_WIND))) snprintf(days_wind[0], sizeof(days_wind[0]), "%s", t->value->cstring);
+    if ((t = dict_find(iterator, KEY_DAY2_WIND))) snprintf(days_wind[1], sizeof(days_wind[1]), "%s", t->value->cstring);
+    if ((t = dict_find(iterator, KEY_DAY3_WIND))) snprintf(days_wind[2], sizeof(days_wind[2]), "%s", t->value->cstring);
 
-    // Persist extended data (byte arrays)
-    persist_write_data(KEY_EXT_TEMPS, &graph_temps[5], 12);
-    persist_write_data(KEY_EXT_RAINS, &graph_rains[12], 36);
-    persist_write_data(KEY_EXT_WINDS, &graph_wind_val[4], 12);
-    persist_write_data(KEY_EXT_HOURS, &graph_hours[4], 12);
-    persist_write_data(KEY_EXT_WMO, graph_wmo, 16);
-    persist_write_data(KEY_EXT_DAY_TEMPS, ext_day_temp, 4);
-    persist_write_data(KEY_EXT_DAY_WMO, ext_day_wmo, 4);
-    persist_write_data(KEY_EXT_DAY_RAIN, ext_day_rain, 4);
-    persist_write_data(KEY_EXT_DAY_WIND, ext_day_wind, 4);
-    persist_write_data(KEY_ALL_DAY_WMO, days_wmo, 7);
+    persist_write_string(KEY_FORECAST_ICON1, icon1);
+    persist_write_string(KEY_FORECAST_ICON2, icon2);
+    persist_write_string(KEY_FORECAST_ICON3, icon3);
+    persist_write_data(KEY_DAY1_TEMP, days_temp, sizeof(days_temp));
+    persist_write_data(KEY_DAY1_ICON, days_icon, sizeof(days_icon));
+    persist_write_data(KEY_DAY1_RAIN, days_rain, sizeof(days_rain));
+    persist_write_data(KEY_DAY1_WIND, days_wind, sizeof(days_wind));
 
     layer_mark_dirty(layer);
   }
@@ -1205,93 +996,27 @@ static void init_var() {
     if (persist_exists(KEY_FORECAST_ICON3))
       persist_read_string(KEY_FORECAST_ICON3, icon3, sizeof(icon3));
 
-    snprintf(graph_icon1, sizeof(graph_icon1), "%s", icon1);
-    snprintf(graph_icon2, sizeof(graph_icon2), "%s", icon2);
-    snprintf(graph_icon3, sizeof(graph_icon3), "%s", icon3);
-
-    graph_temps[0] = persist_read_int(KEY_FORECAST_TEMP1);
-    graph_temps[1] = persist_read_int(KEY_FORECAST_TEMP2);
-    graph_temps[2] = persist_read_int(KEY_FORECAST_TEMP3);
-    graph_temps[3] = persist_read_int(KEY_FORECAST_TEMP4);
-    graph_temps[4] = persist_read_int(KEY_FORECAST_TEMP5);
-
     graph_hours[0] = persist_read_int(KEY_FORECAST_H0);
 
-    if (persist_exists(KEY_GRAPH_H1)) {
-      graph_hours[1] = persist_read_int(KEY_GRAPH_H1);
-      graph_hours[2] = persist_read_int(KEY_GRAPH_H2);
-      graph_hours[3] = persist_read_int(KEY_GRAPH_H3);
-    } else {
-      graph_hours[1] = 3;
-      graph_hours[2] = 6;
-      graph_hours[3] = 9;
-    }
+    // Restore compact arrays (new format)
+    if (persist_exists(KEY_FORECAST_TEMP1))
+      persist_read_data(KEY_FORECAST_TEMP1, graph_temps, sizeof(graph_temps));
+    if (persist_exists(KEY_FORECAST_RAIN1))
+      persist_read_data(KEY_FORECAST_RAIN1, graph_rains, sizeof(graph_rains));
+    if (persist_exists(KEY_FORECAST_WIND1))
+      persist_read_data(KEY_FORECAST_WIND1, graph_wind_val, sizeof(graph_wind_val));
+    if (persist_exists(KEY_FORECAST_H1))
+      persist_read_data(KEY_FORECAST_H1, graph_hours, sizeof(graph_hours));
 
-    if (persist_exists(KEY_GRAPH_WIND0)) {
-      graph_wind_val[0] = persist_read_int(KEY_GRAPH_WIND0);
-      graph_wind_val[1] = persist_read_int(KEY_GRAPH_WIND1);
-      graph_wind_val[2] = persist_read_int(KEY_GRAPH_WIND2);
-      graph_wind_val[3] = persist_read_int(KEY_GRAPH_WIND3);
-    }
-
-    graph_rains[0] = persist_exists(KEY_FORECAST_RAIN1)
-                         ? persist_read_int(KEY_FORECAST_RAIN1)
-                         : 0;
-    graph_rains[1] = persist_read_int(KEY_FORECAST_RAIN11);
-    graph_rains[2] = persist_read_int(KEY_FORECAST_RAIN12);
-    graph_rains[3] = persist_exists(KEY_FORECAST_RAIN2)
-                         ? persist_read_int(KEY_FORECAST_RAIN2)
-                         : 0;
-    graph_rains[4] = persist_read_int(KEY_FORECAST_RAIN21);
-    graph_rains[5] = persist_read_int(KEY_FORECAST_RAIN22);
-    graph_rains[6] = persist_exists(KEY_FORECAST_RAIN3)
-                         ? persist_read_int(KEY_FORECAST_RAIN3)
-                         : 0;
-    graph_rains[7] = persist_read_int(KEY_FORECAST_RAIN31);
-    graph_rains[8] = persist_read_int(KEY_FORECAST_RAIN32);
-    graph_rains[9] = persist_exists(KEY_FORECAST_RAIN4)
-                         ? persist_read_int(KEY_FORECAST_RAIN4)
-                         : 0;
-    graph_rains[10] = persist_read_int(KEY_FORECAST_RAIN41);
-    graph_rains[11] = persist_read_int(KEY_FORECAST_RAIN42);
-
-    // Load 3-day forecast data
-    if (persist_exists(KEY_DAY1_TEMP)) {
-      persist_read_string(KEY_DAY1_TEMP, days_temp[0], sizeof(days_temp[0]));
-      persist_read_string(KEY_DAY2_TEMP, days_temp[1], sizeof(days_temp[1]));
-      persist_read_string(KEY_DAY3_TEMP, days_temp[2], sizeof(days_temp[2]));
-      persist_read_string(KEY_DAY1_ICON, days_icon[0], sizeof(days_icon[0]));
-      persist_read_string(KEY_DAY2_ICON, days_icon[1], sizeof(days_icon[1]));
-      persist_read_string(KEY_DAY3_ICON, days_icon[2], sizeof(days_icon[2]));
-      persist_read_string(KEY_DAY1_RAIN, days_rain[0], sizeof(days_rain[0]));
-      persist_read_string(KEY_DAY2_RAIN, days_rain[1], sizeof(days_rain[1]));
-      persist_read_string(KEY_DAY3_RAIN, days_rain[2], sizeof(days_rain[2]));
-      persist_read_string(KEY_DAY1_WIND, days_wind[0], sizeof(days_wind[0]));
-      persist_read_string(KEY_DAY2_WIND, days_wind[1], sizeof(days_wind[1]));
-      persist_read_string(KEY_DAY3_WIND, days_wind[2], sizeof(days_wind[2]));
-    }
-
-    // Restore extended data (byte arrays)
-    if (persist_exists(KEY_EXT_TEMPS))
-      persist_read_data(KEY_EXT_TEMPS, &graph_temps[5], 12);
-    if (persist_exists(KEY_EXT_RAINS))
-      persist_read_data(KEY_EXT_RAINS, &graph_rains[12], 36);
-    if (persist_exists(KEY_EXT_WINDS))
-      persist_read_data(KEY_EXT_WINDS, &graph_wind_val[4], 12);
-    if (persist_exists(KEY_EXT_HOURS))
-      persist_read_data(KEY_EXT_HOURS, &graph_hours[4], 12);
-    if (persist_exists(KEY_EXT_WMO))
-      persist_read_data(KEY_EXT_WMO, graph_wmo, 16);
-    if (persist_exists(KEY_EXT_DAY_TEMPS))
-      persist_read_data(KEY_EXT_DAY_TEMPS, ext_day_temp, 4);
-    if (persist_exists(KEY_EXT_DAY_WMO))
-      persist_read_data(KEY_EXT_DAY_WMO, ext_day_wmo, 4);
-    if (persist_exists(KEY_EXT_DAY_RAIN))
-      persist_read_data(KEY_EXT_DAY_RAIN, ext_day_rain, 4);
-    if (persist_exists(KEY_EXT_DAY_WIND))
-      persist_read_data(KEY_EXT_DAY_WIND, ext_day_wind, 4);
-    if (persist_exists(KEY_ALL_DAY_WMO))
-      persist_read_data(KEY_ALL_DAY_WMO, days_wmo, 7);
+    // 3-day forecast
+    if (persist_exists(KEY_DAY1_TEMP))
+      persist_read_data(KEY_DAY1_TEMP, days_temp, sizeof(days_temp));
+    if (persist_exists(KEY_DAY1_ICON))
+      persist_read_data(KEY_DAY1_ICON, days_icon, sizeof(days_icon));
+    if (persist_exists(KEY_DAY1_RAIN))
+      persist_read_data(KEY_DAY1_RAIN, days_rain, sizeof(days_rain));
+    if (persist_exists(KEY_DAY1_WIND))
+      persist_read_data(KEY_DAY1_WIND, days_wind, sizeof(days_wind));
 
   } else {
     last_refresh = 0;
@@ -1307,35 +1032,14 @@ static void init_var() {
     snprintf(icon3, sizeof(icon3), " ");
     snprintf(location, sizeof(location), " ");
 
-    for (int i = 0; i < 17; i++) {
-      graph_temps[i] = 10;
-    }
-    for (int i = 0; i < 48; i++) {
-      graph_rains[i] = 0;
-    }
-    snprintf(graph_icon1, sizeof(graph_icon1), " ");
-    snprintf(graph_icon2, sizeof(graph_icon2), " ");
-    snprintf(graph_icon3, sizeof(graph_icon3), " ");
-    for (int i = 0; i < 16; i++) {
-      graph_wind_val[i] = 0;
-      graph_wmo[i] = 0;
-    }
+    memset(graph_temps, 10, sizeof(graph_temps));
+    memset(graph_rains, 0, sizeof(graph_rains));
+    memset(graph_wind_val, 0, sizeof(graph_wind_val));
     graph_hours[0] = 0;
     graph_hours[1] = 3;
     graph_hours[2] = 6;
     graph_hours[3] = 9;
-    for (int i = 4; i < 16; i++) {
-      graph_hours[i] = i * 3;
-    }
-    for (int i = 0; i < 4; i++) {
-      ext_day_temp[i] = 0;
-      ext_day_wmo[i] = 0;
-      ext_day_rain[i] = 0;
-      ext_day_wind[i] = 0;
-    }
-    for (int i = 0; i < 7; i++) {
-      days_wmo[i] = 0;
-    }
+    memset(days_wmo, 0, sizeof(days_wmo));
 
     snprintf(days_icon[0], sizeof(days_icon[0]), " ");
     snprintf(days_icon[1], sizeof(days_icon[1]), " ");

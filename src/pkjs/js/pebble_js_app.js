@@ -286,20 +286,15 @@ function processOpenMeteoResponse(responseText) {
     }
   }
 
-  // --- 7-day forecast data extraction using DAILY data ---
+  // --- 3-day forecast data extraction using DAILY data ---
   var day_temps = ["", "", ""];
   var day_icons = ["", "", ""];
   var day_rains = ["", "", ""];
   var day_winds = ["", "", ""];
-  var ext_day_temps_arr = [0, 0, 0, 0]; // days 4-7 as int8
-  var ext_day_wmo_arr = [0, 0, 0, 0];   // days 4-7 WMO codes
-  var ext_day_rain_arr = [0, 0, 0, 0];  // days 4-7 rain mm
-  var ext_day_wind_arr = [0, 0, 0, 0];  // days 4-7 wind
-  var all_day_wmo_arr = [0, 0, 0, 0, 0, 0, 0]; // all 7 days WMO
 
   var daily = json.daily;
   if (daily && daily.time && daily.time.length > 1) {
-    var maxDays = Math.min(daily.time.length - 1, 7); // up to 7 days (skip today)
+    var maxDays = Math.min(daily.time.length - 1, 3); // 3 days only
     for (var d = 0; d < maxDays; d++) {
       var dayIdx = d + 1; // Skip today (index 0)
       if (dayIdx >= daily.time.length) break;
@@ -310,9 +305,6 @@ function processOpenMeteoResponse(responseText) {
       var wmoCode = daily.weather_code[dayIdx];
       var rainSum = daily.precipitation_sum[dayIdx] || 0;
       var dayWindKmh = daily.wind_gusts_10m_max[dayIdx];
-
-      // Store WMO code for all days
-      all_day_wmo_arr[d] = wmoCode;
 
       // Convert temperature
       var dayTempConverted;
@@ -333,30 +325,19 @@ function processOpenMeteoResponse(responseText) {
         dayWind = Math.round(dayWindKmh);
       }
 
-      if (d < 3) {
-        // Days 1-3: string format (backward compatible)
-        day_temps[d] = dayTempConverted + "°";
-        if (wmoCode === 3 && rainSum > 2) {
-          day_icons[d] = 'rain';
-        } else {
-          day_icons[d] = wmoCodeToSymbolCode(wmoCode, false);
-        }
-        day_rains[d] = Math.round(rainSum) + "mm";
-        if (units == 1) {
-          day_winds[d] = dayWind + "mph";
-        } else if (windSpeedUnit === 'ms') {
-          day_winds[d] = dayWind + "m/s";
-        } else {
-          day_winds[d] = dayWind + "kmh";
-        }
+      day_temps[d] = dayTempConverted + "°";
+      if (wmoCode === 3 && rainSum > 2) {
+        day_icons[d] = 'rain';
       } else {
-        // Days 4-7: compact byte arrays
-        var ei = d - 3;
-        // Clamp temp to int8 range
-        ext_day_temps_arr[ei] = Math.max(-128, Math.min(127, dayTempConverted));
-        ext_day_wmo_arr[ei] = wmoCode;
-        ext_day_rain_arr[ei] = Math.min(255, Math.round(rainSum));
-        ext_day_wind_arr[ei] = Math.min(255, dayWind);
+        day_icons[d] = wmoCodeToSymbolCode(wmoCode, false);
+      }
+      day_rains[d] = Math.round(rainSum) + "mm";
+      if (units == 1) {
+        day_winds[d] = dayWind + "mph";
+      } else if (windSpeedUnit === 'ms') {
+        day_winds[d] = dayWind + "m/s";
+      } else {
+        day_winds[d] = dayWind + "kmh";
       }
     }
   }
@@ -376,42 +357,7 @@ function processOpenMeteoResponse(responseText) {
     h3 = h3 % 12; if (h3 === 0) h3 = 12;
   }
 
-  // Build byte arrays for extended hourly data (hours 15-48, every 3h = 12 values)
-  var ext_temps_bytes = [];
-  var ext_winds_bytes = [];
-  var ext_hours_bytes = [];
-  for (var bi = 0; bi < 12; bi++) {
-    var hkey = 15 + bi * 3; // 15,18,21,...,48
-    var t = hourlyTemperatures['hour' + hkey] || 0;
-    t = Math.max(-128, Math.min(127, Math.round(t)));
-    ext_temps_bytes.push(t < 0 ? t + 256 : t);
-    var w = parseInt(hourlyWind['hour' + hkey]) || 0;
-    ext_winds_bytes.push(Math.min(255, w));
-    var lh = hourly_time['hour' + hkey] || 0;
-    if (units_setting == 1) { lh = lh % 12; if (lh === 0) lh = 12; }
-    ext_hours_bytes.push(lh);
-  }
-
-  // Extended rain bytes (hours 12-47 = 36 values)
-  var ext_rains_bytes = [];
-  for (var bi = 12; bi < 48; bi++) {
-    ext_rains_bytes.push(Math.min(255, hourlyRain['hour' + bi] || 0));
-  }
-
-  // WMO codes for all 16 3h blocks
-  var ext_wmo_bytes = [];
-  for (var bi = 0; bi < 16; bi++) {
-    ext_wmo_bytes.push(hourlyWmoCode['block' + bi] || 0);
-  }
-
-  // Convert ext_day_temps to uint8 (int8 encoding)
-  var ext_day_temps_bytes = [];
-  for (var bi = 0; bi < 4; bi++) {
-    var t = ext_day_temps_arr[bi];
-    ext_day_temps_bytes.push(t < 0 ? t + 256 : t);
-  }
-
-  // Split into 3 messages to fit in 512-byte inbox (real watch constraint).
+  // Split into 2 messages to fit in 512-byte inbox (real watch constraint).
   // Each message is chained via success callback.
   var dict1 = {
     "KEY_TEMPERATURE": temperature,
@@ -469,28 +415,10 @@ function processOpenMeteoResponse(responseText) {
     "KEY_DAY3_WIND": day_winds[2],
   };
 
-  var dict3 = {
-    "KEY_EXT_TEMPS": ext_temps_bytes,
-    "KEY_EXT_RAINS": ext_rains_bytes,
-    "KEY_EXT_WINDS": ext_winds_bytes,
-    "KEY_EXT_HOURS": ext_hours_bytes,
-    "KEY_EXT_WMO": ext_wmo_bytes,
-    "KEY_EXT_DAY_TEMPS": ext_day_temps_bytes,
-    "KEY_EXT_DAY_WMO": ext_day_wmo_arr,
-    "KEY_EXT_DAY_RAIN": ext_day_rain_arr,
-    "KEY_EXT_DAY_WIND": ext_day_wind_arr,
-    "KEY_ALL_DAY_WMO": all_day_wmo_arr,
-  };
-
   Pebble.sendAppMessage(dict1, function () {
     console.log("Open-Meteo msg1 sent");
     Pebble.sendAppMessage(dict2, function () {
-      console.log("Open-Meteo msg2 sent");
-      Pebble.sendAppMessage(dict3, function () {
-        console.log("Open-Meteo weather info sent to Pebble successfully!");
-      }, function () {
-        console.log("Error sending Open-Meteo weather info msg3!");
-      });
+      console.log("Open-Meteo weather info sent to Pebble successfully!");
     }, function () {
       console.log("Error sending Open-Meteo weather info msg2!");
     });
@@ -974,7 +902,7 @@ function getForecast() {
       'latitude=' + current_Latitude + '&longitude=' + current_Longitude +
       '&hourly=temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_gusts_10m' +
       '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,wind_gusts_10m_max' +
-      '&forecast_days=7&timezone=auto';
+      '&forecast_days=4&timezone=auto';
 
     console.log(urlOpenMeteo);
 
