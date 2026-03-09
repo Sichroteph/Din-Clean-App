@@ -262,6 +262,11 @@ uint8_t days_wmo[7] = {0};
 // Weather retry protection
 static bool s_weather_request_pending = false;
 static AppTimer *s_weather_retry_timer = NULL;
+
+// AppMessage guard: true only when app_message_open() succeeded
+static bool s_appmsg_open = false;
+// init guard: true after init() completes (app_event_loop not yet started when false)
+static bool s_init_done = false;
 #define WEATHER_RETRY_DELAY_MS 5000
 
 // Hub: current watchface view index
@@ -308,7 +313,6 @@ static GFont fontsmallbold;
 static GFont fontmedium;
 static GFont fontbig;
 static uint16_t fontbig_resource_id = 0;
-static void ensure_fontbig_loaded(void);
 
 static uint8_t line_interval = 4;
 static uint8_t segment_thickness = 2;
@@ -323,7 +327,7 @@ static void app_focus_changed(bool focused) {
     // Check if weather data is stale and request refresh
     t = time(NULL);
     now = *(localtime(&t));
-    if ((flags.is_connected) && ((mktime(&now) - last_refresh) > duration)) {
+    if (s_init_done && s_appmsg_open && (flags.is_connected) && ((mktime(&now) - last_refresh) > duration)) {
       s_weather_request_pending = true;
 
       DictionaryIterator *iter;
@@ -376,9 +380,20 @@ float my_sqrt(float num) {
 }
 
 static void update_proc(Layer *layer, GContext *ctx) {
+  // Static locals for large structs to avoid stack overflow on real hardware
+  // (Pebble watch has ~2KB app stack; 300+ bytes of GRect/IconBarData would overflow).
+  static GRect rect_text_day, rect_text_dayw, rect_temp, rect_tmin, rect_tmax;
+  static GRect rect_screen, rect_icon, rect_icon6;
+  static GRect rect_icon_hum1, rect_icon_hum2, rect_icon_hum3, rect_icon_leaf;
+  static GRect rect_bt_disconect;
+  static GRect rect_hour_id1, rect_hour_id2, rect_minute_id1, rect_minute_id2;
+  static TimeRenderData time_data;
+  static IconBarData icon_data;
 
-  // Ensure heavy custom font is loaded
-  ensure_fontbig_loaded();
+  if (!s_init_done) {
+    // Called during window_stack_push before init() finishes — skip drawing.
+    return;
+  }
 
   if (!flags.first_draw_logged) {
     flags.first_draw_logged = true;
@@ -388,32 +403,32 @@ static void update_proc(Layer *layer, GContext *ctx) {
   segment_thickness = 3;
 
   // DRAW DIAL
-  GRect rect_text_day = {{TEXT_DAY_STATUS_OFFSET_X + status_offset_x,
-                          TEXT_DAY_STATUS_OFFSET_Y + status_offset_y},
-                         {RULER_XOFFSET, 150}};
-  GRect rect_text_dayw = {{TEXT_DAYW_STATUS_OFFSET_X + status_offset_x,
-                           TEXT_DAYW_STATUS_OFFSET_Y + status_offset_y},
+  rect_text_day = (GRect){{TEXT_DAY_STATUS_OFFSET_X + status_offset_x,
+                           TEXT_DAY_STATUS_OFFSET_Y + status_offset_y},
                           {RULER_XOFFSET, 150}};
-  GRect rect_temp = {{TEXT_TEMP_OFFSET_X + status_offset_x,
-                      TEXT_TEMP_OFFSET_Y + status_offset_y},
-                     {60, 60}};
+  rect_text_dayw = (GRect){{TEXT_DAYW_STATUS_OFFSET_X + status_offset_x,
+                             TEXT_DAYW_STATUS_OFFSET_Y + status_offset_y},
+                            {RULER_XOFFSET, 150}};
+  rect_temp = (GRect){{TEXT_TEMP_OFFSET_X + status_offset_x,
+                       TEXT_TEMP_OFFSET_Y + status_offset_y},
+                      {60, 60}};
 
-  GRect rect_tmin = {{TEXT_TMIN_OFFSET_X, TEXT_TMIN_OFFSET_Y + status_offset_y},
-                     {45, 35}};
-  GRect rect_tmax = {{TEXT_TMAX_OFFSET_X, TEXT_TMAX_OFFSET_Y + status_offset_y},
-                     {45, 35}};
+  rect_tmin = (GRect){{TEXT_TMIN_OFFSET_X, TEXT_TMIN_OFFSET_Y + status_offset_y},
+                      {45, 35}};
+  rect_tmax = (GRect){{TEXT_TMAX_OFFSET_X, TEXT_TMAX_OFFSET_Y + status_offset_y},
+                      {45, 35}};
 
-  GRect rect_screen = {{0, 0}, {144, 168}};
+  rect_screen = (GRect){{0, 0}, {144, 168}};
 
-  GRect rect_icon = {{ICON_X, ICON_Y + 9}, {35, 35}};
-  GRect rect_icon6 = {{ICON6_X, ICON6_Y + 9}, {35, 35}};
+  rect_icon = (GRect){{ICON_X, ICON_Y + 9}, {35, 35}};
+  rect_icon6 = (GRect){{ICON6_X, ICON6_Y + 9}, {35, 35}};
 
-  GRect rect_icon_hum1 = {{5, 116}, {7, 10}};
-  GRect rect_icon_hum2 = {{14, 116}, {7, 10}};
-  GRect rect_icon_hum3 = {{23, 116}, {7, 10}};
-  GRect rect_icon_leaf = {{12, 116}, {11, 10}};
+  rect_icon_hum1 = (GRect){{5, 116}, {7, 10}};
+  rect_icon_hum2 = (GRect){{14, 116}, {7, 10}};
+  rect_icon_hum3 = (GRect){{23, 116}, {7, 10}};
+  rect_icon_leaf = (GRect){{12, 116}, {11, 10}};
 
-  GRect rect_bt_disconect = {
+  rect_bt_disconect = (GRect){
       {ICON_BT_X + status_offset_x, ICON_BT_Y + status_offset_y}, {35, 17}};
 
   int icon_id;
@@ -449,8 +464,8 @@ static void update_proc(Layer *layer, GContext *ctx) {
 
   // Draw hours FIRST for instant display (only 4 small bitmaps)
   static char heure[10];
-  time_t t = time(NULL);
-  struct tm now = *(localtime(&t));
+  t = time(NULL);
+  now = *(localtime(&t));
 
   if (clock_is_24h_style() == true) {
     strftime(heure, sizeof(heure), "%H%M", &now);
@@ -467,51 +482,52 @@ static void update_proc(Layer *layer, GContext *ctx) {
   int num_x = 60;
   int num_y = 1;
 
-  GRect rect_hour_id1 = {{num_x, num_y}, {46, 81}};
-  GRect rect_hour_id2 = {{num_x + offset_x, num_y}, {46, 81}};
-  GRect rect_minute_id1 = {{num_x, num_y + offset_y}, {46, 81}};
-  GRect rect_minute_id2 = {{num_x + offset_x, num_y + offset_y}, {46, 81}};
+  rect_hour_id1 = (GRect){{num_x, num_y}, {46, 81}};
+  rect_hour_id2 = (GRect){{num_x + offset_x, num_y}, {46, 81}};
+  rect_minute_id1 = (GRect){{num_x, num_y + offset_y}, {46, 81}};
+  rect_minute_id2 = (GRect){{num_x + offset_x, num_y + offset_y}, {46, 81}};
 
-  TimeRenderData time_data = {.digit_rects = {rect_hour_id1, rect_hour_id2,
-                                              rect_minute_id1,
-                                              rect_minute_id2}};
+  time_data.digit_rects[0] = rect_hour_id1;
+  time_data.digit_rects[1] = rect_hour_id2;
+  time_data.digit_rects[2] = rect_minute_id1;
+  time_data.digit_rects[3] = rect_minute_id2;
   snprintf(time_data.digits, sizeof(time_data.digits), "%s", heure);
   ui_draw_time(ctx, &time_data);
 
   // Draw icon bar AFTER time (loads many bitmaps, slower)
-  IconBarData icon_data = {.fontsmall = fontsmall,
-                           .fontsmallbold = fontsmallbold,
-                           .fontmedium = fontmedium,
-                           .color_temp = color_temp,
-                           .week_day = week_day,
-                           .mday = mday,
-                           .min_temp_text = minTemp,
-                           .max_temp_text = maxTemp,
-                           .weather_temp_text = weather_temp_char,
-                           .has_fresh_weather = has_fresh_weather,
-                           .is_connected = flags.is_connected,
-                           .is_quiet_time = quiet_time_is_active(),
-                           .is_bw_icon = true,
-                           .is_metric = flags.is_metric,
-                           .humidity = humidity,
-                           .wind_speed_val = wind_speed_val,
-                           .wind2_val = graph_wind_val[2],
-                           .met_unit = flags.is_metric ? 20 : 25,
-                           .icon_id = icon_id,
-                           .icon_id6 = icon_id6,
-                           .rect_text_day = rect_text_day,
-                           .rect_text_dayw = rect_text_dayw,
-                           .rect_temp = rect_temp,
-                           .rect_tmin = rect_tmin,
-                           .rect_tmax = rect_tmax,
-                           .rect_icon = rect_icon,
-                           .rect_icon6 = rect_icon6,
-                           .rect_icon_hum1 = rect_icon_hum1,
-                           .rect_icon_hum2 = rect_icon_hum2,
-                           .rect_icon_hum3 = rect_icon_hum3,
-                           .rect_icon_leaf = rect_icon_leaf,
-                           .rect_bt_disconect = rect_bt_disconect,
-                           .rect_screen = rect_screen};
+  icon_data.fontsmall = fontsmall;
+  icon_data.fontsmallbold = fontsmallbold;
+  icon_data.fontmedium = fontmedium;
+  icon_data.color_temp = color_temp;
+  icon_data.week_day = week_day;
+  icon_data.mday = mday;
+  icon_data.min_temp_text = minTemp;
+  icon_data.max_temp_text = maxTemp;
+  icon_data.weather_temp_text = weather_temp_char;
+  icon_data.has_fresh_weather = has_fresh_weather;
+  icon_data.is_connected = flags.is_connected;
+  icon_data.is_quiet_time = quiet_time_is_active();
+  icon_data.is_bw_icon = true;
+  icon_data.is_metric = flags.is_metric;
+  icon_data.humidity = humidity;
+  icon_data.wind_speed_val = wind_speed_val;
+  icon_data.wind2_val = graph_wind_val[2];
+  icon_data.met_unit = flags.is_metric ? 20 : 25;
+  icon_data.icon_id = icon_id;
+  icon_data.icon_id6 = icon_id6;
+  icon_data.rect_text_day = rect_text_day;
+  icon_data.rect_text_dayw = rect_text_dayw;
+  icon_data.rect_temp = rect_temp;
+  icon_data.rect_tmin = rect_tmin;
+  icon_data.rect_tmax = rect_tmax;
+  icon_data.rect_icon = rect_icon;
+  icon_data.rect_icon6 = rect_icon6;
+  icon_data.rect_icon_hum1 = rect_icon_hum1;
+  icon_data.rect_icon_hum2 = rect_icon_hum2;
+  icon_data.rect_icon_hum3 = rect_icon_hum3;
+  icon_data.rect_icon_leaf = rect_icon_leaf;
+  icon_data.rect_bt_disconect = rect_bt_disconect;
+  icon_data.rect_screen = rect_screen;
 
   ui_draw_icon_bar(ctx, &icon_data);
 
@@ -547,7 +563,7 @@ static void handle_tick(struct tm *cur, TimeUnits units_changed) {
   }
 
   // Get weather update every 30 minutes (even during quiet time)
-  if (flags.is_connected) {
+  if (s_init_done && s_appmsg_open && flags.is_connected) {
     if ((((flags.is_30mn) && (now.tm_min % 30 == 0)) ||
          (now.tm_min % 60 == 0) ||
          ((mktime(&now) - last_refresh) > duration))) {
@@ -601,7 +617,7 @@ static void assign_fonts() {
   fontmedium = fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD);
   fontbig = fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD);
   flags.fontbig_loaded = false;
-  fontbig_resource_id = RESOURCE_ID_FONT_CLEARVIEW_45;
+  fontbig_resource_id = 0; // Custom 45pt font unused in rendering 2014 skip loading to save heap.
   hour_offset_x = 1;
   hour_offset_y = 9;
   status_offset_x = 1;
@@ -1009,11 +1025,13 @@ static void inbox_received_callback(DictionaryIterator *iterator,
     vibes_double_pulse();
 
     // Request immediate weather update to apply new units
-    DictionaryIterator *iter;
-    AppMessageResult outbox_result = app_message_outbox_begin(&iter);
-    if (outbox_result == APP_MSG_OK) {
-      dict_write_uint8(iter, 0, 0);
-      app_message_outbox_send();
+    if (s_appmsg_open) {
+      DictionaryIterator *iter;
+      AppMessageResult outbox_result = app_message_outbox_begin(&iter);
+      if (outbox_result == APP_MSG_OK) {
+        dict_write_uint8(iter, 0, 0);
+        app_message_outbox_send();
+      }
     }
   }
 
@@ -1080,6 +1098,7 @@ static void weather_retry_timer_callback(void *context) {
 }
 
 static void do_send_weather_request(void) {
+  if (!s_appmsg_open) return;
   DictionaryIterator *iter;
   AppMessageResult result = app_message_outbox_begin(&iter);
   if (result == APP_MSG_OK) {
@@ -1125,7 +1144,7 @@ static void init_var() {
   fontmedium = fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD);
   fontbig = fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD);
   flags.fontbig_loaded = false;
-  fontbig_resource_id = RESOURCE_ID_FONT_CLEARVIEW_45;
+  fontbig_resource_id = 0; // Custom 45pt font unused in rendering 2014 skip loading to save heap.
 
   if (persist_exists(KEY_RADIO_UNITS) && persist_exists(KEY_RADIO_REFRESH) &&
       persist_exists(KEY_TOGGLE_VIBRATION) && persist_exists(KEY_TOGGLE_BT)) {
@@ -1427,10 +1446,17 @@ static void click_config_provider(void *context) {
 }
 
 static void init() {
+  // Open AppMessage first, before any heap allocations, to maximise the chance
+  // of succeeding even when 824B of AppMessage pool is orphaned from a prior crash.
+  app_message_register_inbox_received(inbox_received_callback);
+  app_message_register_outbox_failed(outbox_failed_callback);
+  app_message_register_outbox_sent(outbox_sent_callback);
+  AppMessageResult msg_result = app_message_open(512, 64);
+  s_appmsg_open = (msg_result == APP_MSG_OK);
+  APP_LOG(APP_LOG_LEVEL_INFO, "app_message_open(512,64): %d s_appmsg_open=%d", (int)msg_result, (int)s_appmsg_open);
 
   init_var();
   hub_config_init();
-
   s_main_window = window_create();
   window_stack_push(s_main_window, true);
   window_set_click_config_provider(s_main_window, click_config_provider);
@@ -1443,30 +1469,16 @@ static void init() {
   tick_timer_service_subscribe(MINUTE_UNIT, handle_tick);
   bluetooth_connection_service_subscribe(bt_handler);
 
-  // JS Messages
-  app_message_register_inbox_received(inbox_received_callback);
-  app_message_register_outbox_failed(outbox_failed_callback);
-  app_message_register_outbox_sent(outbox_sent_callback);
-
-  AppMessageResult msg_result = app_message_open(1024, 64);
-  APP_LOG(APP_LOG_LEVEL_INFO, "app_message_open: %d (0=OK)", (int)msg_result);
   app_focus_service_subscribe_handlers((AppFocusHandlers){
       .did_focus = app_focus_changed, .will_focus = app_focus_changing});
-
-  // Hub: set main window reference and start timeout
   hub_set_main_window(s_main_window);
   hub_timeout_init(hub_timeout_fired);
 
-  // Trigger weather fetch if cache is stale
-  t = time(NULL);
-  now = *(localtime(&t));
-  if ((mktime(&now) - last_refresh) > duration) {
-    DictionaryIterator *iter;
-    if (app_message_outbox_begin(&iter) == APP_MSG_OK) {
-      dict_write_uint8(iter, 0, 0);
-      app_message_outbox_send();
-    }
-  }
+  // Mark init complete — callbacks (focus, tick) may now safely send AppMessages.
+  s_init_done = true;
+  // Trigger a redraw now that init is done (the initial window_stack_push draw
+  // was skipped because s_init_done was false at that point).
+  layer_mark_dirty(layer);
 }
 
 static void deinit() {
@@ -1500,11 +1512,4 @@ int main(void) {
   init();
   app_event_loop();
   deinit();
-}
-
-static void ensure_fontbig_loaded(void) {
-  if (fontbig_resource_id != 0 && !flags.fontbig_loaded) {
-    fontbig = fonts_load_custom_font(resource_get_handle(fontbig_resource_id));
-    flags.fontbig_loaded = true;
-  }
 }

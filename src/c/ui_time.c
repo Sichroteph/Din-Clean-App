@@ -46,7 +46,9 @@ void ui_draw_time(GContext *ctx, const TimeRenderData *data) {
 
   for (int i = 0; i < 4; i++) {
     GBitmap *bitmap = gbitmap_create_with_resource(resources[i]);
-    graphics_draw_bitmap_in_rect(ctx, bitmap, rects[i]);
-    gbitmap_destroy(bitmap);
+    if (bitmap) {
+      graphics_draw_bitmap_in_rect(ctx, bitmap, rects[i]);
+      gbitmap_destroy(bitmap);
+    }
   }
 }

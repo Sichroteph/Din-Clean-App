@@ -411,7 +411,9 @@ function processOpenMeteoResponse(responseText) {
     ext_day_temps_bytes.push(t < 0 ? t + 256 : t);
   }
 
-  var dictionary = {
+  // Split into 3 messages to fit in 512-byte inbox (real watch constraint).
+  // Each message is chained via success callback.
+  var dict1 = {
     "KEY_TEMPERATURE": temperature,
     "KEY_HUMIDITY": humidity,
     "KEY_WIND_SPEED": wind,
@@ -443,13 +445,16 @@ function processOpenMeteoResponse(responseText) {
     "KEY_FORECAST_RAIN4": hourlyRain.hour9,
     "KEY_FORECAST_RAIN41": hourlyRain.hour10,
     "KEY_FORECAST_RAIN42": hourlyRain.hour11,
-    "KEY_FORECAST_ICON1": hourly_icons.hour3,
-    "KEY_FORECAST_ICON2": hourly_icons.hour6,
-    "KEY_FORECAST_ICON3": hourly_icons.hour9,
     "KEY_LOCATION": "",
     "POOLTEMP": poolTemp * 10,
     "POOLPH": poolPH * 100,
     "POOLORP": poolORP,
+  };
+
+  var dict2 = {
+    "KEY_FORECAST_ICON1": hourly_icons.hour3,
+    "KEY_FORECAST_ICON2": hourly_icons.hour6,
+    "KEY_FORECAST_ICON3": hourly_icons.hour9,
     "KEY_DAY1_TEMP": day_temps[0],
     "KEY_DAY1_ICON": day_icons[0],
     "KEY_DAY1_RAIN": day_rains[0],
@@ -462,6 +467,9 @@ function processOpenMeteoResponse(responseText) {
     "KEY_DAY3_ICON": day_icons[2],
     "KEY_DAY3_RAIN": day_rains[2],
     "KEY_DAY3_WIND": day_winds[2],
+  };
+
+  var dict3 = {
     "KEY_EXT_TEMPS": ext_temps_bytes,
     "KEY_EXT_RAINS": ext_rains_bytes,
     "KEY_EXT_WINDS": ext_winds_bytes,
@@ -474,14 +482,21 @@ function processOpenMeteoResponse(responseText) {
     "KEY_ALL_DAY_WMO": all_day_wmo_arr,
   };
 
-  Pebble.sendAppMessage(dictionary,
-    function () {
-      console.log("Open-Meteo weather info sent to Pebble successfully!");
-    },
-    function () {
-      console.log("Error sending Open-Meteo weather info to Pebble!");
-    }
-  );
+  Pebble.sendAppMessage(dict1, function () {
+    console.log("Open-Meteo msg1 sent");
+    Pebble.sendAppMessage(dict2, function () {
+      console.log("Open-Meteo msg2 sent");
+      Pebble.sendAppMessage(dict3, function () {
+        console.log("Open-Meteo weather info sent to Pebble successfully!");
+      }, function () {
+        console.log("Error sending Open-Meteo weather info msg3!");
+      });
+    }, function () {
+      console.log("Error sending Open-Meteo weather info msg2!");
+    });
+  }, function () {
+    console.log("Error sending Open-Meteo weather info to Pebble!");
+  });
 }
 
 // Build a small, offline fake forecast so emulator tests work without network.
@@ -775,7 +790,8 @@ function processWeatherResponse(responseText) {
     if (h3 === 0) h3 = 12;
   }
 
-  var dictionary = {
+  // Split into 2 messages to fit in 512-byte inbox (real watch constraint).
+  var wdict1 = {
     "KEY_TEMPERATURE": temperature,
     "KEY_HUMIDITY": humidity,
     "KEY_WIND_SPEED": wind,
@@ -807,13 +823,16 @@ function processWeatherResponse(responseText) {
     "KEY_FORECAST_RAIN4": hourlyRain.hour9,
     "KEY_FORECAST_RAIN41": hourlyRain.hour10,
     "KEY_FORECAST_RAIN42": hourlyRain.hour11,
-    "KEY_FORECAST_ICON1": hourly_icons.hour3,
-    "KEY_FORECAST_ICON2": hourly_icons.hour6,
-    "KEY_FORECAST_ICON3": hourly_icons.hour9,
     "KEY_LOCATION": "",
     "POOLTEMP": poolTemp * 10,
     "POOLPH": poolPH * 100,
     "POOLORP": poolORP,
+  };
+
+  var wdict2 = {
+    "KEY_FORECAST_ICON1": hourly_icons.hour3,
+    "KEY_FORECAST_ICON2": hourly_icons.hour6,
+    "KEY_FORECAST_ICON3": hourly_icons.hour9,
     "KEY_DAY1_TEMP": day_temps[0],
     "KEY_DAY1_ICON": day_icons[0],
     "KEY_DAY1_RAIN": day_rains[0],
@@ -828,14 +847,16 @@ function processWeatherResponse(responseText) {
     "KEY_DAY3_WIND": day_winds[2],
   };
 
-  Pebble.sendAppMessage(dictionary,
-    function () {
+  Pebble.sendAppMessage(wdict1, function () {
+    console.log("MET Norway msg1 sent");
+    Pebble.sendAppMessage(wdict2, function () {
       console.log("Weather info sent to Pebble successfully!");
-    },
-    function () {
-      console.log("Error sending weather info to Pebble!");
-    }
-  );
+    }, function () {
+      console.log("Error sending weather info msg2!");
+    });
+  }, function () {
+    console.log("Error sending weather info to Pebble!");
+  });
 }
 
 function getIOPoolData() {
