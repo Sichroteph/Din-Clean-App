@@ -993,7 +993,7 @@ static void inbox_received_callback(DictionaryIterator *iterator,
 
   Tuple *stock_data_tuple = dict_find(iterator, KEY_STOCK_DATA);
   if (stock_data_tuple) {
-    // Format: "idx|symbol|price|change|h0,h1,...,h9"
+    // Format: "idx|symbol|price|change|h0,h1,...,h9|price_min|price_max"
     const char *s = stock_data_tuple->value->cstring;
     int idx = 0;
     // Parse index
@@ -1026,6 +1026,16 @@ static void inbox_received_callback(DictionaryIterator *iterator,
         p.history[h] = (uint8_t)val;
         if (*s == ',') s++;
       }
+      // Parse price_min
+      if (*s == '|') s++;
+      i = 0;
+      while (*s && *s != '|' && i < (int)sizeof(p.price_min) - 1) p.price_min[i++] = *s++;
+      p.price_min[i] = '\0';
+      // Parse price_max
+      if (*s == '|') s++;
+      i = 0;
+      while (*s && *s != '|' && i < (int)sizeof(p.price_max) - 1) p.price_max[i++] = *s++;
+      p.price_max[i] = '\0';
       // Persist this panel individually
       persist_write_data(HUB_PERSIST_STOCK0 + idx, &p, sizeof(StockPanel));
       if (idx == stock_panel_count - 1) {

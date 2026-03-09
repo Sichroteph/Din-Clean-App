@@ -1147,11 +1147,11 @@ function normalizeHistory(values) {
 function buildFakeStockData() {
   return [
     { symbol: 'DJIA', price: '42,531', change: '+0.8%', positive: true,
-      history: [30, 35, 42, 50, 48, 55, 62, 70, 78, 85] },
+      history: [30, 35, 42, 50, 48, 55, 62, 70, 78, 85], price_min: 41800, price_max: 43200 },
     { symbol: 'EUR/CHF', price: '0.9385', change: '-0.3%', positive: false,
-      history: [80, 75, 70, 65, 60, 55, 50, 48, 45, 40] },
+      history: [80, 75, 70, 65, 60, 55, 50, 48, 45, 40], price_min: 0.930, price_max: 0.960 },
     { symbol: 'BTC', price: '97,500', change: '+2.1%', positive: true,
-      history: [10, 20, 15, 30, 45, 40, 60, 55, 80, 95] }
+      history: [10, 20, 15, 30, 45, 40, 60, 55, 80, 95], price_min: 88000, price_max: 102000 }
   ];
 }
 
@@ -1177,8 +1177,11 @@ function sendStockPanel(panels, idx) {
   }
   var p = panels[idx];
   var histStr = normalizeHistory(p.history).join(',');
+  var priceMin = (p.price_min !== undefined) ? formatStockPrice(p.price_min) : '?';
+  var priceMax = (p.price_max !== undefined) ? formatStockPrice(p.price_max) : '?';
   var dataStr = idx + '|' + p.symbol + '|' + p.price + '|' +
-                (p.positive ? '+' : '') + p.change + '|' + histStr;
+                (p.positive ? '+' : '') + p.change + '|' + histStr +
+                '|' + priceMin + '|' + priceMax;
 
   Pebble.sendAppMessage({ 'KEY_STOCK_DATA': dataStr }, function () {
     console.log('Stock panel ' + idx + ' sent: ' + p.symbol);
@@ -1249,12 +1252,21 @@ function fetchStockData() {
           var changePct = ((lastPrice - firstPrice) / firstPrice * 100);
           var changeStr = changePct.toFixed(1) + '%';
 
+          // Compute raw min/max of the valid history window
+          var rawMin = validCloses[0], rawMax = validCloses[0];
+          for (var vi = 1; vi < validCloses.length; vi++) {
+            if (validCloses[vi] < rawMin) rawMin = validCloses[vi];
+            if (validCloses[vi] > rawMax) rawMax = validCloses[vi];
+          }
+
           panels[idx] = {
             symbol: displayName.substring(0, 9),
             price: formatStockPrice(lastPrice),
             change: changeStr,
             positive: changePct >= 0,
-            history: sampled
+            history: sampled,
+            price_min: rawMin,
+            price_max: rawMax
           };
         } catch (e) {
           console.error('Error parsing stock data for ' + symbol + ': ' + e);

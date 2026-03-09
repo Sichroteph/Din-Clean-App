@@ -43,6 +43,8 @@ typedef struct {
   char change[8];                // "+0.8%", "-1.2%"
   uint8_t history[STOCK_HISTORY_POINTS]; // 0-100 normalized
   bool positive;                 // true if change >= 0 (for trend indicator)
+  char price_min[10];            // Pre-formatted min price of history window
+  char price_max[10];            // Pre-formatted max price of history window
 } StockPanel;
 
 // Limits

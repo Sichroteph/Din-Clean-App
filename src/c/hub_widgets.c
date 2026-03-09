@@ -317,12 +317,24 @@ static void widget_stocks_draw(GContext *ctx, GRect bounds, uint8_t page) {
 
   int graph_h = STOCK_GRAPH_BOT - STOCK_GRAPH_TOP;
 
-  // Dotted horizontal grid (3 lines)
+  // Dotted horizontal grid (3 lines) with price labels on the right
   for (int g = 1; g <= 3; g++) {
     int gy = STOCK_GRAPH_TOP + g * graph_h / 4;
     for (int x = STOCK_GRAPH_LEFT; x < STOCK_GRAPH_RIGHT; x += 4) {
       graphics_draw_pixel(ctx, GPoint(x, gy));
     }
+  }
+
+  // Price range labels: max at top, min at bottom (right-aligned, small font)
+  if (p->price_max[0] != '\0') {
+    GRect max_rect = GRect(STOCK_GRAPH_LEFT, STOCK_GRAPH_TOP - 1, STOCK_GRAPH_RIGHT - STOCK_GRAPH_LEFT, 14);
+    graphics_draw_text(ctx, p->price_max, font14, max_rect,
+                       GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
+  }
+  if (p->price_min[0] != '\0') {
+    GRect min_rect = GRect(STOCK_GRAPH_LEFT, STOCK_GRAPH_BOT - 14, STOCK_GRAPH_RIGHT - STOCK_GRAPH_LEFT, 14);
+    graphics_draw_text(ctx, p->price_min, font14, min_rect,
+                       GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
   }
 
   // X positions for 10 history points, evenly spaced
