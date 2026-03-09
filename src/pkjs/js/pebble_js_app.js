@@ -287,14 +287,14 @@ function processOpenMeteoResponse(responseText) {
   }
 
   // --- 3-day forecast data extraction using DAILY data ---
-  var day_temps = ["", "", ""];
-  var day_icons = ["", "", ""];
-  var day_rains = ["", "", ""];
-  var day_winds = ["", "", ""];
+  var day_temps = ["", "", "", "", ""];
+  var day_icons = ["", "", "", "", ""];
+  var day_rains = ["", "", "", "", ""];
+  var day_winds = ["", "", "", "", ""];
 
   var daily = json.daily;
   if (daily && daily.time && daily.time.length > 1) {
-    var maxDays = Math.min(daily.time.length - 1, 3); // 3 days only
+    var maxDays = Math.min(daily.time.length - 1, 5); // 5 days
     for (var d = 0; d < maxDays; d++) {
       var dayIdx = d + 1; // Skip today (index 0)
       if (dayIdx >= daily.time.length) break;
@@ -413,10 +413,22 @@ function processOpenMeteoResponse(responseText) {
     "KEY_DAY3_ICON": day_icons[2],
     "KEY_DAY3_RAIN": day_rains[2],
     "KEY_DAY3_WIND": day_winds[2],
+    "KEY_DAY4_TEMP": day_temps[3],
+    "KEY_DAY4_ICON": day_icons[3],
+    "KEY_DAY4_RAIN": day_rains[3],
+    "KEY_DAY4_WIND": day_winds[3],
+    "KEY_DAY5_TEMP": day_temps[4],
+    "KEY_DAY5_ICON": day_icons[4],
+    "KEY_DAY5_RAIN": day_rains[4],
+    "KEY_DAY5_WIND": day_winds[4],
     "KEY_FORECAST_TEMP6": hourlyTemperatures.hour15,
     "KEY_FORECAST_TEMP7": hourlyTemperatures.hour18,
     "KEY_FORECAST_TEMP8": hourlyTemperatures.hour21,
     "KEY_FORECAST_TEMP9": hourlyTemperatures.hour24,
+    "KEY_FORECAST_WIND4": hourlyWind.hour12,
+    "KEY_FORECAST_WIND5": hourlyWind.hour15,
+    "KEY_FORECAST_WIND6": hourlyWind.hour18,
+    "KEY_FORECAST_WIND7": hourlyWind.hour21,
   };
 
   Pebble.sendAppMessage(dict1, function () {
@@ -637,15 +649,15 @@ function processWeatherResponse(responseText) {
   }
 
   // --- 3-day forecast data extraction ---
-  var day_temps = ["", "", ""];
-  var day_icons = ["", "", ""];
-  var day_rains = ["", "", ""];
-  var day_winds = ["", "", ""];
+  var day_temps = ["", "", "", "", ""];
+  var day_icons = ["", "", "", "", ""];
+  var day_rains = ["", "", "", "", ""];
+  var day_winds = ["", "", "", "", ""];
 
-  // Day offsets: 24h (tomorrow), 48h (day after), 72h (3rd day) - at noon
-  var dayOffsets = [24, 48, 72];
+  // Day offsets: 24h (tomorrow), 48h (day after), 72h (3rd day), 96h (4th), 120h (5th) - at noon
+  var dayOffsets = [24, 48, 72, 96, 120];
 
-  for (var d = 0; d < 3; d++) {
+  for (var d = 0; d < 5; d++) {
     var idx = dayOffsets[d];
     if (jsonWeather.properties.timeseries.length > idx) {
       var dayData = jsonWeather.properties.timeseries[idx].data;
@@ -777,10 +789,22 @@ function processWeatherResponse(responseText) {
     "KEY_DAY3_ICON": day_icons[2],
     "KEY_DAY3_RAIN": day_rains[2],
     "KEY_DAY3_WIND": day_winds[2],
+    "KEY_DAY4_TEMP": day_temps[3],
+    "KEY_DAY4_ICON": day_icons[3],
+    "KEY_DAY4_RAIN": day_rains[3],
+    "KEY_DAY4_WIND": day_winds[3],
+    "KEY_DAY5_TEMP": day_temps[4],
+    "KEY_DAY5_ICON": day_icons[4],
+    "KEY_DAY5_RAIN": day_rains[4],
+    "KEY_DAY5_WIND": day_winds[4],
     "KEY_FORECAST_TEMP6": hourlyTemperatures.hour15,
     "KEY_FORECAST_TEMP7": hourlyTemperatures.hour18,
     "KEY_FORECAST_TEMP8": hourlyTemperatures.hour21,
     "KEY_FORECAST_TEMP9": hourlyTemperatures.hour24,
+    "KEY_FORECAST_WIND4": hourlyWind.hour12,
+    "KEY_FORECAST_WIND5": hourlyWind.hour15,
+    "KEY_FORECAST_WIND6": hourlyWind.hour18,
+    "KEY_FORECAST_WIND7": hourlyWind.hour21,
   };
 
   Pebble.sendAppMessage(wdict1, function () {
@@ -910,7 +934,7 @@ function getForecast() {
       'latitude=' + current_Latitude + '&longitude=' + current_Longitude +
       '&hourly=temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_gusts_10m' +
       '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,wind_gusts_10m_max' +
-      '&forecast_days=4&timezone=auto';
+      '&forecast_days=6&timezone=auto';
 
     console.log(urlOpenMeteo);
 

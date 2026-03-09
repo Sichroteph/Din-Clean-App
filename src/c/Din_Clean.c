@@ -85,6 +85,12 @@
 #define KEY_FORECAST_TEMP8 214
 #define KEY_FORECAST_TEMP9 215
 
+// Extended hourly winds for page 2 (h+12, h+15, h+18, h+21)
+#define KEY_FORECAST_WIND4 224
+#define KEY_FORECAST_WIND5 225
+#define KEY_FORECAST_WIND6 226
+#define KEY_FORECAST_WIND7 227
+
 #define KEY_RADIO_UNITS 36
 #define KEY_RADIO_REFRESH 54
 #define KEY_TOGGLE_VIBRATION 37
@@ -115,6 +121,14 @@
 #define KEY_DAY3_ICON 209
 #define KEY_DAY3_RAIN 210
 #define KEY_DAY3_WIND 211
+#define KEY_DAY4_TEMP 216
+#define KEY_DAY4_ICON 217
+#define KEY_DAY4_RAIN 218
+#define KEY_DAY4_WIND 219
+#define KEY_DAY5_TEMP 220
+#define KEY_DAY5_ICON 221
+#define KEY_DAY5_RAIN 222
+#define KEY_DAY5_WIND 223
 
 //******************************************************************
 
@@ -219,17 +233,17 @@ static char icon3[20] = " ";
 static char location[16] = " ";
 static char rain_ico_val;
 
-// Hourly forecast data (9 temps for 0-24h, 12 rain bars, 4 winds/hours for 0-12h)
+// Hourly forecast data (9 temps for 0-24h, 12 rain bars, 8 winds for 0-24h, 4 hours for 0-12h)
 int8_t graph_temps[9] = {10, 10, 10, 10, 10, 10, 10, 10, 10};
 uint8_t graph_rains[12] = {0};
-uint8_t graph_wind_val[4] = {0};
+uint8_t graph_wind_val[8] = {0};
 uint8_t graph_hours[4] = {0, 3, 6, 9};
 
 // 3-day forecast data
-char days_temp[3][8] = {"--", "--", "--"};
-char days_icon[3][20] = {"", "", ""};
-char days_rain[3][5] = {"0mm", "0mm", "0mm"};
-char days_wind[3][5] = {"0km", "0km", "0km"};
+char days_temp[5][8] = {"--", "--", "--", "--", "--"};
+char days_icon[5][20] = {"", "", "", "", ""};
+char days_rain[5][5] = {"0mm", "0mm", "0mm", "0mm", "0mm"};
+char days_wind[5][5] = {"0km", "0km", "0km", "0km", "0km"};
 char wind_unit_str[6] = "km/h";
 uint8_t days_wmo[3] = {0};
 
@@ -794,6 +808,22 @@ static void inbox_received_callback(DictionaryIterator *iterator,
       snprintf(days_wind[1], sizeof(days_wind[1]), "%s", t->value->cstring);
     if ((t = dict_find(iterator, KEY_DAY3_WIND)))
       snprintf(days_wind[2], sizeof(days_wind[2]), "%s", t->value->cstring);
+    if ((t = dict_find(iterator, KEY_DAY4_TEMP)))
+      snprintf(days_temp[3], sizeof(days_temp[3]), "%s", t->value->cstring);
+    if ((t = dict_find(iterator, KEY_DAY5_TEMP)))
+      snprintf(days_temp[4], sizeof(days_temp[4]), "%s", t->value->cstring);
+    if ((t = dict_find(iterator, KEY_DAY4_ICON)))
+      snprintf(days_icon[3], sizeof(days_icon[3]), "%s", t->value->cstring);
+    if ((t = dict_find(iterator, KEY_DAY5_ICON)))
+      snprintf(days_icon[4], sizeof(days_icon[4]), "%s", t->value->cstring);
+    if ((t = dict_find(iterator, KEY_DAY4_RAIN)))
+      snprintf(days_rain[3], sizeof(days_rain[3]), "%s", t->value->cstring);
+    if ((t = dict_find(iterator, KEY_DAY5_RAIN)))
+      snprintf(days_rain[4], sizeof(days_rain[4]), "%s", t->value->cstring);
+    if ((t = dict_find(iterator, KEY_DAY4_WIND)))
+      snprintf(days_wind[3], sizeof(days_wind[3]), "%s", t->value->cstring);
+    if ((t = dict_find(iterator, KEY_DAY5_WIND)))
+      snprintf(days_wind[4], sizeof(days_wind[4]), "%s", t->value->cstring);
 
     // Extended hourly temps (h+15 to h+24 for page 2 of hourly widget)
     if ((t = dict_find(iterator, KEY_FORECAST_TEMP6)))
@@ -804,6 +834,16 @@ static void inbox_received_callback(DictionaryIterator *iterator,
       graph_temps[7] = (int)t->value->int32;
     if ((t = dict_find(iterator, KEY_FORECAST_TEMP9)))
       graph_temps[8] = (int)t->value->int32;
+
+    // Extended hourly winds (h+12 to h+21 for page 2 of hourly widget)
+    if ((t = dict_find(iterator, KEY_FORECAST_WIND4)))
+      graph_wind_val[4] = atoi(t->value->cstring);
+    if ((t = dict_find(iterator, KEY_FORECAST_WIND5)))
+      graph_wind_val[5] = atoi(t->value->cstring);
+    if ((t = dict_find(iterator, KEY_FORECAST_WIND6)))
+      graph_wind_val[6] = atoi(t->value->cstring);
+    if ((t = dict_find(iterator, KEY_FORECAST_WIND7)))
+      graph_wind_val[7] = atoi(t->value->cstring);
 
     persist_write_string(KEY_FORECAST_ICON1, icon1);
     persist_write_string(KEY_FORECAST_ICON2, icon2);
@@ -1270,9 +1310,9 @@ static void click_config_provider(void *context) {
   window_single_click_subscribe(BUTTON_ID_UP, up_click_handler);
   window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler);
   window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler);
-  window_long_click_subscribe(BUTTON_ID_UP, 500, up_long_handler, NULL);
-  window_long_click_subscribe(BUTTON_ID_DOWN, 500, down_long_handler, NULL);
-  window_long_click_subscribe(BUTTON_ID_SELECT, 500, select_long_handler, NULL);
+  window_long_click_subscribe(BUTTON_ID_UP, 400, up_long_handler, NULL);
+  window_long_click_subscribe(BUTTON_ID_DOWN, 400, down_long_handler, NULL);
+  window_long_click_subscribe(BUTTON_ID_SELECT, 400, select_long_handler, NULL);
 }
 
 static void init() {

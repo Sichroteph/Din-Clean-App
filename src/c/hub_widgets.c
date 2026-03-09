@@ -222,7 +222,7 @@ static uint8_t widget_stocks_page_count(void) {
   return stock_panel_count > 0 ? stock_panel_count : 1;
 }
 static uint8_t widget_hourly_page_count(void) { return 2; }
-static uint8_t widget_daily_page_count(void) { return 2; }
+static uint8_t widget_daily_page_count(void) { return 3; }
 
 static void widget_weather_draw(GContext *ctx, GRect bounds, uint8_t page) {
   graphics_context_set_text_color(ctx, GColorWhite);
@@ -500,8 +500,8 @@ static void widget_hourly_draw(GContext *ctx, GRect bounds, uint8_t page) {
                        NULL);
   }
 
-  // --- Wind section — page 0 only ---
-  if (page == 0) {
+  // --- Wind section ---
+  {
     char wind_label[14];
     snprintf(wind_label, sizeof(wind_label), "Wind (%s)", wind_unit_str);
     graphics_draw_text(ctx, wind_label, font14,
@@ -509,9 +509,10 @@ static void widget_hourly_draw(GContext *ctx, GRect bounds, uint8_t page) {
                        GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter,
                        NULL);
 
+    int wind_start = page * 4;
     for (int i = 0; i < 4; i++) {
       char wbuf[5];
-      snprintf(wbuf, sizeof(wbuf), "%d", graph_wind_val[i]);
+      snprintf(wbuf, sizeof(wbuf), "%d", graph_wind_val[wind_start + i]);
       graphics_draw_text(ctx, wbuf, font14, GRect(i * 36, HOURLY_WIND_Y, 36, 16),
                          GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter,
                          NULL);
@@ -528,8 +529,8 @@ static void widget_hourly_draw(GContext *ctx, GRect bounds, uint8_t page) {
 // ========== Daily Weather Widget ==========
 
 static void draw_daily_row(GContext *ctx, int y, int day_index, int bounds_w) {
-  if (day_index >= 3)
-    return; // only 3 days available
+  if (day_index >= 5)
+    return; // only 5 days available
   graphics_context_set_text_color(ctx, GColorWhite);
 
   // Day abbreviation (compute from current weekday + offset)
