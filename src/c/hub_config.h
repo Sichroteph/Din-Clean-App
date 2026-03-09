@@ -26,7 +26,11 @@
 // Stock widget message keys & persist
 #define KEY_STOCK_DATA       370
 #define KEY_STOCK_COUNT      371
-#define HUB_PERSIST_STOCKS   310
+#define HUB_PERSIST_STOCK0   310
+#define HUB_PERSIST_STOCK1   311
+#define HUB_PERSIST_STOCK2   312
+#define HUB_PERSIST_STOCK3   313
+#define HUB_PERSIST_STOCK4   314
 
 // Stock widget limits
 #define STOCK_MAX_PANELS     5

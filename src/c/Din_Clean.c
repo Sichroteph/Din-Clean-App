@@ -233,8 +233,7 @@ char days_wind[3][5] = {"0km", "0km", "0km"};
 char wind_unit_str[6] = "km/h";
 uint8_t days_wmo[3] = {0};
 
-// Stock widget data (pre-formatted by JS)
-StockPanel stock_panels[STOCK_MAX_PANELS];
+// Stock widget data count (panels stored in persist, loaded on demand)
 uint8_t stock_panel_count = 0;
 
 // Weather retry protection
@@ -974,7 +973,7 @@ static void inbox_received_callback(DictionaryIterator *iterator,
     stock_panel_count = (uint8_t)stock_count_tuple->value->int32;
     if (stock_panel_count > STOCK_MAX_PANELS)
       stock_panel_count = STOCK_MAX_PANELS;
-    memset(stock_panels, 0, sizeof(stock_panels));
+    persist_write_int(KEY_STOCK_COUNT, stock_panel_count);
   }
 
   Tuple *stock_data_tuple = dict_find(iterator, KEY_STOCK_DATA);
@@ -986,36 +985,35 @@ static void inbox_received_callback(DictionaryIterator *iterator,
     while (*s >= '0' && *s <= '9') { idx = idx * 10 + (*s - '0'); s++; }
     if (*s == '|') s++;
     if (idx < STOCK_MAX_PANELS) {
-      StockPanel *p = &stock_panels[idx];
+      StockPanel p;
+      memset(&p, 0, sizeof(p));
       // Parse symbol
       int i = 0;
-      while (*s && *s != '|' && i < (int)sizeof(p->symbol) - 1) p->symbol[i++] = *s++;
-      p->symbol[i] = '\0';
+      while (*s && *s != '|' && i < (int)sizeof(p.symbol) - 1) p.symbol[i++] = *s++;
+      p.symbol[i] = '\0';
       if (*s == '|') s++;
       // Parse price
       i = 0;
-      while (*s && *s != '|' && i < (int)sizeof(p->price) - 1) p->price[i++] = *s++;
-      p->price[i] = '\0';
+      while (*s && *s != '|' && i < (int)sizeof(p.price) - 1) p.price[i++] = *s++;
+      p.price[i] = '\0';
       if (*s == '|') s++;
       // Parse change
       i = 0;
-      while (*s && *s != '|' && i < (int)sizeof(p->change) - 1) p->change[i++] = *s++;
-      p->change[i] = '\0';
-      p->positive = (p->change[0] != '-');
+      while (*s && *s != '|' && i < (int)sizeof(p.change) - 1) p.change[i++] = *s++;
+      p.change[i] = '\0';
+      p.positive = (p.change[0] != '-');
       if (*s == '|') s++;
       // Parse history points (comma-separated uint8)
       for (int h = 0; h < STOCK_HISTORY_POINTS && *s; h++) {
         int val = 0;
         while (*s >= '0' && *s <= '9') { val = val * 10 + (*s - '0'); s++; }
         if (val > 100) val = 100;
-        p->history[h] = (uint8_t)val;
+        p.history[h] = (uint8_t)val;
         if (*s == ',') s++;
       }
-      // Persist after receiving last panel
+      // Persist this panel individually
+      persist_write_data(HUB_PERSIST_STOCK0 + idx, &p, sizeof(StockPanel));
       if (idx == stock_panel_count - 1) {
-        persist_write_data(HUB_PERSIST_STOCKS, stock_panels,
-                           sizeof(StockPanel) * stock_panel_count);
-        persist_write_int(KEY_STOCK_COUNT, stock_panel_count);
         layer_mark_dirty(layer);
       }
     }
@@ -1193,13 +1191,10 @@ static void init_var() {
     snprintf(days_icon[2], sizeof(days_icon[2]), " ");
   }
 
-  // Restore stock data
+  // Restore stock panel count (panels loaded on demand from persist)
   if (persist_exists(KEY_STOCK_COUNT)) {
     stock_panel_count = persist_read_int(KEY_STOCK_COUNT);
     if (stock_panel_count > STOCK_MAX_PANELS) stock_panel_count = STOCK_MAX_PANELS;
-    if (persist_exists(HUB_PERSIST_STOCKS))
-      persist_read_data(HUB_PERSIST_STOCKS, stock_panels,
-                        sizeof(StockPanel) * stock_panel_count);
   }
 
   color_temp = GColorWhite;

@@ -13,9 +13,18 @@ extern char days_rain[][5];
 extern char days_wind[][5];
 extern uint8_t days_wmo[];
 
-// Stock data from Din_Clean.c
-extern StockPanel stock_panels[];
+// Stock data — count in RAM, panels loaded on demand from persist
 extern uint8_t stock_panel_count;
+
+// Load a single stock panel from persist into dst. Returns true on success.
+static bool stock_load_panel(uint8_t idx, StockPanel *dst) {
+  if (idx >= STOCK_MAX_PANELS) return false;
+  int key = HUB_PERSIST_STOCK0 + idx;
+  if (!persist_exists(key)) return false;
+  memset(dst, 0, sizeof(StockPanel));
+  persist_read_data(key, dst, sizeof(StockPanel));
+  return true;
+}
 
 // --- Widget draw/page functions ---
 static void widget_weather_draw(GContext *ctx, GRect bounds, uint8_t page);
@@ -256,7 +265,9 @@ static void widget_stocks_draw(GContext *ctx, GRect bounds, uint8_t page) {
   graphics_context_set_stroke_color(ctx, GColorWhite);
   graphics_context_set_fill_color(ctx, GColorWhite);
 
-  if (stock_panel_count == 0 || page >= stock_panel_count) {
+  StockPanel panel_buf;
+  if (stock_panel_count == 0 || page >= stock_panel_count ||
+      !stock_load_panel(page, &panel_buf)) {
     GRect msg_rect = GRect(0, 60, bounds.size.w, 30);
     graphics_draw_text(ctx, "No stocks",
                        fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD), msg_rect,
@@ -265,7 +276,7 @@ static void widget_stocks_draw(GContext *ctx, GRect bounds, uint8_t page) {
     return;
   }
 
-  StockPanel *p = &stock_panels[page];
+  StockPanel *p = &panel_buf;
   GFont font14 = fonts_get_system_font(FONT_KEY_GOTHIC_14);
 
   // --- Header: symbol (left) + price (right) ---
