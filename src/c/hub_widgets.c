@@ -6,6 +6,7 @@ extern int8_t graph_temps[];
 extern uint8_t graph_rains[];
 extern uint8_t graph_wind_val[];
 extern uint8_t graph_hours[];
+extern char wind_unit_str[];
 extern char days_temp[][8];
 extern char days_icon[][20];
 extern char days_rain[][5];
@@ -29,10 +30,14 @@ typedef struct {
 } WidgetDef;
 
 static const WidgetDef s_widget_defs[] = {
-  [HUB_WIDGET_WEATHER]        = { widget_weather_draw, widget_weather_page_count, "Weather" },
-  [HUB_WIDGET_STOCKS]         = { widget_stocks_draw,  widget_stocks_page_count,  "Stocks" },
-  [HUB_WIDGET_WEATHER_HOURLY] = { widget_hourly_draw,  widget_hourly_page_count,  "Hourly" },
-  [HUB_WIDGET_WEATHER_DAILY]  = { widget_daily_draw,   widget_daily_page_count,   "Daily" },
+    [HUB_WIDGET_WEATHER] = {widget_weather_draw, widget_weather_page_count,
+                            "Weather"},
+    [HUB_WIDGET_STOCKS] = {widget_stocks_draw, widget_stocks_page_count,
+                           "Stocks"},
+    [HUB_WIDGET_WEATHER_HOURLY] = {widget_hourly_draw, widget_hourly_page_count,
+                                   "Hourly"},
+    [HUB_WIDGET_WEATHER_DAILY] = {widget_daily_draw, widget_daily_page_count,
+                                  "Daily"},
 };
 
 typedef struct {
@@ -65,10 +70,12 @@ void hub_widgets_push(bool is_up, HubDirection direction) {
     ids = hub_config_get_down_widgets(&count);
   }
 
-  if (!ids || count == 0) return;
+  if (!ids || count == 0)
+    return;
 
   WidgetCtx *ctx = malloc(sizeof(WidgetCtx));
-  if (!ctx) return;
+  if (!ctx)
+    return;
 
   ctx->widget_ids = ids;
   ctx->widget_count = count;
@@ -78,10 +85,10 @@ void hub_widgets_push(bool is_up, HubDirection direction) {
 
   ctx->window = window_create();
   window_set_user_data(ctx->window, ctx);
-  window_set_window_handlers(ctx->window, (WindowHandlers) {
-    .load = widget_window_load,
-    .unload = widget_window_unload,
-  });
+  window_set_window_handlers(ctx->window, (WindowHandlers){
+                                              .load = widget_window_load,
+                                              .unload = widget_window_unload,
+                                          });
 
   window_stack_push(ctx->window, g_hub_config.anim_enabled ? true : false);
 }
@@ -96,7 +103,8 @@ static void widget_window_load(Window *window) {
   layer_set_update_proc(ctx->canvas, widget_update_proc);
   layer_add_child(root, ctx->canvas);
 
-  window_set_click_config_provider_with_context(window, widget_click_config, ctx);
+  window_set_click_config_provider_with_context(window, widget_click_config,
+                                                ctx);
 
   hub_timeout_reset();
 }
@@ -127,14 +135,13 @@ static void widget_update_proc(Layer *layer, GContext *ctx) {
   // Draw widget position indicator (e.g., "1/3")
   if (wctx->widget_count > 1) {
     char indicator[8];
-    snprintf(indicator, sizeof(indicator), "%d/%d",
-             wctx->current_index + 1, wctx->widget_count);
+    snprintf(indicator, sizeof(indicator), "%d/%d", wctx->current_index + 1,
+             wctx->widget_count);
     graphics_context_set_text_color(ctx, GColorWhite);
     GRect ind_rect = GRect(bounds.size.w - 40, bounds.size.h - 18, 36, 16);
-    graphics_draw_text(ctx, indicator,
-                       fonts_get_system_font(FONT_KEY_GOTHIC_14),
-                       ind_rect, GTextOverflowModeTrailingEllipsis,
-                       GTextAlignmentRight, NULL);
+    graphics_draw_text(
+        ctx, indicator, fonts_get_system_font(FONT_KEY_GOTHIC_14), ind_rect,
+        GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
   }
 }
 
@@ -153,10 +160,8 @@ static void widget_navigate(WidgetCtx *ctx, bool forward) {
       ctx->current_index++;
       ctx->current_page = 0;
       layer_mark_dirty(ctx->canvas);
-    } else {
-      // Past last widget: exit
-      window_stack_pop(g_hub_config.anim_enabled ? true : false);
     }
+    // At last widget: do nothing (no wrap, no exit)
   } else {
     if (ctx->current_index > 0) {
       ctx->current_index--;
@@ -209,27 +214,33 @@ static void widget_weather_draw(GContext *ctx, GRect bounds, uint8_t page) {
 
   char page_label[16];
   switch (page) {
-    case 0: snprintf(page_label, sizeof(page_label), "0-12h"); break;
-    case 1: snprintf(page_label, sizeof(page_label), "12-24h"); break;
-    case 2: snprintf(page_label, sizeof(page_label), "24-36h"); break;
-    default: snprintf(page_label, sizeof(page_label), "??"); break;
+  case 0:
+    snprintf(page_label, sizeof(page_label), "0-12h");
+    break;
+  case 1:
+    snprintf(page_label, sizeof(page_label), "12-24h");
+    break;
+  case 2:
+    snprintf(page_label, sizeof(page_label), "24-36h");
+    break;
+  default:
+    snprintf(page_label, sizeof(page_label), "??");
+    break;
   }
 
   GRect title_rect = GRect(0, 40, bounds.size.w, 34);
   graphics_draw_text(ctx, "Weather",
-                     fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD),
-                     title_rect, GTextOverflowModeTrailingEllipsis,
-                     GTextAlignmentCenter, NULL);
+                     fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD), title_rect,
+                     GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter,
+                     NULL);
 
   GRect page_rect = GRect(0, 78, bounds.size.w, 28);
-  graphics_draw_text(ctx, page_label,
-                     fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD),
-                     page_rect, GTextOverflowModeTrailingEllipsis,
-                     GTextAlignmentCenter, NULL);
+  graphics_draw_text(
+      ctx, page_label, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD),
+      page_rect, GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
 
   GRect stub_rect = GRect(0, 112, bounds.size.w, 22);
-  graphics_draw_text(ctx, "(stub)",
-                     fonts_get_system_font(FONT_KEY_GOTHIC_18),
+  graphics_draw_text(ctx, "(stub)", fonts_get_system_font(FONT_KEY_GOTHIC_18),
                      stub_rect, GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentCenter, NULL);
 }
@@ -241,39 +252,39 @@ static void widget_stocks_draw(GContext *ctx, GRect bounds, uint8_t page) {
   snprintf(label, sizeof(label), "Stock %d", page + 1);
 
   GRect title_rect = GRect(0, 40, bounds.size.w, 34);
-  graphics_draw_text(ctx, "Stocks",
-                     fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD),
-                     title_rect, GTextOverflowModeTrailingEllipsis,
-                     GTextAlignmentCenter, NULL);
+  graphics_draw_text(
+      ctx, "Stocks", fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD), title_rect,
+      GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
 
   GRect page_rect = GRect(0, 78, bounds.size.w, 28);
-  graphics_draw_text(ctx, label,
-                     fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD),
+  graphics_draw_text(ctx, label, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD),
                      page_rect, GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentCenter, NULL);
 
   GRect stub_rect = GRect(0, 112, bounds.size.w, 22);
-  graphics_draw_text(ctx, "(stub)",
-                     fonts_get_system_font(FONT_KEY_GOTHIC_18),
+  graphics_draw_text(ctx, "(stub)", fonts_get_system_font(FONT_KEY_GOTHIC_18),
                      stub_rect, GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentCenter, NULL);
 }
 
 // ========== Hourly Weather Widget ==========
 
-#define HOURLY_LABEL_Y    0
-#define HOURLY_GRAPH_TOP  16
-#define HOURLY_GRAPH_BOT  88
-#define HOURLY_TEMP_Y     88
-#define HOURLY_ICON_Y     104
-#define HOURLY_WIND_Y     140
-#define HOURLY_PAGE_Y     156
-#define HOURLY_MAXRAIN    40
+#define HOURLY_LABEL_Y 0
+#define HOURLY_GRAPH_TOP 16
+#define HOURLY_GRAPH_BOT 88
+#define HOURLY_TEMP_Y 88
+#define HOURLY_ICON_Y 104
+#define HOURLY_WINDLABEL_Y 124
+#define HOURLY_WIND_Y 140
+#define HOURLY_PAGE_Y 156
+#define HOURLY_MAXRAIN 40
 
 static int hourly_temp_to_y(int8_t temp, int8_t tmin, int8_t tmax) {
   int range = tmax - tmin;
-  if (range <= 0) range = 1;
-  return HOURLY_GRAPH_TOP + (tmax - temp) * (HOURLY_GRAPH_BOT - HOURLY_GRAPH_TOP) / range;
+  if (range <= 0)
+    range = 1;
+  return HOURLY_GRAPH_TOP +
+         (tmax - temp) * (HOURLY_GRAPH_BOT - HOURLY_GRAPH_TOP) / range;
 }
 
 static void widget_hourly_draw(GContext *ctx, GRect bounds, uint8_t page) {
@@ -290,17 +301,19 @@ static void widget_hourly_draw(GContext *ctx, GRect bounds, uint8_t page) {
   for (int i = 0; i < 4; i++) {
     char hbuf[5];
     snprintf(hbuf, sizeof(hbuf), "%dh", graph_hours[i]);
-    graphics_draw_text(ctx, hbuf, font14,
-      GRect(i * 36, HOURLY_LABEL_Y, 36, 16),
-      GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
+    graphics_draw_text(ctx, hbuf, font14, GRect(i * 36, HOURLY_LABEL_Y, 36, 16),
+                       GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter,
+                       NULL);
   }
 
   // --- Find min/max temps ---
   int8_t ptmin = 127, ptmax = -128;
   for (int i = 0; i <= 4; i++) {
     int8_t t = graph_temps[i];
-    if (t < ptmin) ptmin = t;
-    if (t > ptmax) ptmax = t;
+    if (t < ptmin)
+      ptmin = t;
+    if (t > ptmax)
+      ptmax = t;
   }
   int range = ptmax - ptmin;
   if (range < 4) {
@@ -329,10 +342,13 @@ static void widget_hourly_draw(GContext *ctx, GRect bounds, uint8_t page) {
   // --- Rain bars (dithered) ---
   for (int i = 0; i < 12; i++) {
     uint8_t rain = graph_rains[i];
-    if (rain == 0) continue;
+    if (rain == 0)
+      continue;
     int bar_h = (int)rain * 30 / HOURLY_MAXRAIN;
-    if (bar_h > 30) bar_h = 30;
-    if (bar_h < 1) bar_h = 1;
+    if (bar_h > 30)
+      bar_h = 30;
+    if (bar_h < 1)
+      bar_h = 1;
     int bar_x = i * 12;
     int bar_y = HOURLY_GRAPH_BOT - bar_h;
     for (int y = bar_y; y < HOURLY_GRAPH_BOT; y++) {
@@ -363,32 +379,41 @@ static void widget_hourly_draw(GContext *ctx, GRect bounds, uint8_t page) {
     int y = hourly_temp_to_y(graph_temps[i], ptmin, ptmax);
     int ly = (y < HOURLY_GRAPH_TOP + 16) ? y + 5 : y - 15;
     int lx = tx[i] - 15;
-    if (lx < 0) lx = 0;
-    if (lx > bounds.size.w - 30) lx = bounds.size.w - 30;
-    graphics_draw_text(ctx, tbuf, font14,
-      GRect(lx, ly, 30, 16),
-      GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
+    if (lx < 0)
+      lx = 0;
+    if (lx > bounds.size.w - 30)
+      lx = bounds.size.w - 30;
+    graphics_draw_text(ctx, tbuf, font14, GRect(lx, ly, 30, 16),
+                       GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter,
+                       NULL);
   }
+
+  // --- Wind label ---
+  char wind_label[14];
+  snprintf(wind_label, sizeof(wind_label), "Wind (%s)", wind_unit_str);
+  graphics_draw_text(ctx, wind_label, font14, GRect(0, HOURLY_WINDLABEL_Y, bounds.size.w, 16),
+                     GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
 
   // --- Wind values ---
   for (int i = 0; i < 4; i++) {
     char wbuf[5];
     snprintf(wbuf, sizeof(wbuf), "%d", graph_wind_val[i]);
-    graphics_draw_text(ctx, wbuf, font14,
-      GRect(i * 36, HOURLY_WIND_Y, 36, 16),
-      GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
+    graphics_draw_text(ctx, wbuf, font14, GRect(i * 36, HOURLY_WIND_Y, 36, 16),
+                       GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter,
+                       NULL);
   }
 
   // --- Page label ---
-  graphics_draw_text(ctx, "0-12h", font14,
-    GRect(0, HOURLY_PAGE_Y, 60, 14),
-    GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+  graphics_draw_text(ctx, "0-12h", font14, GRect(0, HOURLY_PAGE_Y, 60, 14),
+                     GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft,
+                     NULL);
 }
 
 // ========== Daily Weather Widget ==========
 
 static void draw_daily_row(GContext *ctx, int y, int day_index, int bounds_w) {
-  if (day_index >= 3) return; // only 3 days available
+  if (day_index >= 3)
+    return; // only 3 days available
   graphics_context_set_text_color(ctx, GColorWhite);
 
   // Day abbreviation (compute from current weekday + offset)
@@ -403,9 +428,9 @@ static void draw_daily_row(GContext *ctx, int y, int day_index, int bounds_w) {
   GFont font14 = fonts_get_system_font(FONT_KEY_GOTHIC_14);
 
   // Day name (top-left)
-  graphics_draw_text(ctx, dayn, font18b,
-    GRect(2, y, 42, 22),
-    GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+  graphics_draw_text(ctx, dayn, font18b, GRect(2, y, 42, 22),
+                     GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft,
+                     NULL);
 
   // Weather icon (center-left) — use text icon name
   int icon_id = weather_utils_build_icon(days_icon[day_index], true);
@@ -416,19 +441,19 @@ static void draw_daily_row(GContext *ctx, int y, int day_index, int bounds_w) {
   }
 
   // Temperature (right of icon)
-  graphics_draw_text(ctx, days_temp[day_index], font24b,
-    GRect(84, y - 2, 58, 28),
-    GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
+  graphics_draw_text(
+      ctx, days_temp[day_index], font24b, GRect(84, y - 2, 58, 28),
+      GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
 
   // Rain (below temp, right side)
-  graphics_draw_text(ctx, days_rain[day_index], font14,
-    GRect(84, y + 24, 58, 16),
-    GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
+  graphics_draw_text(
+      ctx, days_rain[day_index], font14, GRect(84, y + 24, 58, 16),
+      GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
 
   // Wind (below rain, right side)
-  graphics_draw_text(ctx, days_wind[day_index], font14,
-    GRect(84, y + 38, 58, 16),
-    GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
+  graphics_draw_text(
+      ctx, days_wind[day_index], font14, GRect(84, y + 38, 58, 16),
+      GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
 }
 
 static void widget_daily_draw(GContext *ctx, GRect bounds, uint8_t page) {
@@ -460,7 +485,7 @@ static void widget_daily_draw(GContext *ctx, GRect bounds, uint8_t page) {
   } else {
     snprintf(pbuf, sizeof(pbuf), "J+%d", first_day + 1);
   }
-  graphics_draw_text(ctx, pbuf, font14,
-    GRect(2, bounds.size.h - 16, 80, 14),
-    GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+  graphics_draw_text(ctx, pbuf, font14, GRect(2, bounds.size.h - 16, 80, 14),
+                     GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft,
+                     NULL);
 }

@@ -1102,124 +1102,124 @@ Pebble.addEventListener('showConfiguration', function () {
 
 Pebble.addEventListener('webviewclosed', function (e) {
   try {
-  if (!e.response || e.response === 'CANCELLED') {
-    console.log('Webview closed without submitting config (response: ' + e.response + ')');
-    return;
-  }
-  var configData = JSON.parse(decodeURIComponent(e.response));
-  console.log('Configuration page returned: ' + JSON.stringify(configData));
-
-  var input_iopool_token = configData['input_iopool_token'];
-  var radio_units = configData['radio_units'];
-  var radio_refresh = configData['radio_refresh'];
-  var toggle_vibration = configData['toggle_vibration'];
-  var toggle_bt = configData['toggle_bt'];
-  var color_right_back = configData['color_right_back'];
-  var color_left_back = configData['color_left_back'];
-
-  var dict = {};
-
-  // Weather API selection (Open-Meteo or MET Norway)
-  var weather_api = configData['weather_api'] || 'openmeteo';
-  localStorage.setItem(180, weather_api);
-  console.log("Weather API set to: " + weather_api);
-
-  localStorage.setItem(152, radio_units ? 1 : 0);
-  localStorage.setItem(158, input_iopool_token);
-
-  // Wind speed unit for metric mode (kmh or ms)
-  var wind_speed_unit = configData['wind_speed_unit'] || 'kmh';
-  localStorage.setItem(181, wind_speed_unit);
-  console.log("Wind speed unit set to: " + wind_speed_unit);
-
-  // Encoding: 1 = on/true/metric/30min, 2 = off/false/imperial/15min
-  // Never send 0 — Pebble SDK silently drops zero-value integer entries
-  dict['KEY_RADIO_UNITS'] = radio_units ? 2 : 1;       // 2=metric, 1=imperial
-  dict['KEY_RADIO_REFRESH'] = radio_refresh ? 1 : 2;   // 1=30min, 2=15min
-  dict['KEY_TOGGLE_VIBRATION'] = toggle_vibration ? 1 : 2; // 1=on, 2=off
-  dict['KEY_TOGGLE_BT'] = toggle_bt ? 1 : 2;           // 1=on, 2=off
-
-  function safeColorComponent(hex, start, end) {
-    if (typeof hex === 'string' && hex.length >= end) {
-      return parseInt(hex.substring(start, end), 16);
+    if (!e.response || e.response === 'CANCELLED') {
+      console.log('Webview closed without submitting config (response: ' + e.response + ')');
+      return;
     }
-    return 0;
-  }
+    var configData = JSON.parse(decodeURIComponent(e.response));
+    console.log('Configuration page returned: ' + JSON.stringify(configData));
 
-  dict['KEY_COLOR_RIGHT_BACK_R'] = safeColorComponent(color_right_back, 2, 4);
-  dict['KEY_COLOR_RIGHT_BACK_G'] = safeColorComponent(color_right_back, 4, 6);
-  dict['KEY_COLOR_RIGHT_BACK_B'] = safeColorComponent(color_right_back, 6, 8);
+    var input_iopool_token = configData['input_iopool_token'];
+    var radio_units = configData['radio_units'];
+    var radio_refresh = configData['radio_refresh'];
+    var toggle_vibration = configData['toggle_vibration'];
+    var toggle_bt = configData['toggle_bt'];
+    var color_right_back = configData['color_right_back'];
+    var color_left_back = configData['color_left_back'];
 
-  dict['KEY_COLOR_LEFT_BACK_R'] = safeColorComponent(color_left_back, 2, 4);
-  dict['KEY_COLOR_LEFT_BACK_G'] = safeColorComponent(color_left_back, 4, 6);
-  dict['KEY_COLOR_LEFT_BACK_B'] = safeColorComponent(color_left_back, 6, 8);
+    var dict = {};
 
-  // --- Hub configuration ---
-  var hub_timeout = parseInt(configData['hub_timeout']) || 30;
-  var hub_anim = (configData['hub_anim'] !== undefined) ? parseInt(configData['hub_anim']) : 1;
-  var hub_btn_up = (configData['hub_btn_up'] !== undefined) ? parseInt(configData['hub_btn_up']) : 1;  // 0=menu, 1=widgets
-  var hub_btn_down = (configData['hub_btn_down'] !== undefined) ? parseInt(configData['hub_btn_down']) : 0; // 0=menu, 1=widgets
+    // Weather API selection (Open-Meteo or MET Norway)
+    var weather_api = configData['weather_api'] || 'openmeteo';
+    localStorage.setItem(180, weather_api);
+    console.log("Weather API set to: " + weather_api);
 
-  // Long press: encode as (type << 4) | data
-  // type: 0=pseudoapp, 1=webhook
-  var hub_lp_up = parseInt(configData['hub_lp_up']) || 0x10; // webhook:0
-  var hub_lp_down = parseInt(configData['hub_lp_down']) || 0x00; // pseudoapp:stopwatch
-  var hub_lp_select = parseInt(configData['hub_lp_select']) || 0x01; // pseudoapp:timer
+    localStorage.setItem(152, radio_units ? 1 : 0);
+    localStorage.setItem(158, input_iopool_token);
 
-  // Views: comma-separated enabled view IDs
-  var hub_views = configData['hub_views'] || '0,1,2,3';
+    // Wind speed unit for metric mode (kmh or ms)
+    var wind_speed_unit = configData['wind_speed_unit'] || 'kmh';
+    localStorage.setItem(181, wind_speed_unit);
+    console.log("Wind speed unit set to: " + wind_speed_unit);
 
-  dict['KEY_HUB_TIMEOUT'] = hub_timeout;
-  dict['KEY_HUB_ANIM'] = (hub_anim === 1) ? 1 : 2;          // 1=on, 2=off
-  dict['KEY_HUB_BTN_UP'] = (hub_btn_up === 1) ? 1 : 2;      // 1=widgets, 2=menu
-  dict['KEY_HUB_BTN_DOWN'] = (hub_btn_down === 1) ? 1 : 2;  // 1=widgets, 2=menu
-  dict['KEY_HUB_LP_UP'] = hub_lp_up;
-  dict['KEY_HUB_LP_DOWN'] = hub_lp_down;
-  dict['KEY_HUB_LP_SELECT'] = hub_lp_select;
-  dict['KEY_HUB_VIEWS'] = hub_views;
+    // Encoding: 1 = on/true/metric/30min, 2 = off/false/imperial/15min
+    // Never send 0 — Pebble SDK silently drops zero-value integer entries
+    dict['KEY_RADIO_UNITS'] = radio_units ? 2 : 1;       // 2=metric, 1=imperial
+    dict['KEY_RADIO_REFRESH'] = radio_refresh ? 1 : 2;   // 1=30min, 2=15min
+    dict['KEY_TOGGLE_VIBRATION'] = toggle_vibration ? 1 : 2; // 1=on, 2=off
+    dict['KEY_TOGGLE_BT'] = toggle_bt ? 1 : 2;           // 1=on, 2=off
 
-  // Custom menu/widget data
-  var hub_menu_up = configData['hub_menu_up'] || '';
-  var hub_menu_down = configData['hub_menu_down'] || '';
-  var hub_widgets_up = configData['hub_widgets_up'] || '0,1';
-  var hub_widgets_down = configData['hub_widgets_down'] || '0,1';
-
-  dict['KEY_HUB_MENU_UP'] = hub_menu_up;
-  dict['KEY_HUB_MENU_DOWN'] = hub_menu_down;
-  dict['KEY_HUB_WIDGETS_UP'] = hub_widgets_up;
-  dict['KEY_HUB_WIDGETS_DOWN'] = hub_widgets_down;
-
-  // Webhook URLs (stored in JS localStorage only, keyed by index)
-  var webhookUrlsStr = configData['webhook_urls'];
-  if (webhookUrlsStr) {
-    try {
-      var webhookUrls = JSON.parse(webhookUrlsStr);
-      for (var k in webhookUrls) {
-        if (webhookUrls.hasOwnProperty(k)) {
-          localStorage.setItem('webhook_url_' + k, webhookUrls[k]);
-        }
+    function safeColorComponent(hex, start, end) {
+      if (typeof hex === 'string' && hex.length >= end) {
+        return parseInt(hex.substring(start, end), 16);
       }
-    } catch (e) {
-      console.log('Failed to parse webhook_urls');
+      return 0;
     }
-  }
-  // Backward compat: single webhook_url from old config
-  var webhook_url = configData['webhook_url'];
-  if (webhook_url && !webhookUrlsStr) {
-    localStorage.setItem('webhook_url_0', webhook_url);
-  }
 
-  console.log('[CFG] Sending dict keys: ' + Object.keys(dict).join(', '));
-  console.log('[CFG] KEY_RADIO_UNITS=' + dict['KEY_RADIO_UNITS'] + ' KEY_HUB_TIMEOUT=' + dict['KEY_HUB_TIMEOUT'] + ' KEY_HUB_WIDGETS_UP=' + dict['KEY_HUB_WIDGETS_UP']);
-  Pebble.sendAppMessage(dict, function () {
-    // Refresh weather data after configuration changes (e.g., API provider, units)
-    console.log("Configuration sent successfully, fetching weather data");
-    setTimeout(function () {
-      getWeather();
-    }, 500);
-  }, function () {
-    console.log("Failed to send configuration");
-  });
+    dict['KEY_COLOR_RIGHT_BACK_R'] = safeColorComponent(color_right_back, 2, 4);
+    dict['KEY_COLOR_RIGHT_BACK_G'] = safeColorComponent(color_right_back, 4, 6);
+    dict['KEY_COLOR_RIGHT_BACK_B'] = safeColorComponent(color_right_back, 6, 8);
+
+    dict['KEY_COLOR_LEFT_BACK_R'] = safeColorComponent(color_left_back, 2, 4);
+    dict['KEY_COLOR_LEFT_BACK_G'] = safeColorComponent(color_left_back, 4, 6);
+    dict['KEY_COLOR_LEFT_BACK_B'] = safeColorComponent(color_left_back, 6, 8);
+
+    // --- Hub configuration ---
+    var hub_timeout = parseInt(configData['hub_timeout']) || 30;
+    var hub_anim = (configData['hub_anim'] !== undefined) ? parseInt(configData['hub_anim']) : 1;
+    var hub_btn_up = (configData['hub_btn_up'] !== undefined) ? parseInt(configData['hub_btn_up']) : 1;  // 0=menu, 1=widgets
+    var hub_btn_down = (configData['hub_btn_down'] !== undefined) ? parseInt(configData['hub_btn_down']) : 0; // 0=menu, 1=widgets
+
+    // Long press: encode as (type << 4) | data
+    // type: 0=pseudoapp, 1=webhook
+    var hub_lp_up = parseInt(configData['hub_lp_up']) || 0x10; // webhook:0
+    var hub_lp_down = parseInt(configData['hub_lp_down']) || 0x00; // pseudoapp:stopwatch
+    var hub_lp_select = parseInt(configData['hub_lp_select']) || 0x01; // pseudoapp:timer
+
+    // Views: comma-separated enabled view IDs
+    var hub_views = configData['hub_views'] || '0,1,2,3';
+
+    dict['KEY_HUB_TIMEOUT'] = hub_timeout;
+    dict['KEY_HUB_ANIM'] = (hub_anim === 1) ? 1 : 2;          // 1=on, 2=off
+    dict['KEY_HUB_BTN_UP'] = (hub_btn_up === 1) ? 1 : 2;      // 1=widgets, 2=menu
+    dict['KEY_HUB_BTN_DOWN'] = (hub_btn_down === 1) ? 1 : 2;  // 1=widgets, 2=menu
+    dict['KEY_HUB_LP_UP'] = hub_lp_up;
+    dict['KEY_HUB_LP_DOWN'] = hub_lp_down;
+    dict['KEY_HUB_LP_SELECT'] = hub_lp_select;
+    dict['KEY_HUB_VIEWS'] = hub_views;
+
+    // Custom menu/widget data
+    var hub_menu_up = configData['hub_menu_up'] || '';
+    var hub_menu_down = configData['hub_menu_down'] || '';
+    var hub_widgets_up = configData['hub_widgets_up'] || '0,1';
+    var hub_widgets_down = configData['hub_widgets_down'] || '0,1';
+
+    dict['KEY_HUB_MENU_UP'] = hub_menu_up;
+    dict['KEY_HUB_MENU_DOWN'] = hub_menu_down;
+    dict['KEY_HUB_WIDGETS_UP'] = hub_widgets_up;
+    dict['KEY_HUB_WIDGETS_DOWN'] = hub_widgets_down;
+
+    // Webhook URLs (stored in JS localStorage only, keyed by index)
+    var webhookUrlsStr = configData['webhook_urls'];
+    if (webhookUrlsStr) {
+      try {
+        var webhookUrls = JSON.parse(webhookUrlsStr);
+        for (var k in webhookUrls) {
+          if (webhookUrls.hasOwnProperty(k)) {
+            localStorage.setItem('webhook_url_' + k, webhookUrls[k]);
+          }
+        }
+      } catch (e) {
+        console.log('Failed to parse webhook_urls');
+      }
+    }
+    // Backward compat: single webhook_url from old config
+    var webhook_url = configData['webhook_url'];
+    if (webhook_url && !webhookUrlsStr) {
+      localStorage.setItem('webhook_url_0', webhook_url);
+    }
+
+    console.log('[CFG] Sending dict keys: ' + Object.keys(dict).join(', '));
+    console.log('[CFG] KEY_RADIO_UNITS=' + dict['KEY_RADIO_UNITS'] + ' KEY_HUB_TIMEOUT=' + dict['KEY_HUB_TIMEOUT'] + ' KEY_HUB_WIDGETS_UP=' + dict['KEY_HUB_WIDGETS_UP']);
+    Pebble.sendAppMessage(dict, function () {
+      // Refresh weather data after configuration changes (e.g., API provider, units)
+      console.log("Configuration sent successfully, fetching weather data");
+      setTimeout(function () {
+        getWeather();
+      }, 500);
+    }, function () {
+      console.log("Failed to send configuration");
+    });
   } catch (err) {
     console.error('webviewclosed error: ' + (err && err.message ? err.message : err));
   }
