@@ -358,11 +358,11 @@ static void widget_stocks_draw(GContext *ctx, GRect bounds, uint8_t page) {
                                    (STOCK_HISTORY_POINTS - 1);
   }
 
-  // Map history (0-100) to y coordinates
+  // Map history (0-90) to y coordinates
   int py[STOCK_HISTORY_POINTS];
   for (int i = 0; i < STOCK_HISTORY_POINTS; i++) {
-    // 100 → top, 0 → bottom
-    py[i] = STOCK_GRAPH_BOT - (int)p->history[i] * graph_h / 100;
+    // 90 → top, 0 → bottom
+    py[i] = STOCK_GRAPH_BOT - (int)p->history[i] * graph_h / 90;
   }
 
   // Filled area under curve (dithered)

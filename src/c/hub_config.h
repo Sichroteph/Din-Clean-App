@@ -50,7 +50,7 @@ typedef struct {
   char symbol[10]; // Display name: "DJIA", "EUR/CHF", "BTC"
   char price[12];  // Pre-formatted: "42,531", "0.9385"
   char change[8];  // "+0.8%", "-1.2%"
-  uint8_t history[STOCK_HISTORY_POINTS]; // 0-100 normalized (binary: char+33)
+  uint8_t history[STOCK_HISTORY_POINTS]; // 0-90 normalized (binary: char+33)
   bool positive;      // true if change >= 0 (for trend indicator)
 } StockPanel;
 

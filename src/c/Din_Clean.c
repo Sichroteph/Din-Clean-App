@@ -908,11 +908,11 @@ static void inbox_received_callback(DictionaryIterator *iterator,
       p.positive = (p.change[0] != '-');
       if (*s == '|')
         s++;
-      // Parse history points (binary: each char = value + 33)
+      // Parse history points (binary: each char = value + 33, range 0-90)
       for (int h = 0; h < STOCK_HISTORY_POINTS && *s && *s != '|'; h++) {
         int val = (int)(*s) - 33;
         if (val < 0) val = 0;
-        if (val > 100) val = 100;
+        if (val > 90) val = 90;
         p.history[h] = (uint8_t)val;
         s++;
       }

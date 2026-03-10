@@ -1100,7 +1100,7 @@ function sampleArray(arr, n) {
   return result;
 }
 
-// Normalize values to 0-100 range
+// Normalize values to 0-90 range (fits in ASCII 33-123, avoids '|' at 124)
 function normalizeHistory(values) {
   var min = values[0], max = values[0];
   for (var i = 1; i < values.length; i++) {
@@ -1108,12 +1108,12 @@ function normalizeHistory(values) {
     if (values[i] > max) max = values[i];
   }
   var range = max - min;
-  if (range < 0.0001) range = 1; // flat line → all 50
+  if (range < 0.0001) range = 1; // flat line → all 45
   var result = [];
   for (var j = 0; j < values.length; j++) {
-    var v = Math.round((values[j] - min) / range * 100);
+    var v = Math.round((values[j] - min) / range * 90);
     if (v < 0) v = 0;
-    if (v > 100) v = 100;
+    if (v > 90) v = 90;
     result.push(v);
   }
   return result;
