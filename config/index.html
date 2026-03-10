@@ -1043,7 +1043,7 @@
   };
 
   var widgetLists = {
-    up: [0, 1, 2, 3],
+    up: [0, 1, 2],
     down: [0, 1]
   };
 
@@ -1543,16 +1543,21 @@
     var wUp = localStorage['hub_widgets_up'];
     var wDown = localStorage['hub_widgets_down'];
 
-    // If no saved config, or was the old 2-widget default, upgrade to include
-    // new Hourly (2) and Daily (3) widgets.
-    if (!wUp || wUp === '0' || wUp === '0,1') {
-      widgetLists.up = [0, 1, 2, 3];
-      persistWidgets();
-    } else {
-      widgetLists.up = deserializeWidgets(wUp);
+    var validIds = AVAILABLE_WIDGETS.map(function(w) { return w.id; });
+    function filterKnown(list) {
+      return list.filter(function(id) { return validIds.indexOf(id) >= 0; });
     }
 
-    if (wDown) widgetLists.down = deserializeWidgets(wDown);
+    // If no saved config, or was the old 2-widget default, upgrade to include
+    // Hourly (1) and Daily (2) widgets.
+    if (!wUp || wUp === '0' || wUp === '0,1' || wUp === '0,1,2,3') {
+      widgetLists.up = [0, 1, 2];
+      persistWidgets();
+    } else {
+      widgetLists.up = filterKnown(deserializeWidgets(wUp));
+    }
+
+    if (wDown) widgetLists.down = filterKnown(deserializeWidgets(wDown));
   }
 
   // ================================================================

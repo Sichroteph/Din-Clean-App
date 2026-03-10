@@ -105,9 +105,9 @@ void hub_widgets_push(bool is_up, HubDirection direction) {
 
   ctx->widget_ids = ids;
   ctx->widget_count = count;
-  ctx->current_index = 0;
+  ctx->current_index = is_up ? (count - 1) : 0;
   ctx->current_page = 0;
-  ctx->nav_up_is_next = (direction == HUB_DIR_UP);
+  ctx->nav_up_is_next = false;
 
   ctx->window = window_create();
   window_set_user_data(ctx->window, ctx);
