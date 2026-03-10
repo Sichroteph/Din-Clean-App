@@ -218,7 +218,7 @@ time_t last_refresh = 0;
 int duration = 3600;
 int offline_delay = 3600;
 
-static char icon[20] = " ";
+static char icon[4] = " ";
 
 // Hourly forecast data (9 temps for 0-24h, 12 rain bars, 8 winds for 0-24h, 4
 // hours for 0-12h)
@@ -229,7 +229,7 @@ uint8_t graph_hours[4] = {0, 3, 6, 9};
 
 // 3-day forecast data
 char days_temp[5][8] = {"--", "--", "--", "--", "--"};
-char days_icon[5][16] = {"", "", "", "", ""};
+char days_icon[5][4] = {"", "", "", "", ""};
 char days_rain[5][5] = {"0mm", "0mm", "0mm", "0mm", "0mm"};
 char days_wind[5][5] = {"0km", "0km", "0km", "0km", "0km"};
 char wind_unit_str[5] = "km/h";
@@ -316,7 +316,7 @@ static int build_icon_with_pool_check(const char *text_icon) {
       return RESOURCE_ID_WARNING_W;
     }
   }
-  return weather_utils_build_icon(text_icon, true);
+  return weather_utils_build_icon(text_icon);
 }
 
 // Compact centered text helper
@@ -336,41 +336,56 @@ static void draw_alt_view(GContext *ctx, uint8_t vid, int icon_id, bool fresh) {
   char buf[24];
 
   if (vid == HUB_VIEW_WEATHER) {
+    // Icon centré en haut
     GBitmap *bmp = gbitmap_create_with_resource(icon_id);
     if (bmp) {
-      graphics_draw_bitmap_in_rect(ctx, bmp, GRect(54, 10, 35, 35));
+      graphics_draw_bitmap_in_rect(ctx, bmp, GRect(54, 2, 35, 35));
       gbitmap_destroy(bmp);
     }
-    dtext(ctx, weather_temp_char, fb, 46, 34);
+    // Température actuelle
+    dtext(ctx, weather_temp_char, fb, 38, 34);
+    // Min / Max (même police que la temp)
     snprintf(buf, sizeof(buf), "%s / %s", minTemp, maxTemp);
-    dtext(ctx, buf, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), 80, 24);
-    snprintf(buf, sizeof(buf), "%d%%  %d%s", humidity, wind_speed_val,
-             wind_unit_str);
-    dtext(ctx, buf, fs, 108, 18);
+    dtext(ctx, buf, fb, 76, 34);
+    // Vent + Humidité inversés (même police)
+    snprintf(buf, sizeof(buf), "%d%s  %d%%", wind_speed_val, wind_unit_str,
+             humidity);
+    dtext(ctx, buf, fb, 114, 34);
+    // Heure de mise à jour (petite)
     if (fresh) {
       struct tm *ref = localtime(&last_refresh);
       snprintf(buf, sizeof(buf), "Maj %02d:%02d", ref->tm_hour, ref->tm_min);
     } else {
       snprintf(buf, sizeof(buf), "Offline");
     }
-    dtext(ctx, buf, fs, 140, 18);
+    dtext(ctx, buf, fs, 152, 16);
   } else {
     BatteryChargeState bat = battery_state_service_peek();
+    // --- "Battery" label ---
+    dtext(ctx, "Battery", fs, 8, 16);
+    // --- Gauge body : moitié de largeur, plus épaisse, centrée ---
+    // Gauge: 62px wide x 26px tall, centered (x=38), nub 7x16 on right
     graphics_context_set_fill_color(ctx, GColorWhite);
-    graphics_fill_rect(ctx, GRect(32, 96, 80, 10), 0, GCornerNone);
+    graphics_fill_rect(ctx, GRect(38, 26, 62, 26), 0, GCornerNone);
     graphics_context_set_fill_color(ctx, GColorBlack);
-    graphics_fill_rect(ctx, GRect(33 + bat.charge_percent * 78 / 100, 97, 78 - bat.charge_percent * 78 / 100, 8), 0, GCornerNone);
+    int c_px = bat.charge_percent * 60 / 100;
+    graphics_fill_rect(ctx, GRect(39 + c_px, 27, 60 - c_px, 24), 0, GCornerNone);
+    // --- Borne positive (nub) à droite ---
+    graphics_context_set_fill_color(ctx, GColorWhite);
+    graphics_fill_rect(ctx, GRect(100, 31, 7, 16), 0, GCornerNone);
+    // --- Countdown ---
     if (persist_exists(HUB_PERSIST_COUNTDOWN)) {
       CountdownData cd;
       memset(&cd, 0, sizeof(CountdownData));
       persist_read_data(HUB_PERSIST_COUNTDOWN, &cd, sizeof(CountdownData));
       int days = (int)((cd.ts - time(NULL)) / 86400);
       if (days > 0) {
-        if (cd.label[0]) {
-          dtext(ctx, cd.label, fs, 112, 16);
+        bool has_label = cd.label[0] != '\0';
+        if (has_label) {
+          dtext(ctx, cd.label, fb, 80, 34);
         }
         snprintf(buf, sizeof(buf), "J-%d", days);
-        dtext(ctx, buf, fb, cd.label[0] ? 130 : 118, 34);
+        dtext(ctx, buf, fb, has_label ? 118 : 96, 34);
       }
     }
   }

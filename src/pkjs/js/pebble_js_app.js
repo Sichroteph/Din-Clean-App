@@ -79,71 +79,47 @@ var xhrRequest = function (url, type, callback, errorCallback) {
   xhr.send();
 };
 
-// WMO Weather Code to MET Norway symbol_code mapping
-// WMO codes: https://open-meteo.com/en/docs (weather_code field)
-// Maps to MET Norway icon names for compatibility with existing build_icon() in C
-function wmoCodeToSymbolCode(wmoCode, isNight) {
-  var dayNight = isNight ? '_night' : '_day';
+// 2-char icon codes sent to the watch:
+// sd=sunny day, cn=clear night, fd=fair day, fn=fair night,
+// pd=partly cloudy day, pn=partly cloudy night, cl=cloudy,
+// ra=rain, rn=rain night, th=thunder, sn=snow, fg=fog
 
+// WMO Weather Code → 2-char icon code
+function wmoToIcon(wmoCode, isNight) {
   switch (wmoCode) {
-    case 0:  // Clear sky
-      return 'clearsky' + dayNight;
-    case 1:  // Mainly clear
-      return 'fair' + dayNight;
-    case 2:  // Partly cloudy
-      return 'partlycloudy' + dayNight;
-    case 3:  // Overcast
-      return 'cloudy';
-    case 45: // Fog
-    case 48: // Depositing rime fog
-      return 'fog';
-    case 51: // Drizzle: Light
-      return 'lightrain';
-    case 53: // Drizzle: Moderate
-      return 'rain';
-    case 55: // Drizzle: Dense
-      return 'rain';
-    case 56: // Freezing Drizzle: Light
-      return 'sleet';
-    case 57: // Freezing Drizzle: Dense
-      return 'sleet';
-    case 61: // Rain: Slight
-      return 'lightrainshowers' + dayNight;
-    case 63: // Rain: Moderate
-      return 'rain';
-    case 65: // Rain: Heavy
-      return 'heavyrain';
-    case 66: // Freezing Rain: Light
-      return 'sleet';
-    case 67: // Freezing Rain: Heavy
-      return 'heavysleet';
-    case 71: // Snow fall: Slight
-      return 'lightsnow';
-    case 73: // Snow fall: Moderate
-      return 'snow';
-    case 75: // Snow fall: Heavy
-      return 'heavysnow';
-    case 77: // Snow grains
-      return 'snow';
-    case 80: // Rain showers: Slight
-      return 'lightrainshowers' + dayNight;
-    case 81: // Rain showers: Moderate
-      return 'rainshowers' + dayNight;
-    case 82: // Rain showers: Violent
-      return 'heavyrainshowers' + dayNight;
-    case 85: // Snow showers: Slight
-      return 'lightsnowshowers' + dayNight;
-    case 86: // Snow showers: Heavy
-      return 'heavysnowshowers' + dayNight;
-    case 95: // Thunderstorm: Slight or moderate
-      return 'rainandthunder';
-    case 96: // Thunderstorm with slight hail
-      return 'rainandthunder';
-    case 99: // Thunderstorm with heavy hail
-      return 'heavyrainandthunder';
+    case 0:  return isNight ? 'cn' : 'sd';
+    case 1:  return isNight ? 'fn' : 'fd';
+    case 2:  return isNight ? 'pn' : 'pd';
+    case 3:  return 'cl';
+    case 45: case 48: return 'fg';
+    case 51: case 53: case 55: case 63: case 65:
+      return 'ra';
+    case 56: case 57: case 66: case 67:
+    case 71: case 73: case 75: case 77:
+    case 85: case 86:
+      return 'sn';
+    case 61: case 80: case 81: case 82:
+      return isNight ? 'rn' : 'ra';
+    case 95: case 96: case 99:
+      return 'th';
     default:
-      return 'partlycloudy' + dayNight;
+      return isNight ? 'pn' : 'pd';
   }
+}
+
+// MET Norway symbol_code → 2-char icon code
+function symbolToIcon(symbol) {
+  if (!symbol || symbol === '') return 'sd';
+  var night = symbol.indexOf('_night') !== -1;
+  if (symbol.indexOf('clearsky') === 0) return night ? 'cn' : 'sd';
+  if (symbol.indexOf('fair') === 0) return night ? 'fn' : 'fd';
+  if (symbol.indexOf('partlycloudy') === 0) return night ? 'pn' : 'pd';
+  if (symbol === 'cloudy') return 'cl';
+  if (symbol === 'fog') return 'fg';
+  if (symbol.indexOf('thunder') !== -1) return 'th';
+  if (symbol.indexOf('snow') !== -1 || symbol.indexOf('sleet') !== -1) return 'sn';
+  if (symbol.indexOf('rain') !== -1) return night ? 'rn' : 'ra';
+  return night ? 'pn' : 'pd';
 }
 
 // Check if current hour is night time (between sunset and sunrise)
@@ -169,7 +145,7 @@ function processOpenMeteoResponse(responseText) {
   var now = new Date();
   var currentHour = now.getHours();
   var isNight = isNightTime(currentHour);
-  var icon = wmoCodeToSymbolCode(currentWmoCode, isNight);
+  var icon = wmoToIcon(currentWmoCode, isNight);
 
   // Calculate min/max for next 24 hours
   var tmin = 1000;
@@ -271,7 +247,7 @@ function processOpenMeteoResponse(responseText) {
 
       // Icon for this hour
       var hourIsNight = isNightTime(localHour);
-      hourly_icons['hour' + j] = wmoCodeToSymbolCode(hourly.weather_code[apiIndex], hourIsNight);
+      hourly_icons['hour' + j] = wmoToIcon(hourly.weather_code[apiIndex], hourIsNight);
 
       // Store WMO code for this 3h block
       var blockIdx = j / 3;
@@ -328,9 +304,9 @@ function processOpenMeteoResponse(responseText) {
 
       day_temps[d] = dayTempConverted + "°";
       if (wmoCode === 3 && rainSum > 2) {
-        day_icons[d] = 'rain';
+        day_icons[d] = 'ra';
       } else {
-        day_icons[d] = wmoCodeToSymbolCode(wmoCode, false);
+        day_icons[d] = wmoToIcon(wmoCode, false);
       }
       day_rains[d] = Math.round(rainSum) + "mm";
       if (units == 1) {
@@ -575,7 +551,7 @@ function processWeatherResponse(responseText) {
     humidity = 50;
   }
 
-  var icon = jsonWeather.properties.timeseries[0].data.next_12_hours.summary.symbol_code;
+  var icon = symbolToIcon(jsonWeather.properties.timeseries[0].data.next_12_hours.summary.symbol_code);
 
   var hourlyTemperatures = {
     hour0: 0, hour3: 0, hour6: 0, hour9: 0, hour12: 0, hour15: 0, hour18: 0, hour21: 0, hour24: 0
@@ -626,9 +602,9 @@ function processWeatherResponse(responseText) {
       hourlyWind['hour' + j] = windValue + "\n";
 
       if (jsonWeather.properties.timeseries[j].data.next_1_hours && jsonWeather.properties.timeseries[j].data.next_1_hours.summary) {
-        hourly_icons['hour' + j] = jsonWeather.properties.timeseries[j].data.next_1_hours.summary.symbol_code;
+        hourly_icons['hour' + j] = symbolToIcon(jsonWeather.properties.timeseries[j].data.next_1_hours.summary.symbol_code);
       } else if (jsonWeather.properties.timeseries[j].data.next_6_hours && jsonWeather.properties.timeseries[j].data.next_6_hours.summary) {
-        hourly_icons['hour' + j] = jsonWeather.properties.timeseries[j].data.next_6_hours.summary.symbol_code;
+        hourly_icons['hour' + j] = symbolToIcon(jsonWeather.properties.timeseries[j].data.next_6_hours.summary.symbol_code);
       }
     }
 
@@ -681,11 +657,11 @@ function processWeatherResponse(responseText) {
 
       // Icon
       if (dayData.next_12_hours && dayData.next_12_hours.summary) {
-        day_icons[d] = dayData.next_12_hours.summary.symbol_code;
+        day_icons[d] = symbolToIcon(dayData.next_12_hours.summary.symbol_code);
       } else if (dayData.next_6_hours && dayData.next_6_hours.summary) {
-        day_icons[d] = dayData.next_6_hours.summary.symbol_code;
+        day_icons[d] = symbolToIcon(dayData.next_6_hours.summary.symbol_code);
       } else if (dayData.next_1_hours && dayData.next_1_hours.summary) {
-        day_icons[d] = dayData.next_1_hours.summary.symbol_code;
+        day_icons[d] = symbolToIcon(dayData.next_1_hours.summary.symbol_code);
       }
 
       // Rain - sum over 6 hours

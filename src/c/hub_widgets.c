@@ -8,7 +8,7 @@ extern uint8_t graph_wind_val[];
 extern uint8_t graph_hours[];
 extern char wind_unit_str[];
 extern char days_temp[][8];
-extern char days_icon[][20];
+extern char days_icon[][4];
 extern char days_rain[][5];
 extern char days_wind[][5];
 
@@ -594,7 +594,7 @@ static void draw_daily_row(GContext *ctx, int y, int day_index, int bounds_w) {
                      NULL);
 
   // Weather icon (center-left) — use text icon name
-  int icon_id = weather_utils_build_icon(days_icon[day_index], true);
+  int icon_id = weather_utils_build_icon(days_icon[day_index]);
   GBitmap *bmp = gbitmap_create_with_resource(icon_id);
   if (bmp) {
     graphics_draw_bitmap_in_rect(ctx, bmp, GRect(46, y + 2, 35, 35));

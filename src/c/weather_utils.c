@@ -1,7 +1,5 @@
 #include "weather_utils.h"
 
-#include <string.h>
-
 // Abbreviated weekday names (3 chars)
 static const char *const s_weekday_abbrev_fr[] = {"DIM", "LUN", "MAR", "MER",
                                                   "JEU", "VEN", "SAM"};
@@ -30,43 +28,23 @@ const char *weather_utils_get_weekday_abbrev(const char *locale,
   return s_weekday_abbrev_en[day_index];
 }
 
-int weather_utils_build_icon(const char *text_icon, bool is_bw_icon) {
-  (void)is_bw_icon; // Always use B&W icons
-
-  if (!text_icon || text_icon[0] == '\0' || text_icon[0] == ' ') {
+int weather_utils_build_icon(const char *code) {
+  if (!code || code[0] == '\0' || code[0] == ' ')
     return RESOURCE_ID_ENSOLEILLE_W;
-  }
 
-  // Compact lookup table: exact matches
-  static const struct {
-    const char *name;
-    uint16_t id;
-  } exact[] = {
-      {"clearsky_day", RESOURCE_ID_ENSOLEILLE_W},
-      {"clearsky_night", RESOURCE_ID_NUIT_CLAIRE_W},
-      {"fair_day", RESOURCE_ID_FAIBLES_PASSAGES_NUAGEUX_W},
-      {"fair_polartwilight", RESOURCE_ID_FAIBLES_PASSAGES_NUAGEUX_W},
-      {"fair_night", RESOURCE_ID_NUIT_BIEN_DEGAGEE_W},
-      {"wind", RESOURCE_ID_WIND},
-      {"partlycloudy_night", RESOURCE_ID_NUIT_AVEC_DEVELOPPEMENT_NUAGEUX_W},
-      {"cloudy", RESOURCE_ID_FORTEMENT_NUAGEUX_W},
-      {"rainshowers_night", RESOURCE_ID_NUIT_AVEC_AVERSES_W},
-      {"fog", RESOURCE_ID_BROUILLARD_W},
-  };
-  for (unsigned i = 0; i < sizeof(exact) / sizeof(exact[0]); i++) {
-    if (strcmp(text_icon, exact[i].name) == 0)
-      return exact[i].id;
-  }
+  char c0 = code[0], c1 = code[1];
+  if (c0 == 's' && c1 == 'd') return RESOURCE_ID_ENSOLEILLE_W;
+  if (c0 == 'c' && c1 == 'n') return RESOURCE_ID_NUIT_CLAIRE_W;
+  if (c0 == 'f' && c1 == 'd') return RESOURCE_ID_FAIBLES_PASSAGES_NUAGEUX_W;
+  if (c0 == 'f' && c1 == 'n') return RESOURCE_ID_NUIT_BIEN_DEGAGEE_W;
+  if (c0 == 'p' && c1 == 'd') return RESOURCE_ID_DEVELOPPEMENT_NUAGEUX_W;
+  if (c0 == 'p' && c1 == 'n') return RESOURCE_ID_NUIT_AVEC_DEVELOPPEMENT_NUAGEUX_W;
+  if (c0 == 'c' && c1 == 'l') return RESOURCE_ID_FORTEMENT_NUAGEUX_W;
+  if (c0 == 'r' && c1 == 'a') return RESOURCE_ID_AVERSES_DE_PLUIE_FORTE_W;
+  if (c0 == 'r' && c1 == 'n') return RESOURCE_ID_NUIT_AVEC_AVERSES_W;
+  if (c0 == 't' && c1 == 'h') return RESOURCE_ID_FORTEMENT_ORAGEUX_W;
+  if (c0 == 's' && c1 == 'n') return RESOURCE_ID_NEIGE_FORTE_W;
+  if (c0 == 'f' && c1 == 'g') return RESOURCE_ID_BROUILLARD_W;
 
-  // Prefix / substring matches (order matters: check before generic "rain")
-  if (strncmp(text_icon, "partlycloudy_", 13) == 0)
-    return RESOURCE_ID_DEVELOPPEMENT_NUAGEUX_W;
-  if (strstr(text_icon, "thunder") != NULL)
-    return RESOURCE_ID_FORTEMENT_ORAGEUX_W;
-  if (strstr(text_icon, "snow") != NULL || strstr(text_icon, "sleet") != NULL)
-    return RESOURCE_ID_NEIGE_FORTE_W;
-  if (strstr(text_icon, "rain") != NULL)
-    return RESOURCE_ID_AVERSES_DE_PLUIE_FORTE_W;
-
-  return RESOURCE_ID_BT;
+  return RESOURCE_ID_ENSOLEILLE_W;
 }
