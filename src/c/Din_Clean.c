@@ -369,7 +369,8 @@ static void draw_alt_view(GContext *ctx, uint8_t vid, int icon_id, bool fresh) {
     graphics_fill_rect(ctx, GRect(38, 26, 62, 26), 0, GCornerNone);
     graphics_context_set_fill_color(ctx, GColorBlack);
     int c_px = bat.charge_percent * 60 / 100;
-    graphics_fill_rect(ctx, GRect(39 + c_px, 27, 60 - c_px, 24), 0, GCornerNone);
+    graphics_fill_rect(ctx, GRect(39 + c_px, 27, 60 - c_px, 24), 0,
+                       GCornerNone);
     // --- Borne positive (nub) à droite ---
     graphics_context_set_fill_color(ctx, GColorWhite);
     graphics_fill_rect(ctx, GRect(100, 31, 7, 16), 0, GCornerNone);
@@ -541,11 +542,10 @@ static void update_proc(Layer *layer, GContext *ctx) {
     graphics_context_set_stroke_color(ctx, GColorWhite);
     graphics_draw_round_rect(ctx, GRect(10, 64, 124, 36), 4);
     graphics_context_set_text_color(ctx, GColorWhite);
-    graphics_draw_text(ctx, "Press < to exit",
-                       fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
-                       GRect(12, 68, 120, 28),
-                       GTextOverflowModeTrailingEllipsis,
-                       GTextAlignmentCenter, NULL);
+    graphics_draw_text(
+        ctx, "Press < to exit", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
+        GRect(12, 68, 120, 28), GTextOverflowModeTrailingEllipsis,
+        GTextAlignmentCenter, NULL);
   }
 
   APP_LOG(APP_LOG_LEVEL_INFO, "HEAP post-render: %zu", heap_bytes_free());
