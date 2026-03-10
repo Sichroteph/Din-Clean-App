@@ -16,7 +16,8 @@ typedef struct {
 } PA;
 static PA *s_v;       /* visible PA (NULL when closed) */
 static char s_buf[6]; /* "HH:MM\0" */
-static const uint32_t s_3lp[] = {1000, 500, 1000, 500, 1000}; /* 3 long pulses */
+static const uint32_t s_3lp[] = {1000, 500, 1000, 500,
+                                 1000}; /* 3 long pulses */
 static const char *s_names[] = {"Stopwatch", "Timer", "Alarm"};
 
 static void fmt(int a, int b) {
@@ -35,8 +36,11 @@ static void refresh(void) {
   const char *title = s_names[s_v->id];
   if (s_v->id == HUB_APP_STOPWATCH) {
     uint32_t e = s_sw_elapsed;
-    if (s_sw_start) e += (uint32_t)(time(NULL) - s_sw_start);
-    a = (int)(e / 60); if (a > 99) a = 99;
+    if (s_sw_start)
+      e += (uint32_t)(time(NULL) - s_sw_start);
+    a = (int)(e / 60);
+    if (a > 99)
+      a = 99;
     b = (int)(e % 60);
     title = s_sw_start ? "STOP" : "Stopwatch";
   } else if (s_v->id == HUB_APP_TIMER) {
@@ -64,14 +68,16 @@ static void pa_tick(void *d) {
   s_at = NULL;
   if (s_tend && time(NULL) >= s_tend) {
     s_tend = 0;
-    vibes_enqueue_custom_pattern((VibePattern){.durations=(uint32_t*)s_3lp,.num_segments=5});
+    vibes_enqueue_custom_pattern(
+        (VibePattern){.durations = (uint32_t *)s_3lp, .num_segments = 5});
   }
   if (s_ast == 2) {
     time_t now = time(NULL);
     struct tm *tm = localtime(&now);
     if (tm->tm_hour == s_ah && tm->tm_min == s_am) {
       s_ast = 0;
-      vibes_enqueue_custom_pattern((VibePattern){.durations=(uint32_t*)s_3lp,.num_segments=5});
+      vibes_enqueue_custom_pattern(
+          (VibePattern){.durations = (uint32_t *)s_3lp, .num_segments = 5});
     }
   }
   if (s_v)
@@ -118,10 +124,14 @@ static void h_sel(ClickRecognizerRef r, void *c) {
     if (s_sw_start) {
       s_sw_elapsed += (uint32_t)(time(NULL) - s_sw_start);
       s_sw_start = 0;
-      if (s_at) { app_timer_cancel(s_at); s_at = NULL; }
+      if (s_at) {
+        app_timer_cancel(s_at);
+        s_at = NULL;
+      }
     } else {
       s_sw_start = time(NULL);
-      if (s_at) app_timer_cancel(s_at);
+      if (s_at)
+        app_timer_cancel(s_at);
       s_at = app_timer_register(1000, pa_tick, NULL);
     }
   } else if (s_v->id == HUB_APP_TIMER) {
@@ -189,7 +199,9 @@ static void pa_load(Window *w) {
       s_at = NULL;
     }
     uint32_t ms = ((p->id == HUB_APP_STOPWATCH && s_sw_start) ||
-                   (p->id == HUB_APP_TIMER && s_tend)) ? 1000 : 30000;
+                   (p->id == HUB_APP_TIMER && s_tend))
+                      ? 1000
+                      : 30000;
     s_at = app_timer_register(ms, pa_tick, NULL);
   }
   hub_timeout_reset();

@@ -146,9 +146,8 @@ void hub_timeout_deinit(void);
 void hub_set_main_window(Window *window);
 void hub_return_to_watchface(void);
 
-// Default menu/widget data accessors
-const HubMenuItem *hub_config_get_up_menu(uint8_t *count);
-const HubMenuItem *hub_config_get_down_menu(uint8_t *count);
+// Load menu items from persist (or defaults) into dst[]. Returns count.
+uint8_t hub_config_load_menu(bool is_up, HubMenuItem *dst);
 const uint8_t *hub_config_get_up_widgets(uint8_t *count);
 const uint8_t *hub_config_get_down_widgets(uint8_t *count);
 

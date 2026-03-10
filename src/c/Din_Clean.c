@@ -219,12 +219,6 @@ int duration = 3600;
 int offline_delay = 3600;
 
 static char icon[20] = " ";
-static char icon1[20] = " ";
-static char icon2[20] = " ";
-static char icon3[20] = " ";
-
-static char location[16] = " ";
-static char rain_ico_val;
 
 // Hourly forecast data (9 temps for 0-24h, 12 rain bars, 8 winds for 0-24h, 4
 // hours for 0-12h)
@@ -235,10 +229,10 @@ uint8_t graph_hours[4] = {0, 3, 6, 9};
 
 // 3-day forecast data
 char days_temp[5][8] = {"--", "--", "--", "--", "--"};
-char days_icon[5][20] = {"", "", "", "", ""};
+char days_icon[5][16] = {"", "", "", "", ""};
 char days_rain[5][5] = {"0mm", "0mm", "0mm", "0mm", "0mm"};
 char days_wind[5][5] = {"0km", "0km", "0km", "0km", "0km"};
-char wind_unit_str[6] = "km/h";
+char wind_unit_str[5] = "km/h";
 
 // Stock widget data count (panels stored in persist, loaded on demand)
 uint8_t stock_panel_count = 0;
@@ -273,8 +267,6 @@ static AppFlags flags = {.is_metric = 1,
                          .is_charging = 0,
                          .is_connected = 0};
 
-static GColor color_right;
-static GColor color_left;
 static GColor color_temp;
 
 static int8_t hour_offset_x = 0;
@@ -445,48 +437,13 @@ static void update_proc(Layer *layer, GContext *ctx) {
 
   APP_LOG(APP_LOG_LEVEL_INFO, "HEAP pre-render: %zu", heap_bytes_free());
 
-  // DRAW DIAL
-  icon_data.rect_text_day =
-      (GRect){{TEXT_DAY_STATUS_OFFSET_X + status_offset_x,
-               TEXT_DAY_STATUS_OFFSET_Y + status_offset_y},
-              {RULER_XOFFSET, 150}};
-  icon_data.rect_text_dayw =
-      (GRect){{TEXT_DAYW_STATUS_OFFSET_X + status_offset_x,
-               TEXT_DAYW_STATUS_OFFSET_Y + status_offset_y},
-              {RULER_XOFFSET, 150}};
-  icon_data.rect_temp = (GRect){{TEXT_TEMP_OFFSET_X + status_offset_x,
-                                 TEXT_TEMP_OFFSET_Y + status_offset_y},
-                                {60, 60}};
-
-  icon_data.rect_tmin = (GRect){
-      {TEXT_TMIN_OFFSET_X, TEXT_TMIN_OFFSET_Y + status_offset_y}, {45, 35}};
-  icon_data.rect_tmax = (GRect){
-      {TEXT_TMAX_OFFSET_X, TEXT_TMAX_OFFSET_Y + status_offset_y}, {45, 35}};
-
-  icon_data.rect_screen = (GRect){{0, 0}, {144, 168}};
-
-  icon_data.rect_icon = (GRect){{ICON_X, ICON_Y + 9}, {35, 35}};
-  icon_data.rect_icon6 = (GRect){{ICON6_X, ICON6_Y + 9}, {35, 35}};
-
-  icon_data.rect_icon_hum1 = (GRect){{5, 116}, {7, 10}};
-  icon_data.rect_icon_hum2 = (GRect){{14, 116}, {7, 10}};
-  icon_data.rect_icon_hum3 = (GRect){{23, 116}, {7, 10}};
-  icon_data.rect_icon_leaf = (GRect){{12, 116}, {11, 10}};
-
-  icon_data.rect_bt_disconect = (GRect){
-      {ICON_BT_X + status_offset_x, ICON_BT_Y + status_offset_y}, {35, 17}};
-
   int icon_id;
-  int icon_id6;
-  rain_ico_val = graph_rains[0];
   icon_id = build_icon_with_pool_check(icon);
-  rain_ico_val = graph_rains[6];
-  icon_id6 = build_icon_with_pool_check(icon2);
 
   // Draw background
-  graphics_context_set_fill_color(ctx, color_right);
+  graphics_context_set_fill_color(ctx, GColorBlack);
   graphics_fill_rect(ctx, GRect(RULER_XOFFSET, 0, 160, 180), 0, GCornerNone);
-  graphics_context_set_fill_color(ctx, color_left);
+  graphics_context_set_fill_color(ctx, GColorBlack);
   graphics_fill_rect(ctx, GRect(0, 0, RULER_XOFFSET, 180), 0, GCornerNone);
 
   t = time(NULL);
@@ -498,7 +455,6 @@ static void update_proc(Layer *layer, GContext *ctx) {
 
   snprintf(mday, sizeof(mday), "%i", now.tm_mday);
   graphics_context_set_text_color(ctx, color_temp);
-  icon_data.rect_text_dayw.origin.x += 2;
 
   bool has_fresh_weather =
       ((mktime(&now) - last_refresh) < duration + offline_delay);
@@ -558,14 +514,10 @@ static void update_proc(Layer *layer, GContext *ctx) {
   icon_data.has_fresh_weather = has_fresh_weather;
   icon_data.is_connected = flags.is_connected;
   icon_data.is_quiet_time = quiet_time_is_active();
-  icon_data.is_bw_icon = true;
-  icon_data.is_metric = flags.is_metric;
   icon_data.humidity = humidity;
   icon_data.wind_speed_val = wind_speed_val;
-  icon_data.wind2_val = graph_wind_val[2];
   icon_data.met_unit = flags.is_metric ? 20 : 25;
   icon_data.icon_id = icon_id;
-  icon_data.icon_id6 = icon_id6;
   ui_draw_icon_bar(ctx, &icon_data);
 
   draw_action_toast(ctx);
@@ -695,11 +647,6 @@ static void inbox_received_callback(DictionaryIterator *iterator,
         graph_rains[b * 3 + 2] = (int)t->value->int32;
     }
 
-    char *icon_ptrs[] = {icon1, icon2, icon3};
-    for (int i = 0; i < 3; i++)
-      if ((t = dict_find(iterator, KEY_FORECAST_ICON1 + i)))
-        snprintf(icon_ptrs[i], sizeof(icon1), "%s", t->value->cstring);
-
     if ((t = dict_find(iterator, KEY_FORECAST_WIND0)))
       graph_wind_val[0] = atoi(t->value->cstring);
     for (int i = 0; i < 3; i++)
@@ -733,10 +680,6 @@ static void inbox_received_callback(DictionaryIterator *iterator,
   Tuple *icon1_check = dict_find(iterator, KEY_FORECAST_ICON1);
   if (!temp_tuple && icon1_check) {
     Tuple *t;
-    char *ic_ptrs[] = {icon1, icon2, icon3};
-    for (int i = 0; i < 3; i++)
-      if ((t = dict_find(iterator, KEY_FORECAST_ICON1 + i)))
-        snprintf(ic_ptrs[i], sizeof(icon1), "%s", t->value->cstring);
     // 5-day forecast: days 1-3 base=200+d*4, days 4-5 base=204+d*4
     for (int d = 0; d < 5; d++) {
       uint32_t base = (d < 3 ? 200 : 204) + d * 4;
@@ -770,9 +713,6 @@ static void inbox_received_callback(DictionaryIterator *iterator,
         graph_wind_val[4 + i] = atoi(t->value->cstring);
     }
 
-    persist_write_string(KEY_FORECAST_ICON1, icon1);
-    persist_write_string(KEY_FORECAST_ICON2, icon2);
-    persist_write_string(KEY_FORECAST_ICON3, icon3);
     persist_write_data(KEY_DAY1_TEMP, days_temp, sizeof(days_temp));
     persist_write_data(KEY_DAY1_ICON, days_icon, sizeof(days_icon));
     persist_write_data(KEY_DAY1_RAIN, days_rain, sizeof(days_rain));
@@ -787,18 +727,6 @@ static void inbox_received_callback(DictionaryIterator *iterator,
     Tuple *vibration_tuple = dict_find(iterator, KEY_TOGGLE_VIBRATION);
     Tuple *bt_tuple = dict_find(iterator, KEY_TOGGLE_BT);
 
-    Tuple *color_right_r_tuple = dict_find(iterator, KEY_COLOR_RIGHT_R);
-    Tuple *color_right_g_tuple = dict_find(iterator, KEY_COLOR_RIGHT_G);
-    Tuple *color_right_b_tuple = dict_find(iterator, KEY_COLOR_RIGHT_B);
-
-    Tuple *color_left_r_tuple = dict_find(iterator, KEY_COLOR_LEFT_R);
-    Tuple *color_left_g_tuple = dict_find(iterator, KEY_COLOR_LEFT_G);
-    Tuple *color_left_b_tuple = dict_find(iterator, KEY_COLOR_LEFT_B);
-
-    int red;
-    int green;
-    int blue;
-
     flags.is_bt = bt_tuple ? (bt_tuple->value->int32 == 1) : flags.is_bt;
     flags.is_metric =
         radio_tuple ? (radio_tuple->value->int32 != 1) : flags.is_metric;
@@ -806,30 +734,6 @@ static void inbox_received_callback(DictionaryIterator *iterator,
         refresh_tuple ? (refresh_tuple->value->int32 == 1) : flags.is_30mn;
     flags.is_vibration = vibration_tuple ? (vibration_tuple->value->int32 == 1)
                                          : flags.is_vibration;
-
-    if (color_right_r_tuple && color_right_g_tuple && color_right_b_tuple) {
-      red = color_right_r_tuple->value->int32;
-      green = color_right_g_tuple->value->int32;
-      blue = color_right_b_tuple->value->int32;
-      persist_write_int(KEY_COLOR_RIGHT_R, red);
-      persist_write_int(KEY_COLOR_RIGHT_G, green);
-      persist_write_int(KEY_COLOR_RIGHT_B, blue);
-      color_right = GColorFromRGB(red, green, blue);
-    }
-
-    if (color_left_r_tuple && color_left_g_tuple && color_left_b_tuple) {
-      red = color_left_r_tuple->value->int32;
-      green = color_left_g_tuple->value->int32;
-      blue = color_left_b_tuple->value->int32;
-      persist_write_int(KEY_COLOR_LEFT_R, red);
-      persist_write_int(KEY_COLOR_LEFT_G, green);
-      persist_write_int(KEY_COLOR_LEFT_B, blue);
-      color_left = GColorFromRGB(red, green, blue);
-    }
-
-    // Force B&W colors for all platforms (aplite style)
-    color_left = GColorBlack;
-    color_right = GColorBlack;
 
     persist_write_bool(KEY_RADIO_UNITS, flags.is_metric);
     persist_write_bool(KEY_RADIO_REFRESH, flags.is_30mn);
@@ -1076,24 +980,11 @@ static void init_var() {
     flags.is_30mn = persist_read_bool(KEY_RADIO_REFRESH);
     flags.is_bt = persist_read_bool(KEY_TOGGLE_BT);
     flags.is_vibration = persist_read_bool(KEY_TOGGLE_VIBRATION);
-
-    int red, green, blue;
-    red = persist_read_int(KEY_COLOR_RIGHT_R);
-    green = persist_read_int(KEY_COLOR_RIGHT_G);
-    blue = persist_read_int(KEY_COLOR_RIGHT_B);
-    color_right = GColorFromRGB(red, green, blue);
-
-    red = persist_read_int(KEY_COLOR_LEFT_R);
-    green = persist_read_int(KEY_COLOR_LEFT_G);
-    blue = persist_read_int(KEY_COLOR_LEFT_B);
-    color_left = GColorFromRGB(red, green, blue);
   } else {
     flags.is_metric = true;
     flags.is_vibration = false;
     flags.is_bt = false;
     flags.is_30mn = true;
-    color_right = GColorBlack;
-    color_left = GColorBlack;
   }
 
   if (persist_exists(KEY_LAST_REFRESH) && persist_exists(KEY_TEMPERATURE) &&
@@ -1118,15 +1009,6 @@ static void init_var() {
         persist_exists(KEY_POOLTEMP) ? persist_read_int(KEY_POOLTEMP) : 0;
     npoolPH = persist_exists(KEY_POOLPH) ? persist_read_int(KEY_POOLPH) : 0;
     npoolORP = persist_exists(KEY_poolORP) ? persist_read_int(KEY_poolORP) : 0;
-
-    if (persist_exists(KEY_LOCATION))
-      persist_read_string(KEY_LOCATION, location, sizeof(location));
-    if (persist_exists(KEY_FORECAST_ICON1))
-      persist_read_string(KEY_FORECAST_ICON1, icon1, sizeof(icon1));
-    if (persist_exists(KEY_FORECAST_ICON2))
-      persist_read_string(KEY_FORECAST_ICON2, icon2, sizeof(icon2));
-    if (persist_exists(KEY_FORECAST_ICON3))
-      persist_read_string(KEY_FORECAST_ICON3, icon3, sizeof(icon3));
 
     graph_hours[0] = persist_read_int(KEY_FORECAST_H0);
 
@@ -1160,10 +1042,6 @@ static void init_var() {
     weather_temp = 0;
 
     snprintf(icon, sizeof(icon), " ");
-    snprintf(icon1, sizeof(icon1), " ");
-    snprintf(icon2, sizeof(icon2), " ");
-    snprintf(icon3, sizeof(icon3), " ");
-    snprintf(location, sizeof(location), " ");
 
     memset(graph_temps, 10, sizeof(graph_temps));
     memset(graph_rains, 0, sizeof(graph_rains));
@@ -1186,8 +1064,6 @@ static void init_var() {
   }
 
   color_temp = GColorWhite;
-  color_left = GColorBlack;
-  color_right = GColorBlack;
 
   assign_fonts();
 

@@ -6,6 +6,7 @@ typedef struct {
   Window *window;
   MenuLayer *menu;
   const HubMenuItem *all_items;
+  HubMenuItem items[HUB_MAX_MENU_ITEMS]; // owned copy for root menus
   uint8_t all_count;
   uint8_t visible_indices[HUB_MAX_MENU_ITEMS];
   uint8_t visible_count;
@@ -30,19 +31,42 @@ static void handle_select_click(ClickRecognizerRef recognizer, void *context);
 static void menu_click_config_provider(void *context);
 
 void hub_menu_push(bool is_up_menu, HubDirection direction) {
-  uint8_t count;
-  const HubMenuItem *items;
-
-  if (is_up_menu) {
-    items = hub_config_get_up_menu(&count);
-  } else {
-    items = hub_config_get_down_menu(&count);
-  }
-
-  if (!items || count == 0)
+  MenuCtx *ctx = malloc(sizeof(MenuCtx));
+  if (!ctx)
     return;
 
-  hub_menu_push_submenu(items, count, -1, 0, direction);
+  ctx->all_count = hub_config_load_menu(is_up_menu, ctx->items);
+  if (ctx->all_count == 0) {
+    free(ctx);
+    return;
+  }
+  ctx->all_items = ctx->items;
+
+  ctx->parent_index = -1;
+  ctx->depth = 0;
+  ctx->direction = direction;
+
+  // Find visible items (children of root)
+  ctx->visible_count = hub_menu_get_children(
+      ctx->all_items, ctx->all_count, -1, ctx->visible_indices, HUB_MAX_MENU_ITEMS);
+
+  if (ctx->visible_count == 0) {
+    free(ctx);
+    return;
+  }
+
+  ctx->window = window_create();
+  if (!ctx->window) {
+    free(ctx);
+    return;
+  }
+  window_set_user_data(ctx->window, ctx);
+  window_set_window_handlers(ctx->window, (WindowHandlers){
+                                              .load = menu_window_load,
+                                              .unload = menu_window_unload,
+                                          });
+
+  window_stack_push(ctx->window, true);
 }
 
 void hub_menu_push_submenu(const HubMenuItem *items, uint8_t count,

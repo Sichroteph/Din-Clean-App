@@ -17,15 +17,7 @@ static const uint8_t s_default_up_widgets[] = {HUB_WIDGET_STOCKS};
 static const uint8_t s_default_down_widgets[] = {HUB_WIDGET_STOCKS};
 #define DEFAULT_DOWN_WIDGET_COUNT 1
 
-// --- Dynamic (custom) menu/widget storage ---
-static HubMenuItem s_custom_menu_up[HUB_MAX_MENU_ITEMS];
-static uint8_t s_custom_menu_up_count = 0;
-static bool s_has_custom_menu_up = false;
-
-static HubMenuItem s_custom_menu_down[HUB_MAX_MENU_ITEMS];
-static uint8_t s_custom_menu_down_count = 0;
-static bool s_has_custom_menu_down = false;
-
+// --- Dynamic (custom) widget storage ---
 static uint8_t s_custom_widgets_up[HUB_MAX_WIDGETS];
 static uint8_t s_custom_widgets_up_count = 0;
 static bool s_has_custom_widgets_up = false;
@@ -182,17 +174,14 @@ static void parse_widget_string(const char *str, uint8_t *out, uint8_t *count) {
 
 // --- Public parse API (called from inbox handler) ---
 void hub_config_parse_menu(const char *str, bool is_up) {
-  if (is_up) {
-    parse_menu_string(str, s_custom_menu_up, &s_custom_menu_up_count);
-    s_has_custom_menu_up = true;
-    // Persist
-    persist_write_data(HUB_PERSIST_MENU_UP, s_custom_menu_up,
-                       s_custom_menu_up_count * sizeof(HubMenuItem));
+  HubMenuItem items[HUB_MAX_MENU_ITEMS];
+  uint8_t count = 0;
+  parse_menu_string(str, items, &count);
+  uint32_t key = is_up ? HUB_PERSIST_MENU_UP : HUB_PERSIST_MENU_DOWN;
+  if (count > 0) {
+    persist_write_data(key, items, count * sizeof(HubMenuItem));
   } else {
-    parse_menu_string(str, s_custom_menu_down, &s_custom_menu_down_count);
-    s_has_custom_menu_down = true;
-    persist_write_data(HUB_PERSIST_MENU_DOWN, s_custom_menu_down,
-                       s_custom_menu_down_count * sizeof(HubMenuItem));
+    persist_delete(key);
   }
 }
 
@@ -237,30 +226,6 @@ void hub_config_load(void) {
     persist_read_data(HUB_PERSIST_CONFIG, &g_hub_config, sizeof(HubConfig));
   }
 
-  // Load custom menu data
-  if (persist_exists(HUB_PERSIST_MENU_UP)) {
-    int size = persist_get_size(HUB_PERSIST_MENU_UP);
-    if (size > 0 && (size % sizeof(HubMenuItem)) == 0) {
-      s_custom_menu_up_count = size / sizeof(HubMenuItem);
-      if (s_custom_menu_up_count > HUB_MAX_MENU_ITEMS)
-        s_custom_menu_up_count = HUB_MAX_MENU_ITEMS;
-      persist_read_data(HUB_PERSIST_MENU_UP, s_custom_menu_up,
-                        s_custom_menu_up_count * sizeof(HubMenuItem));
-      s_has_custom_menu_up = true;
-    }
-  }
-  if (persist_exists(HUB_PERSIST_MENU_DOWN)) {
-    int size = persist_get_size(HUB_PERSIST_MENU_DOWN);
-    if (size > 0 && (size % sizeof(HubMenuItem)) == 0) {
-      s_custom_menu_down_count = size / sizeof(HubMenuItem);
-      if (s_custom_menu_down_count > HUB_MAX_MENU_ITEMS)
-        s_custom_menu_down_count = HUB_MAX_MENU_ITEMS;
-      persist_read_data(HUB_PERSIST_MENU_DOWN, s_custom_menu_down,
-                        s_custom_menu_down_count * sizeof(HubMenuItem));
-      s_has_custom_menu_down = true;
-    }
-  }
-
   // Load custom widget data
   if (persist_exists(HUB_PERSIST_WIDGETS_UP)) {
     int size = persist_get_size(HUB_PERSIST_WIDGETS_UP);
@@ -290,23 +255,24 @@ void hub_config_save(void) {
   persist_write_data(HUB_PERSIST_CONFIG, &g_hub_config, sizeof(HubConfig));
 }
 
-// --- Data accessors (return custom data if available, otherwise defaults) ---
-const HubMenuItem *hub_config_get_up_menu(uint8_t *count) {
-  if (s_has_custom_menu_up) {
-    *count = s_custom_menu_up_count;
-    return s_custom_menu_up;
+// --- Menu loading: on-demand from persist (no BSS arrays) ---
+uint8_t hub_config_load_menu(bool is_up, HubMenuItem *dst) {
+  uint32_t key = is_up ? HUB_PERSIST_MENU_UP : HUB_PERSIST_MENU_DOWN;
+  if (persist_exists(key)) {
+    int size = persist_get_size(key);
+    if (size > 0 && (size % sizeof(HubMenuItem)) == 0) {
+      uint8_t count = size / sizeof(HubMenuItem);
+      if (count > HUB_MAX_MENU_ITEMS) count = HUB_MAX_MENU_ITEMS;
+      persist_read_data(key, dst, count * sizeof(HubMenuItem));
+      return count;
+    }
   }
-  *count = 0;
-  return NULL;
-}
-
-const HubMenuItem *hub_config_get_down_menu(uint8_t *count) {
-  if (s_has_custom_menu_down) {
-    *count = s_custom_menu_down_count;
-    return s_custom_menu_down;
+  // Defaults
+  if (!is_up) {
+    memcpy(dst, s_default_down_menu, sizeof(s_default_down_menu));
+    return DEFAULT_DOWN_MENU_COUNT;
   }
-  *count = DEFAULT_DOWN_MENU_COUNT;
-  return s_default_down_menu;
+  return 0;
 }
 
 const uint8_t *hub_config_get_up_widgets(uint8_t *count) {

@@ -97,3 +97,106 @@ git checkout main
 - `pebble logs --phone 192.168.1.133` works on the physical watch. Always use `timeout 30` to cap collection: `timeout 30 pebble logs --phone 192.168.1.133`
 - **Priority IP order to try for `pebble install --phone`**: `192.168.1.133` → `192.168.1.157` → `192.168.1.170`
 - Phone IP can change if DHCP reassigns; check Pebble app → Settings → Developer Mode if connection refused.
+
+---
+
+## Memory Optimization Playbook
+
+### Measuring heap at runtime (ground truth)
+Build numbers are insufficient — always measure on the actual device:
+```c
+APP_LOG(APP_LOG_LEVEL_DEBUG, "HEAP free: %d", (int)heap_bytes_free());
+```
+Place these calls at: end of `init()`, beginning of the main `update_proc`, and end of `update_proc`. The post-render value is the most important — it reflects steady-state heap available for AppMessage and dynamic allocations.
+
+### Platform RAM model
+| Platform | RAM budget | Code location |
+|----------|-----------|---------------|
+| aplite   | 24,576 B  | text+data+bss+heap+stack all in same 24KB |
+| basalt / diorite | ~64KB | code in flash; only data+bss+heap+stack in RAM |
+
+**Consequence**: reducing `.text` (code size) helps aplite but NOT basalt/diorite. Reducing `.data` or `.bss` helps **all** platforms equally (1 byte saved = 1 byte more heap). Prioritise BSS/data reductions when targeting all platforms.
+
+### Analyse before touching anything
+Run `arm-none-eabi-size` on all three ELFs to get a baseline:
+```bash
+arm-none-eabi-size build/aplite/pebble-app.elf build/basalt/pebble-app.elf build/diorite/pebble-app.elf
+```
+Then grep BSS symbols to find which variables are biggest:
+```bash
+arm-none-eabi-nm --size-sort --print-size build/aplite/pebble-app.elf | grep " [bB] "
+```
+
+### Dead code / dead variable removal
+1. **Grep for usage before removing**: `grep -rn "variable_name" src/c/` — if it only appears in its own declaration and one assignment, it's dead.
+2. Remove entire `static` arrays that are never read after being written.
+3. Remove `persist_write` / `persist_read` pairs for values that are never used downstream.
+4. Remove function declarations from `.h` files and implementations from `.c` files together.
+5. Dead code discovered in this project: `weather_utils_get_weekday_name`, `weather_utils_create_date_text`, `weather_utils_get_month_abbrev`, `weather_utils_build_icon_from_wmo`, four `s_weekday_lang_*[7]` arrays, four `s_month_abbrev_*[12]` arrays; globals `icon1/2/3[20]`, `location[16]`, `rain_ico_val`, `color_right`, `color_left`.
+
+### BSS reduction: move data out of structs into local computation
+**Anti-pattern** — storing layout GRects in a persistent struct:
+```c
+typedef struct { GRect rect_icon; GRect rect_temp; /* ... 11 more ... */ } IconBarData;
+// Assigned on every tick, stored permanently in BSS
+icon_data.rect_icon = GRect(IB_ICON_X, IB_ICON_Y, 35, 35);
+```
+**Fix** — compute GRects as local variables inside the draw function:
+```c
+#define IB_ICON_X 0
+#define IB_ICON_Y 60
+// Inside the draw function:
+GRect rect_icon = GRect(IB_ICON_X, IB_ICON_Y, 35, 35);
+```
+This eliminates 11 × 8 = 88 bytes of BSS and removes the assignment overhead in `update_proc`. The GRect structs only live on the stack for the ~1 ms the draw function runs.
+
+### BSS reduction: on-demand persist loading instead of permanent BSS arrays
+**Anti-pattern** — loading all persisted data at init into permanent BSS arrays:
+```c
+static HubMenuItem s_custom_menu_up[5];    // 5 × sizeof(HubMenuItem) in BSS always
+static HubMenuItem s_custom_menu_down[5];
+// Loaded unconditionally in hub_config_load()
+```
+**Fix** — load on demand when the feature is actually used:
+```c
+// In hub_menu.c, allocated only when menu window is opened:
+typedef struct { HubMenuItem items[HUB_MAX_MENU_ITEMS]; ... } MenuCtx;
+MenuCtx *ctx = malloc(sizeof(MenuCtx));
+hub_config_load_menu(is_up, ctx->items);
+// ctx is freed in window_unload — heap is reclaimed immediately after menu closes
+```
+This converts permanent BSS into temporary heap, net gain = `2 × HUB_MAX_MENU_ITEMS × sizeof(HubMenuItem)` bytes of BSS freed permanently.
+
+### Reduce buffer sizes aggressively
+- Always use the actual maximum string length + 1, not a round number: `char days_icon[5][16]` instead of `[5][20]` if icon names are at most 15 chars.
+- `wind_unit_str[5]` (not `[6]`) for strings like "km/h" (4 chars + NUL).
+- Each 4-byte shave × N array elements adds up quickly in BSS.
+
+### AppMessage inbox size
+`app_message_open(512, 32)` — inbox=512 is sufficient if JS sends data in two dicts. Outbox 32 bytes (only one `KEY_REQUEST` uint8 tuple needed). Larger inbox = less heap available for the rest of init.
+
+### Removing struct fields vs. function parameters
+When removing a field from a struct passed to a draw function, prefer **passing the value as a direct parameter** rather than restructuring the whole call:
+```c
+// Before: uses struct field
+static void draw_wind_overlays(GContext *ctx, GRect bounds, const IconBarData *d);
+// After: field removed from struct, passed directly
+static void draw_wind_overlays(GContext *ctx, GRect bounds, int wind_val, int met_unit);
+```
+
+### Verified build sizes (post-optimization, March 2026)
+| Platform | text   | data | bss | total  |
+|----------|--------|------|-----|--------|
+| aplite   | 19,463 | 504  | 416 | 20,383 |
+| basalt   | ~18,600| 536  | 440 | ~19,576|
+| diorite  | ~18,600| 536  | 440 | ~19,576|
+
+Runtime heap (aplite, post-render): **~2,600 bytes free** (was ~572 before optimizations).
+
+### Checklist before any new feature
+Before adding a new feature, verify that it does not:
+- Add new BSS arrays larger than ~20 bytes
+- Add new global struct fields that could be computed locally instead
+- Increase inbox size above 512 bytes
+- Allocate inside a draw callback without freeing (leak per render cycle)
+- Add `persist_read` in `init()` for data that could be loaded on demand
