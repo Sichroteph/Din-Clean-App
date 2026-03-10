@@ -23,6 +23,9 @@
 #define KEY_HUB_WIDGETS_DOWN 361
 #define KEY_HUB_ANIM 362
 
+// Countdown persist key (time_t target date)
+#define HUB_PERSIST_COUNTDOWN 320
+
 // Stock widget message keys & persist
 #define KEY_STOCK_DATA 370
 #define KEY_STOCK_COUNT 371

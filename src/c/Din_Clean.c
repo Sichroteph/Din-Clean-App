@@ -327,6 +327,64 @@ static int build_icon_with_pool_check(const char *text_icon) {
   return weather_utils_build_icon(text_icon, true);
 }
 
+// Compact centered text helper
+static void dtext(GContext *c, const char *s, GFont f, int y, int h) {
+  graphics_draw_text(c, s, f, GRect(0, y, 144, h),
+    GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
+}
+
+// Alternative view renderer (0 heap alloc — draws on existing GContext)
+static void draw_alt_view(GContext *ctx, uint8_t vid, int icon_id, bool fresh) {
+  graphics_context_set_fill_color(ctx, GColorBlack);
+  graphics_fill_rect(ctx, GRect(0, 0, 144, 168), 0, GCornerNone);
+  graphics_context_set_text_color(ctx, GColorWhite);
+  GFont fb = fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD);
+  GFont fs = fonts_get_system_font(FONT_KEY_GOTHIC_14);
+  char buf[24];
+
+  if (vid == 1) { // weather detail
+    GBitmap *bmp = gbitmap_create_with_resource(icon_id);
+    if (bmp) {
+      graphics_draw_bitmap_in_rect(ctx, bmp, GRect(54, 10, 35, 35));
+      gbitmap_destroy(bmp);
+    }
+    dtext(ctx, weather_temp_char, fb, 46, 34);
+    snprintf(buf, sizeof(buf), "%s / %s", minTemp, maxTemp);
+    dtext(ctx, buf, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), 80, 24);
+    snprintf(buf, sizeof(buf), "%d%%  %d%s", humidity, wind_speed_val,
+             wind_unit_str);
+    dtext(ctx, buf, fs, 108, 18);
+    if (fresh) {
+      struct tm *ref = localtime(&last_refresh);
+      snprintf(buf, sizeof(buf), "Maj %02d:%02d", ref->tm_hour, ref->tm_min);
+    } else {
+      snprintf(buf, sizeof(buf), "Offline");
+    }
+    dtext(ctx, buf, fs, 140, 18);
+  } else {
+    strftime(buf, sizeof(buf), "%a %d %b %Y", &now);
+    dtext(ctx, buf, fb, 8, 34);
+    int w = now.tm_wday ? now.tm_wday : 7;
+    int yr = now.tm_year + 1900;
+    int diy = (yr % 4 == 0 && (yr % 100 != 0 || yr % 400 == 0)) ? 366 : 365;
+    snprintf(buf, sizeof(buf), "S%d  Jour %d/%d",
+             (now.tm_yday + 8 - w) / 7, now.tm_yday + 1, diy);
+    dtext(ctx, buf, fs, 48, 18);
+    BatteryChargeState bat = battery_state_service_peek();
+    snprintf(buf, sizeof(buf), "Batterie %d%%", bat.charge_percent);
+    dtext(ctx, buf, fs, 70, 18);
+    if (persist_exists(HUB_PERSIST_COUNTDOWN)) {
+      time_t target;
+      persist_read_data(HUB_PERSIST_COUNTDOWN, &target, sizeof(time_t));
+      int days = (int)((target - time(NULL)) / 86400);
+      if (days > 0) {
+        snprintf(buf, sizeof(buf), "J-%d", days);
+        dtext(ctx, buf, fb, 104, 28);
+      }
+    }
+  }
+}
+
 static void update_proc(Layer *layer, GContext *ctx) {
   // Static locals for large structs to avoid stack overflow on real hardware
   // (Pebble watch has ~2KB app stack; IconBarData/TimeRenderData would
@@ -409,6 +467,12 @@ static void update_proc(Layer *layer, GContext *ctx) {
   snprintf(minTemp, sizeof(minTemp), "%i°", tmin_val);
   snprintf(maxTemp, sizeof(maxTemp), "%i°", tmax_val);
 
+  // Alternative views: 1=weather detail, 2=date/info
+  if (current_view_index > 0) {
+    draw_alt_view(ctx, current_view_index, icon_id, has_fresh_weather);
+    return;
+  }
+
   // Draw hours FIRST for instant display (only 4 small bitmaps)
   static char heure[10];
   t = time(NULL);
@@ -461,33 +525,6 @@ static void update_proc(Layer *layer, GContext *ctx) {
   ui_draw_icon_bar(ctx, &icon_data);
 
   APP_LOG(APP_LOG_LEVEL_INFO, "HEAP post-render: %zu", heap_bytes_free());
-  // Draw view label for non-main views (stubs)
-  if (g_hub_config.view_count > 0 &&
-      current_view_index < g_hub_config.view_count) {
-    uint8_t view_id = g_hub_config.view_order[current_view_index];
-    const char *view_label = NULL;
-    switch (view_id) {
-    case HUB_VIEW_2:
-      view_label = "View 2";
-      break;
-    case HUB_VIEW_3:
-      view_label = "View 3";
-      break;
-    case HUB_VIEW_ANALOG:
-      view_label = "Analog";
-      break;
-    default:
-      break;
-    }
-    if (view_label) {
-      graphics_context_set_text_color(ctx, GColorWhite);
-      GRect label_rect = GRect(40, 0, 100, 20);
-      graphics_draw_text(ctx, view_label,
-                         fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD),
-                         label_rect, GTextOverflowModeTrailingEllipsis,
-                         GTextAlignmentRight, NULL);
-    }
-  }
 }
 
 static void handle_tick(struct tm *cur, TimeUnits units_changed) {
@@ -1134,10 +1171,11 @@ static void down_click_handler(ClickRecognizerRef recognizer, void *context) {
   }
 }
 
+#define ALT_VIEW_COUNT 3 // Main + 2 alt views
 static void select_click_handler(ClickRecognizerRef recognizer, void *context) {
-  // Cycle watchface views
-  if (g_hub_config.view_count > 1) {
-    current_view_index = (current_view_index + 1) % g_hub_config.view_count;
+  {
+    current_view_index = (current_view_index + 1) % ALT_VIEW_COUNT;
+    hub_timeout_reset();
     layer_mark_dirty(layer);
   }
 }

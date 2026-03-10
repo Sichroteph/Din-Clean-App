@@ -301,10 +301,11 @@ function processOpenMeteoResponse(responseText) {
 
       var tempMax = daily.temperature_2m_max[dayIdx];
       var tempMin = daily.temperature_2m_min[dayIdx];
+      if (tempMax == null || tempMin == null) break; // beyond model range, stop
       var dayTemp = (tempMax + tempMin) / 2;
       var wmoCode = daily.weather_code[dayIdx];
       var rainSum = daily.precipitation_sum[dayIdx] || 0;
-      var dayWindKmh = daily.wind_gusts_10m_max[dayIdx];
+      var dayWindKmh = daily.wind_gusts_10m_max[dayIdx] || 0;
 
       // Convert temperature
       var dayTempConverted;

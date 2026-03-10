@@ -618,24 +618,23 @@ static void widget_daily_draw(GContext *ctx, GRect bounds, uint8_t page) {
   int first_day = page * 2; // 0-based day index
 
   // Draw first day row
-  if (first_day < 7) {
+  if (first_day < 5) {
     draw_daily_row(ctx, 8, first_day, bounds.size.w);
   }
 
-  // Dotted separator line
-  for (int x = 4; x < bounds.size.w - 4; x += 3) {
-    graphics_draw_pixel(ctx, GPoint(x, 78));
-  }
-
-  // Draw second day row
-  if (first_day + 1 < 7) {
+  // Dotted separator + second row only when two days are available
+  bool has_second = (first_day + 1 < 5);
+  if (has_second) {
+    for (int x = 4; x < bounds.size.w - 4; x += 3) {
+      graphics_draw_pixel(ctx, GPoint(x, 78));
+    }
     draw_daily_row(ctx, 84, first_day + 1, bounds.size.w);
   }
 
   // Page label (bottom-left)
   char pbuf[16];
   GFont font14 = fonts_get_system_font(FONT_KEY_GOTHIC_14);
-  if (first_day + 1 < 7) {
+  if (has_second) {
     snprintf(pbuf, sizeof(pbuf), "J+%d J+%d", first_day + 1, first_day + 2);
   } else {
     snprintf(pbuf, sizeof(pbuf), "J+%d", first_day + 1);
