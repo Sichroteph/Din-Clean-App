@@ -11,11 +11,11 @@ static const HubMenuItem s_default_down_menu[] = {
 };
 #define DEFAULT_DOWN_MENU_COUNT 3
 
-static const uint8_t s_default_up_widgets[] = { HUB_WIDGET_WEATHER, HUB_WIDGET_STOCKS };
-#define DEFAULT_UP_WIDGET_COUNT 2
+static const uint8_t s_default_up_widgets[] = { HUB_WIDGET_STOCKS };
+#define DEFAULT_UP_WIDGET_COUNT 1
 
-static const uint8_t s_default_down_widgets[] = { HUB_WIDGET_WEATHER, HUB_WIDGET_STOCKS };
-#define DEFAULT_DOWN_WIDGET_COUNT 2
+static const uint8_t s_default_down_widgets[] = { HUB_WIDGET_STOCKS };
+#define DEFAULT_DOWN_WIDGET_COUNT 1
 
 // --- Dynamic (custom) menu/widget storage ---
 static HubMenuItem s_custom_menu_up[HUB_MAX_MENU_ITEMS];

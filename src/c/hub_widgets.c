@@ -44,11 +44,9 @@ static bool stock_load_panel(uint8_t idx, StockPanel *dst) {
 #endif
 
 // --- Widget draw/page functions ---
-static void widget_weather_draw(GContext *ctx, GRect bounds, uint8_t page);
 static void widget_stocks_draw(GContext *ctx, GRect bounds, uint8_t page);
 static void widget_hourly_draw(GContext *ctx, GRect bounds, uint8_t page);
 static void widget_daily_draw(GContext *ctx, GRect bounds, uint8_t page);
-static uint8_t widget_weather_page_count(void);
 static uint8_t widget_stocks_page_count(void);
 static uint8_t widget_hourly_page_count(void);
 static uint8_t widget_daily_page_count(void);
@@ -60,8 +58,6 @@ typedef struct {
 } WidgetDef;
 
 static const WidgetDef s_widget_defs[] = {
-    [HUB_WIDGET_WEATHER] = {widget_weather_draw, widget_weather_page_count,
-                            "Weather"},
     [HUB_WIDGET_STOCKS] = {widget_stocks_draw, widget_stocks_page_count,
                            "Stocks"},
     [HUB_WIDGET_WEATHER_HOURLY] = {widget_hourly_draw, widget_hourly_page_count,
@@ -234,48 +230,11 @@ static void widget_back_handler(ClickRecognizerRef rec, void *context) {
 
 // ========== Widget implementations (stubs) ==========
 
-static uint8_t widget_weather_page_count(void) { return 3; }
 static uint8_t widget_stocks_page_count(void) {
   return stock_panel_count > 0 ? stock_panel_count : 1;
 }
 static uint8_t widget_hourly_page_count(void) { return 2; }
 static uint8_t widget_daily_page_count(void) { return 3; }
-
-static void widget_weather_draw(GContext *ctx, GRect bounds, uint8_t page) {
-  graphics_context_set_text_color(ctx, GColorWhite);
-
-  char page_label[16];
-  switch (page) {
-  case 0:
-    snprintf(page_label, sizeof(page_label), "0-12h");
-    break;
-  case 1:
-    snprintf(page_label, sizeof(page_label), "12-24h");
-    break;
-  case 2:
-    snprintf(page_label, sizeof(page_label), "24-36h");
-    break;
-  default:
-    snprintf(page_label, sizeof(page_label), "??");
-    break;
-  }
-
-  GRect title_rect = GRect(0, 40, bounds.size.w, 34);
-  graphics_draw_text(ctx, "Weather",
-                     fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD), title_rect,
-                     GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter,
-                     NULL);
-
-  GRect page_rect = GRect(0, 78, bounds.size.w, 28);
-  graphics_draw_text(
-      ctx, page_label, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD),
-      page_rect, GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
-
-  GRect stub_rect = GRect(0, 112, bounds.size.w, 22);
-  graphics_draw_text(ctx, "(stub)", fonts_get_system_font(FONT_KEY_GOTHIC_18),
-                     stub_rect, GTextOverflowModeTrailingEllipsis,
-                     GTextAlignmentCenter, NULL);
-}
 
 #ifdef PBL_PLATFORM_APLITE
 static void widget_stocks_draw(GContext *ctx, GRect bounds, uint8_t page) {
