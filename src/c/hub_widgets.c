@@ -253,23 +253,20 @@ static void widget_stocks_draw(GContext *ctx, GRect bounds, uint8_t page) {
   StockPanelLite *p = &panel_buf;
 
   // Symbol centered, large
-  GRect sym_rect = GRect(0, 30, bounds.size.w, 34);
+  GRect sym_rect = GRect(0, 26, bounds.size.w, 34);
   graphics_draw_text(
       ctx, p->symbol, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD), sym_rect,
       GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
 
-  // Price centered
-  GRect price_rect = GRect(0, 62, bounds.size.w, 28);
+  // Price centered (large)
+  GRect price_rect = GRect(0, 64, bounds.size.w, 28);
   graphics_draw_text(
       ctx, p->price, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD), price_rect,
       GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
 
-  // Change with trend indicator centered
-  char change_buf[12];
-  snprintf(change_buf, sizeof(change_buf), "%s %s",
-           p->positive ? "\xe2\x96\xb2" : "\xe2\x96\xbc", p->change);
-  GRect chg_rect = GRect(0, 92, bounds.size.w, 22);
-  graphics_draw_text(ctx, change_buf, fonts_get_system_font(FONT_KEY_GOTHIC_18),
+  // Change centered (gothic24bold for better readability)
+  GRect chg_rect = GRect(0, 96, bounds.size.w, 28);
+  graphics_draw_text(ctx, p->change, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD),
                      chg_rect, GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentCenter, NULL);
 
@@ -277,7 +274,7 @@ static void widget_stocks_draw(GContext *ctx, GRect bounds, uint8_t page) {
   if (stock_panel_count > 1) {
     char ind[6];
     snprintf(ind, sizeof(ind), "%d/%d", page + 1, stock_panel_count);
-    GRect ind_rect = GRect(0, 118, bounds.size.w, 18);
+    GRect ind_rect = GRect(0, 128, bounds.size.w, 16);
     graphics_draw_text(ctx, ind, fonts_get_system_font(FONT_KEY_GOTHIC_14),
                        ind_rect, GTextOverflowModeTrailingEllipsis,
                        GTextAlignmentCenter, NULL);
@@ -301,40 +298,34 @@ static void widget_stocks_draw(GContext *ctx, GRect bounds, uint8_t page) {
   }
 
   StockPanel *p = &panel_buf;
+  GFont font24b = fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD);
+  GFont font18 = fonts_get_system_font(FONT_KEY_GOTHIC_18);
   GFont font14 = fonts_get_system_font(FONT_KEY_GOTHIC_14);
 
-  // --- Header: symbol (left) + price (right) ---
-  GRect sym_rect = GRect(2, -2, bounds.size.w - 4, 26);
-  graphics_draw_text(
-      ctx, p->symbol, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD), sym_rect,
-      GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
-  GRect price_rect = GRect(2, 0, bounds.size.w - 4, 20);
-  graphics_draw_text(ctx, p->price, fonts_get_system_font(FONT_KEY_GOTHIC_18),
-                     price_rect, GTextOverflowModeTrailingEllipsis,
-                     GTextAlignmentRight, NULL);
+  // --- Row 1: symbol (left) + price (right), both gothic24bold ---
+  GRect sym_rect = GRect(2, 0, bounds.size.w - 4, 28);
+  graphics_draw_text(ctx, p->symbol, font24b, sym_rect,
+                     GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+  GRect price_rect = GRect(2, 0, bounds.size.w - 4, 28);
+  graphics_draw_text(ctx, p->price, font24b, price_rect,
+                     GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
 
-  // --- Change line with trend indicator ---
-  char change_buf[12];
-  snprintf(change_buf, sizeof(change_buf), "%s %s",
-           p->positive ? "\xe2\x96\xb2" : "\xe2\x96\xbc", p->change);
-  GRect chg_rect = GRect(2, 20, bounds.size.w - 4, 18);
-  graphics_draw_text(ctx, change_buf, font14, chg_rect,
-                     GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft,
-                     NULL);
+  // --- Row 2: change (left, gothic18) + panel indicator (right, gothic14) ---
+  GRect chg_rect = GRect(2, 30, bounds.size.w - 4, 22);
+  graphics_draw_text(ctx, p->change, font18, chg_rect,
+                     GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
 
-  // Panel indicator (e.g., "1/3")
   if (stock_panel_count > 1) {
     char ind[6];
     snprintf(ind, sizeof(ind), "%d/%d", page + 1, stock_panel_count);
-    GRect ind_rect = GRect(bounds.size.w - 36, 20, 34, 18);
+    GRect ind_rect = GRect(bounds.size.w - 36, 34, 34, 16);
     graphics_draw_text(ctx, ind, font14, ind_rect,
-                       GTextOverflowModeTrailingEllipsis, GTextAlignmentRight,
-                       NULL);
+                       GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
   }
 
 // --- Graph area ---
-#define STOCK_GRAPH_TOP 42
-#define STOCK_GRAPH_BOT 148
+#define STOCK_GRAPH_TOP 54
+#define STOCK_GRAPH_BOT 162
 #define STOCK_GRAPH_LEFT 2
 #define STOCK_GRAPH_RIGHT 142
 
@@ -412,7 +403,7 @@ static void widget_stocks_draw(GContext *ctx, GRect bounds, uint8_t page) {
 #define HOURLY_LABEL_Y 0
 #define HOURLY_GRAPH_TOP 16
 #define HOURLY_GRAPH_BOT 88
-#define HOURLY_TEMP_Y 88
+#define HOURLY_TEMP_Y (HOURLY_GRAPH_BOT + 2)
 #define HOURLY_ICON_Y 104
 #define HOURLY_WINDLABEL_Y 124
 #define HOURLY_WIND_Y 140
@@ -475,9 +466,9 @@ static void widget_hourly_draw(GContext *ctx, GRect bounds, uint8_t page) {
     ptmax += 1;
   }
 
-  // --- Dotted grid lines ---
+  // --- Dotted grid lines (drawn first, rain bars will overlay them) ---
   int y_ref_top = HOURLY_GRAPH_TOP + 8;
-  int y_ref_bot = HOURLY_GRAPH_BOT - 8;
+  int y_ref_bot = HOURLY_GRAPH_BOT - 1;
   for (int x = 0; x < bounds.size.w; x += 4) {
     graphics_draw_pixel(ctx, GPoint(x, y_ref_top));
     graphics_draw_pixel(ctx, GPoint(x, y_ref_bot));
@@ -489,7 +480,8 @@ static void widget_hourly_draw(GContext *ctx, GRect bounds, uint8_t page) {
     }
   }
 
-  // --- Rain bars (dithered) — page 0 only ---
+  // --- Rain bars (dithered, drawn after grid so they appear on top) ---
+  // Drawn just before the temperature curve so the curve remains topmost.
   if (page == 0) {
     for (int i = 0; i < 12; i++) {
       uint8_t rain = graph_rains[i];
@@ -511,7 +503,7 @@ static void widget_hourly_draw(GContext *ctx, GRect bounds, uint8_t page) {
     }
   }
 
-  // --- Temperature line ---
+  // --- Temperature line (topmost layer in graph area) ---
   graphics_context_set_stroke_width(ctx, 2);
   for (int i = 0; i < 4; i++) {
     int y1 = hourly_temp_to_y(temps[i], ptmin, ptmax);
@@ -524,20 +516,17 @@ static void widget_hourly_draw(GContext *ctx, GRect bounds, uint8_t page) {
   }
   graphics_context_set_stroke_width(ctx, 1);
 
-  // --- Temperature labels ---
-  for (int i = 0; i <= 4; i++) {
-    char tbuf[6];
-    snprintf(tbuf, sizeof(tbuf), "%d\xc2\xb0", temps[i]);
-    int y = hourly_temp_to_y(temps[i], ptmin, ptmax);
-    int ly = (y < HOURLY_GRAPH_TOP + 16) ? y + 5 : y - 15;
-    int lx = tx[i] - 15;
-    if (lx < 0)
-      lx = 0;
-    if (lx > bounds.size.w - 30)
-      lx = bounds.size.w - 30;
-    graphics_draw_text(ctx, tbuf, font14, GRect(lx, ly, 30, 16),
-                       GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter,
-                       NULL);
+  // --- Temperature labels (below graph, bold, aligned with hour columns) ---
+  {
+    GFont font18b = fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
+    for (int i = 0; i < 4; i++) {
+      char tbuf[6];
+      snprintf(tbuf, sizeof(tbuf), "%d\xc2\xb0", temps[i]);
+      graphics_draw_text(ctx, tbuf, font18b,
+                         GRect(i * 36, HOURLY_TEMP_Y, 36, 22),
+                         GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter,
+                         NULL);
+    }
   }
 
   // --- Wind section ---

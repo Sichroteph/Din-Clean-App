@@ -6,6 +6,8 @@ static uint8_t s_tmin = 5;     /* timer: setup minutes 1-99 */
 static uint8_t s_ah = 7, s_am; /* alarm: target H:M */
 static uint8_t s_ast;          /* alarm: 0=editH 1=editM 2=armed */
 static AppTimer *s_at;         /* shared background timer */
+static time_t s_sw_start;      /* stopwatch: time() when started, 0=stopped */
+static uint32_t s_sw_elapsed;  /* stopwatch: accumulated seconds when stopped */
 
 typedef struct {
   Window *w;
@@ -30,7 +32,13 @@ static void refresh(void) {
     return;
   int a = 0, b = 0;
   const char *title = s_names[s_v->id];
-  if (s_v->id == HUB_APP_TIMER) {
+  if (s_v->id == HUB_APP_STOPWATCH) {
+    uint32_t e = s_sw_elapsed;
+    if (s_sw_start) e += (uint32_t)(time(NULL) - s_sw_start);
+    a = (int)(e / 60); if (a > 99) a = 99;
+    b = (int)(e % 60);
+    title = s_sw_start ? "STOP" : "Stopwatch";
+  } else if (s_v->id == HUB_APP_TIMER) {
     title = s_tend ? "STOP" : "Timer";
     if (s_tend) {
       int r = (int)(s_tend - time(NULL));
@@ -67,8 +75,9 @@ static void pa_tick(void *d) {
   }
   if (s_v)
     refresh();
-  if (s_tend || s_ast == 2) {
-    uint32_t ms = (s_tend && s_v && s_v->id == HUB_APP_TIMER) ? 1000
+  int sw_vis = s_sw_start && s_v && s_v->id == HUB_APP_STOPWATCH;
+  if (s_tend || s_ast == 2 || sw_vis) {
+    uint32_t ms = (sw_vis || (s_tend && s_v && s_v->id == HUB_APP_TIMER)) ? 1000
                   : s_tend ? (uint32_t)(s_tend - time(NULL)) * 1000
                            : 30000;
     s_at = app_timer_register(ms, pa_tick, NULL);
@@ -79,7 +88,9 @@ static void adj(int d) {
   hub_timeout_reset();
   if (!s_v)
     return;
-  if (s_v->id == HUB_APP_TIMER && !s_tend) {
+  if (s_v->id == HUB_APP_STOPWATCH && !s_sw_start) {
+    s_sw_elapsed = 0;
+  } else if (s_v->id == HUB_APP_TIMER && !s_tend) {
     int v = s_tmin + d;
     if (v < 1)
       v = 1;
@@ -102,7 +113,17 @@ static void h_sel(ClickRecognizerRef r, void *c) {
   hub_timeout_reset();
   if (!s_v)
     return;
-  if (s_v->id == HUB_APP_TIMER) {
+  if (s_v->id == HUB_APP_STOPWATCH) {
+    if (s_sw_start) {
+      s_sw_elapsed += (uint32_t)(time(NULL) - s_sw_start);
+      s_sw_start = 0;
+      if (s_at) { app_timer_cancel(s_at); s_at = NULL; }
+    } else {
+      s_sw_start = time(NULL);
+      if (s_at) app_timer_cancel(s_at);
+      s_at = app_timer_register(1000, pa_tick, NULL);
+    }
+  } else if (s_v->id == HUB_APP_TIMER) {
     if (s_tend) {
       s_tend = 0;
       if (s_at) {
@@ -161,13 +182,14 @@ static void pa_load(Window *w) {
   s_v = p;
   refresh();
   window_set_click_config_provider(w, ccfg);
-  if (s_tend || s_ast == 2) {
+  if (s_tend || s_ast == 2 || s_sw_start) {
     if (s_at) {
       app_timer_cancel(s_at);
       s_at = NULL;
     }
-    s_at = app_timer_register(p->id == HUB_APP_TIMER && s_tend ? 1000 : 30000,
-                              pa_tick, NULL);
+    uint32_t ms = ((p->id == HUB_APP_STOPWATCH && s_sw_start) ||
+                   (p->id == HUB_APP_TIMER && s_tend)) ? 1000 : 30000;
+    s_at = app_timer_register(ms, pa_tick, NULL);
   }
   hub_timeout_reset();
 }

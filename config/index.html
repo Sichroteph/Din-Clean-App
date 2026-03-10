@@ -908,17 +908,6 @@
           </select>
         </div>
       </div>
-      <div class="card">
-        <div class="card-header">History Period</div>
-        <div class="row">
-          <div class="seg-group">
-            <button class="seg-btn active" data-val="5d" onclick="setStockPeriod(this)">1 Week</button>
-            <button class="seg-btn" data-val="1mo" onclick="setStockPeriod(this)">1 Month</button>
-            <button class="seg-btn" data-val="3mo" onclick="setStockPeriod(this)">3 Months</button>
-          </div>
-        </div>
-        <input type="hidden" id="stock_period" value="5d">
-      </div>
     </div></div>
   </div>
 
@@ -1639,14 +1628,6 @@
         { symbol: 'BTC-USD', name: 'BTC' }
       ];
     }
-    // Period
-    var period = localStorage['stock_period'] || '5d';
-    document.getElementById('stock_period').value = period;
-    var btns = document.querySelectorAll('[onclick^="setStockPeriod"]');
-    for (var b = 0; b < btns.length; b++) {
-      if (btns[b].getAttribute('data-val') === period) btns[b].classList.add('active');
-      else btns[b].classList.remove('active');
-    }
     renderStockPanels();
   }
 
@@ -1711,12 +1692,7 @@
   }
 
   function setStockPeriod(btn) {
-    var parent = btn.parentNode;
-    var siblings = parent.querySelectorAll('.seg-btn');
-    for (var i = 0; i < siblings.length; i++) siblings[i].classList.remove('active');
-    btn.classList.add('active');
-    document.getElementById('stock_period').value = btn.getAttribute('data-val');
-    persistStockPanels();
+    // no-op: period is now fixed at 24h
   }
 
   function persistStockPanels() {
@@ -1729,7 +1705,6 @@
     }
     localStorage['stock_symbols'] = JSON.stringify(syms);
     localStorage['stock_names'] = JSON.stringify(names);
-    localStorage['stock_period'] = document.getElementById('stock_period').value;
   }
 
   // ================================================================
@@ -1793,7 +1768,6 @@
     persistStockPanels();
     options['stock_symbols'] = localStorage['stock_symbols'] || '[]';
     options['stock_names'] = localStorage['stock_names'] || '[]';
-    options['stock_period'] = document.getElementById('stock_period').value;
 
     for (var key in options) {
       localStorage[key] = options[key];

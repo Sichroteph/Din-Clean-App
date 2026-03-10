@@ -1086,7 +1086,7 @@ var DEFAULT_STOCK_SYMBOLS = ['^DJI', 'EURCHF=X', 'BTC-USD'];
 var DEFAULT_STOCK_NAMES = ['DJIA', 'EUR/CHF', 'BTC'];
 
 function getStockConfig() {
-  var symbols, names, period;
+  var symbols, names;
   try {
     symbols = JSON.parse(localStorage.getItem('stock_symbols'));
     names = JSON.parse(localStorage.getItem('stock_names'));
@@ -1096,8 +1096,7 @@ function getStockConfig() {
     names = DEFAULT_STOCK_NAMES;
   }
   if (!names) names = symbols.slice();
-  period = localStorage.getItem('stock_period') || '5d';
-  return { symbols: symbols, names: names, period: period };
+  return { symbols: symbols, names: names };
 }
 
 // Format a price for the Pebble display (max 11 chars)
@@ -1210,20 +1209,14 @@ function fetchStockData() {
   var panels = [];
   var remaining = config.symbols.length;
 
-  // Period → Yahoo Finance range/interval
-  var range = config.period;
-  var interval;
-  if (range === '1mo') interval = '1d';
-  else if (range === '3mo') interval = '1wk';
-  else { range = '5d'; interval = '1h'; }
-
   for (var i = 0; i < config.symbols.length; i++) {
     (function (idx) {
       var symbol = config.symbols[idx];
       var displayName = config.names[idx] || symbol;
+      // Always fetch 5 days of hourly data; variation is computed over the last 24h
       var url = 'https://query1.finance.yahoo.com/v8/finance/chart/' +
                 encodeURIComponent(symbol) +
-                '?range=' + range + '&interval=' + interval;
+                '?range=5d&interval=1h';
 
       console.log('Fetching stock: ' + symbol + ' → ' + url);
 
@@ -1232,11 +1225,16 @@ function fetchStockData() {
           var json = JSON.parse(responseText);
           var result = json.chart.result[0];
           var closes = result.indicators.quote[0].close;
+          var timestamps = result.timestamp || [];
 
-          // Filter out null values
+          // Filter out null values, keeping paired (timestamp, close)
           var validCloses = [];
+          var validTs = [];
           for (var c = 0; c < closes.length; c++) {
-            if (closes[c] !== null) validCloses.push(closes[c]);
+            if (closes[c] !== null) {
+              validCloses.push(closes[c]);
+              validTs.push(timestamps[c] || 0);
+            }
           }
 
           if (validCloses.length < 2) {
@@ -1248,9 +1246,35 @@ function fetchStockData() {
 
           var sampled = sampleArray(validCloses, 10);
           var lastPrice = validCloses[validCloses.length - 1];
-          var firstPrice = validCloses[0];
-          var changePct = ((lastPrice - firstPrice) / firstPrice * 100);
-          var changeStr = changePct.toFixed(1) + '%';
+          var lastTs = validTs[validTs.length - 1];
+
+          // Find the last point recorded on the previous trading day
+          // (i.e. last point whose local calendar date is strictly before today's)
+          var lastDate = new Date(lastTs * 1000);
+          var lastDay = lastDate.toDateString();
+          var baseIdx = 0;
+          var foundPrevDay = false;
+          for (var ti = validTs.length - 2; ti >= 0; ti--) {
+            var d = new Date(validTs[ti] * 1000).toDateString();
+            if (d !== lastDay) {
+              // Walk forward to the last point of that previous day
+              var prevDay = d;
+              var prevDayLastIdx = ti;
+              for (var tj = ti + 1; tj < validTs.length - 1; tj++) {
+                if (new Date(validTs[tj] * 1000).toDateString() === prevDay) prevDayLastIdx = tj;
+                else break;
+              }
+              baseIdx = prevDayLastIdx;
+              foundPrevDay = true;
+              break;
+            }
+          }
+          // Fallback: use oldest available point
+          if (!foundPrevDay) baseIdx = 0;
+          var basePrice = validCloses[baseIdx];
+
+          var changePct = ((lastPrice - basePrice) / basePrice * 100);
+          var changeStr = (changePct >= 0 ? '+' : '') + changePct.toFixed(1) + '%';
 
           // Compute raw min/max of the valid history window
           var rawMin = validCloses[0], rawMax = validCloses[0];
