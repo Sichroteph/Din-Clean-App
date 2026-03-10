@@ -355,20 +355,11 @@ static void draw_alt_view(GContext *ctx, uint8_t vid, int icon_id, bool fresh) {
     }
     dtext(ctx, buf, fs, 140, 18);
   } else {
-    GFont fm = fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
-    strftime(buf, sizeof(buf), "%a %d %b", &now);
-    dtext(ctx, buf, fb, 8, 34);
-    strftime(buf, sizeof(buf), "%Y", &now);
-    dtext(ctx, buf, fm, 44, 22);
-    int w = now.tm_wday ? now.tm_wday : 7;
-    int yr = now.tm_year + 1900;
-    int diy = (yr % 4 == 0 && (yr % 100 != 0 || yr % 400 == 0)) ? 366 : 365;
-    snprintf(buf, sizeof(buf), "S%d  Jour %d/%d", (now.tm_yday + 8 - w) / 7,
-             now.tm_yday + 1, diy);
-    dtext(ctx, buf, fs, 70, 18);
     BatteryChargeState bat = battery_state_service_peek();
-    snprintf(buf, sizeof(buf), "Batterie %d%%", bat.charge_percent);
-    dtext(ctx, buf, fs, 92, 18);
+    graphics_context_set_fill_color(ctx, GColorWhite);
+    graphics_fill_rect(ctx, GRect(32, 96, 80, 10), 0, GCornerNone);
+    graphics_context_set_fill_color(ctx, GColorBlack);
+    graphics_fill_rect(ctx, GRect(33 + bat.charge_percent * 78 / 100, 97, 78 - bat.charge_percent * 78 / 100, 8), 0, GCornerNone);
     if (persist_exists(HUB_PERSIST_COUNTDOWN)) {
       CountdownData cd;
       memset(&cd, 0, sizeof(CountdownData));
@@ -844,8 +835,9 @@ static void inbox_received_callback(DictionaryIterator *iterator,
         }
         cd.ts = ts;
         Tuple *lt = dict_find(iterator, KEY_HUB_COUNTDOWN_LABEL);
-        if (lt && lt->value->cstring[0]) {
+        if (lt) {
           strncpy(cd.label, lt->value->cstring, sizeof(cd.label) - 1);
+          cd.label[sizeof(cd.label) - 1] = '\0';
         }
         persist_write_data(HUB_PERSIST_COUNTDOWN, &cd, sizeof(CountdownData));
       }
