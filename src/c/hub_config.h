@@ -47,6 +47,16 @@ typedef struct {
   char price_max[10];            // Pre-formatted max price of history window
 } StockPanel;
 
+#ifdef PBL_PLATFORM_APLITE
+// Lightweight stock panel for Aplite — no graph data, saves ~35 bytes/panel
+typedef struct {
+  char symbol[10];
+  char price[12];
+  char change[8];
+  bool positive;
+} StockPanelLite;
+#endif
+
 // Limits
 #define HUB_MAX_MENU_ITEMS   5  // Reduced from 8 to save 90 bytes BSS on APLITE
 #define HUB_MAX_WIDGETS      6
