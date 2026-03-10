@@ -226,7 +226,8 @@ static char icon3[20] = " ";
 static char location[16] = " ";
 static char rain_ico_val;
 
-// Hourly forecast data (9 temps for 0-24h, 12 rain bars, 8 winds for 0-24h, 4 hours for 0-12h)
+// Hourly forecast data (9 temps for 0-24h, 12 rain bars, 8 winds for 0-24h, 4
+// hours for 0-12h)
 int8_t graph_temps[9] = {10, 10, 10, 10, 10, 10, 10, 10, 10};
 uint8_t graph_rains[12] = {0};
 uint8_t graph_wind_val[8] = {0};
@@ -328,7 +329,8 @@ static int build_icon_with_pool_check(const char *text_icon) {
 
 static void update_proc(Layer *layer, GContext *ctx) {
   // Static locals for large structs to avoid stack overflow on real hardware
-  // (Pebble watch has ~2KB app stack; IconBarData/TimeRenderData would overflow).
+  // (Pebble watch has ~2KB app stack; IconBarData/TimeRenderData would
+  // overflow).
   static TimeRenderData time_data;
   static IconBarData icon_data;
 
@@ -346,12 +348,14 @@ static void update_proc(Layer *layer, GContext *ctx) {
   APP_LOG(APP_LOG_LEVEL_INFO, "HEAP pre-render: %zu", heap_bytes_free());
 
   // DRAW DIAL
-  icon_data.rect_text_day = (GRect){{TEXT_DAY_STATUS_OFFSET_X + status_offset_x,
-                                     TEXT_DAY_STATUS_OFFSET_Y + status_offset_y},
-                                    {RULER_XOFFSET, 150}};
-  icon_data.rect_text_dayw = (GRect){{TEXT_DAYW_STATUS_OFFSET_X + status_offset_x,
-                                      TEXT_DAYW_STATUS_OFFSET_Y + status_offset_y},
-                                     {RULER_XOFFSET, 150}};
+  icon_data.rect_text_day =
+      (GRect){{TEXT_DAY_STATUS_OFFSET_X + status_offset_x,
+               TEXT_DAY_STATUS_OFFSET_Y + status_offset_y},
+              {RULER_XOFFSET, 150}};
+  icon_data.rect_text_dayw =
+      (GRect){{TEXT_DAYW_STATUS_OFFSET_X + status_offset_x,
+               TEXT_DAYW_STATUS_OFFSET_Y + status_offset_y},
+              {RULER_XOFFSET, 150}};
   icon_data.rect_temp = (GRect){{TEXT_TEMP_OFFSET_X + status_offset_x,
                                  TEXT_TEMP_OFFSET_Y + status_offset_y},
                                 {60, 60}};
@@ -428,7 +432,8 @@ static void update_proc(Layer *layer, GContext *ctx) {
   time_data.digit_rects[0] = (GRect){{num_x, num_y}, {46, 81}};
   time_data.digit_rects[1] = (GRect){{num_x + offset_x, num_y}, {46, 81}};
   time_data.digit_rects[2] = (GRect){{num_x, num_y + offset_y}, {46, 81}};
-  time_data.digit_rects[3] = (GRect){{num_x + offset_x, num_y + offset_y}, {46, 81}};
+  time_data.digit_rects[3] =
+      (GRect){{num_x + offset_x, num_y + offset_y}, {46, 81}};
   snprintf(time_data.digits, sizeof(time_data.digits), "%s", heure);
   ui_draw_time(ctx, &time_data);
 
@@ -660,10 +665,14 @@ static void inbox_received_callback(DictionaryIterator *iterator,
         snprintf(days_wind[d], sizeof(days_wind[d]), "%s", t->value->cstring);
         if (d == 0) {
           const char *p = t->value->cstring;
-          while (*p >= '0' && *p <= '9') p++;
-          if (strncmp(p, "m/s", 3) == 0) snprintf(wind_unit_str, sizeof(wind_unit_str), "m/s");
-          else if (strncmp(p, "mph", 3) == 0) snprintf(wind_unit_str, sizeof(wind_unit_str), "mph");
-          else snprintf(wind_unit_str, sizeof(wind_unit_str), "km/h");
+          while (*p >= '0' && *p <= '9')
+            p++;
+          if (strncmp(p, "m/s", 3) == 0)
+            snprintf(wind_unit_str, sizeof(wind_unit_str), "m/s");
+          else if (strncmp(p, "mph", 3) == 0)
+            snprintf(wind_unit_str, sizeof(wind_unit_str), "mph");
+          else
+            snprintf(wind_unit_str, sizeof(wind_unit_str), "km/h");
         }
       }
     }
@@ -828,44 +837,63 @@ static void inbox_received_callback(DictionaryIterator *iterator,
     const char *s = stock_data_tuple->value->cstring;
     int idx = 0;
     // Parse index
-    while (*s >= '0' && *s <= '9') { idx = idx * 10 + (*s - '0'); s++; }
-    if (*s == '|') s++;
+    while (*s >= '0' && *s <= '9') {
+      idx = idx * 10 + (*s - '0');
+      s++;
+    }
+    if (*s == '|')
+      s++;
     if (idx < STOCK_MAX_PANELS) {
       StockPanel p;
       memset(&p, 0, sizeof(p));
       // Parse symbol
       int i = 0;
-      while (*s && *s != '|' && i < (int)sizeof(p.symbol) - 1) p.symbol[i++] = *s++;
+      while (*s && *s != '|' && i < (int)sizeof(p.symbol) - 1)
+        p.symbol[i++] = *s++;
       p.symbol[i] = '\0';
-      if (*s == '|') s++;
+      if (*s == '|')
+        s++;
       // Parse price
       i = 0;
-      while (*s && *s != '|' && i < (int)sizeof(p.price) - 1) p.price[i++] = *s++;
+      while (*s && *s != '|' && i < (int)sizeof(p.price) - 1)
+        p.price[i++] = *s++;
       p.price[i] = '\0';
-      if (*s == '|') s++;
+      if (*s == '|')
+        s++;
       // Parse change
       i = 0;
-      while (*s && *s != '|' && i < (int)sizeof(p.change) - 1) p.change[i++] = *s++;
+      while (*s && *s != '|' && i < (int)sizeof(p.change) - 1)
+        p.change[i++] = *s++;
       p.change[i] = '\0';
       p.positive = (p.change[0] != '-');
-      if (*s == '|') s++;
+      if (*s == '|')
+        s++;
       // Parse history points (comma-separated uint8)
       for (int h = 0; h < STOCK_HISTORY_POINTS && *s; h++) {
         int val = 0;
-        while (*s >= '0' && *s <= '9') { val = val * 10 + (*s - '0'); s++; }
-        if (val > 100) val = 100;
+        while (*s >= '0' && *s <= '9') {
+          val = val * 10 + (*s - '0');
+          s++;
+        }
+        if (val > 100)
+          val = 100;
         p.history[h] = (uint8_t)val;
-        if (*s == ',') s++;
+        if (*s == ',')
+          s++;
       }
       // Parse price_min
-      if (*s == '|') s++;
+      if (*s == '|')
+        s++;
       i = 0;
-      while (*s && *s != '|' && i < (int)sizeof(p.price_min) - 1) p.price_min[i++] = *s++;
+      while (*s && *s != '|' && i < (int)sizeof(p.price_min) - 1)
+        p.price_min[i++] = *s++;
       p.price_min[i] = '\0';
       // Parse price_max
-      if (*s == '|') s++;
+      if (*s == '|')
+        s++;
       i = 0;
-      while (*s && *s != '|' && i < (int)sizeof(p.price_max) - 1) p.price_max[i++] = *s++;
+      while (*s && *s != '|' && i < (int)sizeof(p.price_max) - 1)
+        p.price_max[i++] = *s++;
       p.price_max[i] = '\0';
       // Persist this panel individually
       persist_write_data(HUB_PERSIST_STOCK0 + idx, &p, sizeof(StockPanel));
@@ -1045,7 +1073,8 @@ static void init_var() {
   // Restore stock panel count (panels loaded on demand from persist)
   if (persist_exists(KEY_STOCK_COUNT)) {
     stock_panel_count = persist_read_int(KEY_STOCK_COUNT);
-    if (stock_panel_count > STOCK_MAX_PANELS) stock_panel_count = STOCK_MAX_PANELS;
+    if (stock_panel_count > STOCK_MAX_PANELS)
+      stock_panel_count = STOCK_MAX_PANELS;
   }
 
   color_temp = GColorWhite;
@@ -1151,8 +1180,8 @@ static void init() {
   app_message_register_outbox_sent(outbox_sent_callback);
   AppMessageResult msg_result = app_message_open(512, 32);
   s_appmsg_open = (msg_result == APP_MSG_OK);
-  APP_LOG(APP_LOG_LEVEL_INFO, "app_message_open: %d heap=%zu",
-          (int)msg_result, heap_bytes_free());
+  APP_LOG(APP_LOG_LEVEL_INFO, "app_message_open: %d heap=%zu", (int)msg_result,
+          heap_bytes_free());
 
   init_var();
   hub_config_init();
