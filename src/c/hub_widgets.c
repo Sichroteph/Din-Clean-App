@@ -12,6 +12,7 @@ extern char days_icon[][20];
 extern char days_rain[][5];
 extern char days_wind[][5];
 
+#ifndef PBL_PLATFORM_APLITE
 // Stock data — count in RAM, panels loaded on demand from persist
 extern uint8_t stock_panel_count;
 
@@ -24,6 +25,7 @@ static bool stock_load_panel(uint8_t idx, StockPanel *dst) {
   persist_read_data(key, dst, sizeof(StockPanel));
   return true;
 }
+#endif
 
 // --- Widget draw/page functions ---
 static void widget_weather_draw(GContext *ctx, GRect bounds, uint8_t page);
@@ -217,9 +219,13 @@ static void widget_back_handler(ClickRecognizerRef rec, void *context) {
 // ========== Widget implementations (stubs) ==========
 
 static uint8_t widget_weather_page_count(void) { return 3; }
+#ifndef PBL_PLATFORM_APLITE
 static uint8_t widget_stocks_page_count(void) {
   return stock_panel_count > 0 ? stock_panel_count : 1;
 }
+#else
+static uint8_t widget_stocks_page_count(void) { return 0; }
+#endif
 static uint8_t widget_hourly_page_count(void) { return 2; }
 static uint8_t widget_daily_page_count(void) { return 3; }
 
@@ -259,6 +265,15 @@ static void widget_weather_draw(GContext *ctx, GRect bounds, uint8_t page) {
                      GTextAlignmentCenter, NULL);
 }
 
+#ifdef PBL_PLATFORM_APLITE
+static void widget_stocks_draw(GContext *ctx, GRect bounds, uint8_t page) {
+  (void)page;
+  graphics_context_set_text_color(ctx, GColorWhite);
+  graphics_draw_text(ctx, "N/A", fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD),
+    GRect(0, 60, bounds.size.w, 30), GTextOverflowModeTrailingEllipsis,
+    GTextAlignmentCenter, NULL);
+}
+#else
 static void widget_stocks_draw(GContext *ctx, GRect bounds, uint8_t page) {
   graphics_context_set_text_color(ctx, GColorWhite);
   graphics_context_set_stroke_color(ctx, GColorWhite);
@@ -377,6 +392,7 @@ static void widget_stocks_draw(GContext *ctx, GRect bounds, uint8_t page) {
   graphics_fill_circle(ctx, GPoint(px[STOCK_HISTORY_POINTS - 1],
                                    py[STOCK_HISTORY_POINTS - 1]), 3);
 }
+#endif // !PBL_PLATFORM_APLITE
 
 // ========== Hourly Weather Widget ==========
 

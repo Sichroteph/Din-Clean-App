@@ -240,8 +240,10 @@ char days_rain[5][5] = {"0mm", "0mm", "0mm", "0mm", "0mm"};
 char days_wind[5][5] = {"0km", "0km", "0km", "0km", "0km"};
 char wind_unit_str[6] = "km/h";
 
+#ifndef PBL_PLATFORM_APLITE
 // Stock widget data count (panels stored in persist, loaded on demand)
 uint8_t stock_panel_count = 0;
+#endif
 
 // Weather retry protection
 static bool s_weather_request_pending = false;
@@ -822,6 +824,7 @@ static void inbox_received_callback(DictionaryIterator *iterator,
     hub_timeout_reset();
   }
 
+#ifndef PBL_PLATFORM_APLITE
   // Stock data messages from JS
   Tuple *stock_count_tuple = dict_find(iterator, KEY_STOCK_COUNT);
   if (stock_count_tuple) {
@@ -902,6 +905,7 @@ static void inbox_received_callback(DictionaryIterator *iterator,
       }
     }
   }
+#endif // !PBL_PLATFORM_APLITE
 }
 
 // Forward declaration for weather retry
@@ -1070,12 +1074,14 @@ static void init_var() {
     snprintf(days_icon[2], sizeof(days_icon[2]), " ");
   }
 
+#ifndef PBL_PLATFORM_APLITE
   // Restore stock panel count (panels loaded on demand from persist)
   if (persist_exists(KEY_STOCK_COUNT)) {
     stock_panel_count = persist_read_int(KEY_STOCK_COUNT);
     if (stock_panel_count > STOCK_MAX_PANELS)
       stock_panel_count = STOCK_MAX_PANELS;
   }
+#endif
 
   color_temp = GColorWhite;
   color_left = GColorBlack;
