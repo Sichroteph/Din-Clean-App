@@ -3,21 +3,21 @@
 #include "ui_icon_bar.h"
 
 // Layout constants (previously computed in Din_Clean.c update_proc)
-#define IB_DAYW_X  0
-#define IB_DAYW_Y  0
-#define IB_DAY_X   0
-#define IB_DAY_Y   6
+#define IB_DAYW_X 0
+#define IB_DAYW_Y 0
+#define IB_DAY_X 0
+#define IB_DAY_Y 6
 #define IB_SIDEBAR 36
-#define IB_TEMP_X  (-11)
-#define IB_TEMP_Y  75
-#define IB_TMIN_X  (-5)
-#define IB_TMIN_Y  131
-#define IB_TMAX_X  (-5)
-#define IB_TMAX_Y  144
-#define IB_ICON_X  0
-#define IB_ICON_Y  39
-#define IB_BT_X    (-1)
-#define IB_BT_Y    16
+#define IB_TEMP_X (-11)
+#define IB_TEMP_Y 75
+#define IB_TMIN_X (-5)
+#define IB_TMIN_Y 131
+#define IB_TMAX_X (-5)
+#define IB_TMAX_Y 144
+#define IB_ICON_X 0
+#define IB_ICON_Y 39
+#define IB_BT_X (-1)
+#define IB_BT_Y 16
 
 static void draw_humidity_icons(GContext *ctx, const IconBarData *d) {
   if (d->humidity <= 0) {
@@ -64,8 +64,7 @@ static void draw_humidity_icons(GContext *ctx, const IconBarData *d) {
 }
 
 // Load each wind overlay POURTOURW1-4 only if wind exceeds threshold
-static void draw_wind_overlays(GContext *ctx, int wind_val,
-                                int met_unit) {
+static void draw_wind_overlays(GContext *ctx, int wind_val, int met_unit) {
   const GRect wr = {{IB_ICON_X, IB_ICON_Y}, {35, 35}};
   if (wind_val > met_unit) {
     GBitmap *w1 = gbitmap_create_with_resource(RESOURCE_ID_POURTOURW1);
@@ -117,8 +116,8 @@ void ui_draw_icon_bar(GContext *ctx, const IconBarData *d) {
   }
 
   const GRect dayw_r = {{IB_DAYW_X, IB_DAYW_Y}, {IB_SIDEBAR, 150}};
-  const GRect day_r  = {{IB_DAY_X, IB_DAY_Y}, {IB_SIDEBAR, 150}};
-  const GRect bt_r   = {{IB_BT_X, IB_BT_Y}, {35, 17}};
+  const GRect day_r = {{IB_DAY_X, IB_DAY_Y}, {IB_SIDEBAR, 150}};
+  const GRect bt_r = {{IB_BT_X, IB_BT_Y}, {35, 17}};
 
   // Connection / quiet time status
   if (!d->is_quiet_time) {
@@ -146,7 +145,8 @@ void ui_draw_icon_bar(GContext *ctx, const IconBarData *d) {
 
   draw_humidity_icons(ctx, d);
 
-  // Validate icon_id before loading to prevent crashes from invalid resource IDs
+  // Validate icon_id before loading to prevent crashes from invalid resource
+  // IDs
   const GRect icon_r = {{IB_ICON_X, IB_ICON_Y}, {35, 35}};
   if (d->icon_id > 0 && d->icon_id < 500) {
     GBitmap *icon = gbitmap_create_with_resource(d->icon_id);

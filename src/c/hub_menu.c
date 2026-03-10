@@ -47,8 +47,9 @@ void hub_menu_push(bool is_up_menu, HubDirection direction) {
   ctx->direction = direction;
 
   // Find visible items (children of root)
-  ctx->visible_count = hub_menu_get_children(
-      ctx->all_items, ctx->all_count, -1, ctx->visible_indices, HUB_MAX_MENU_ITEMS);
+  ctx->visible_count =
+      hub_menu_get_children(ctx->all_items, ctx->all_count, -1,
+                            ctx->visible_indices, HUB_MAX_MENU_ITEMS);
 
   if (ctx->visible_count == 0) {
     free(ctx);

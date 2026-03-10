@@ -38,20 +38,24 @@ int weather_utils_build_icon(const char *text_icon, bool is_bw_icon) {
   }
 
   // Compact lookup table: exact matches
-  static const struct { const char *name; uint16_t id; } exact[] = {
-    {"clearsky_day",    RESOURCE_ID_ENSOLEILLE_W},
-    {"clearsky_night",  RESOURCE_ID_NUIT_CLAIRE_W},
-    {"fair_day",        RESOURCE_ID_FAIBLES_PASSAGES_NUAGEUX_W},
-    {"fair_polartwilight", RESOURCE_ID_FAIBLES_PASSAGES_NUAGEUX_W},
-    {"fair_night",      RESOURCE_ID_NUIT_BIEN_DEGAGEE_W},
-    {"wind",            RESOURCE_ID_WIND},
-    {"partlycloudy_night", RESOURCE_ID_NUIT_AVEC_DEVELOPPEMENT_NUAGEUX_W},
-    {"cloudy",          RESOURCE_ID_FORTEMENT_NUAGEUX_W},
-    {"rainshowers_night", RESOURCE_ID_NUIT_AVEC_AVERSES_W},
-    {"fog",             RESOURCE_ID_BROUILLARD_W},
+  static const struct {
+    const char *name;
+    uint16_t id;
+  } exact[] = {
+      {"clearsky_day", RESOURCE_ID_ENSOLEILLE_W},
+      {"clearsky_night", RESOURCE_ID_NUIT_CLAIRE_W},
+      {"fair_day", RESOURCE_ID_FAIBLES_PASSAGES_NUAGEUX_W},
+      {"fair_polartwilight", RESOURCE_ID_FAIBLES_PASSAGES_NUAGEUX_W},
+      {"fair_night", RESOURCE_ID_NUIT_BIEN_DEGAGEE_W},
+      {"wind", RESOURCE_ID_WIND},
+      {"partlycloudy_night", RESOURCE_ID_NUIT_AVEC_DEVELOPPEMENT_NUAGEUX_W},
+      {"cloudy", RESOURCE_ID_FORTEMENT_NUAGEUX_W},
+      {"rainshowers_night", RESOURCE_ID_NUIT_AVEC_AVERSES_W},
+      {"fog", RESOURCE_ID_BROUILLARD_W},
   };
-  for (unsigned i = 0; i < sizeof(exact)/sizeof(exact[0]); i++) {
-    if (strcmp(text_icon, exact[i].name) == 0) return exact[i].id;
+  for (unsigned i = 0; i < sizeof(exact) / sizeof(exact[0]); i++) {
+    if (strcmp(text_icon, exact[i].name) == 0)
+      return exact[i].id;
   }
 
   // Prefix / substring matches (order matters: check before generic "rain")

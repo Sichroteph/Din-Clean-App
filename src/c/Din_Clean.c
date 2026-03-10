@@ -385,7 +385,8 @@ static void draw_alt_view(GContext *ctx, uint8_t vid, int icon_id, bool fresh) {
   }
 }
 
-// --- Action toast overlay (zero heap in BSS; only the AppTimer entry is heap) ---
+// --- Action toast overlay (zero heap in BSS; only the AppTimer entry is heap)
+// ---
 
 static AppTimer *s_action_toast_timer = NULL;
 
@@ -402,7 +403,8 @@ static void draw_action_toast(GContext *ctx) {
   if (!g_hub_action_toast)
     return;
   if (!s_action_toast_timer)
-    s_action_toast_timer = app_timer_register(1500, action_toast_clear_cb, NULL);
+    s_action_toast_timer =
+        app_timer_register(1500, action_toast_clear_cb, NULL);
   // Rounded rectangle backdrop
   graphics_context_set_fill_color(ctx, GColorBlack);
   graphics_fill_rect(ctx, GRect(10, 64, 124, 36), 4, GCornersAll);
@@ -412,9 +414,8 @@ static void draw_action_toast(GContext *ctx) {
   graphics_context_set_text_color(ctx, GColorWhite);
   graphics_draw_text(ctx, "Action sent!",
                      fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
-                     GRect(12, 68, 120, 28),
-                     GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter,
-                     NULL);
+                     GRect(12, 68, 120, 28), GTextOverflowModeTrailingEllipsis,
+                     GTextAlignmentCenter, NULL);
 }
 
 static void update_proc(Layer *layer, GContext *ctx) {
@@ -818,7 +819,8 @@ static void inbox_received_callback(DictionaryIterator *iterator,
         CountdownData cd;
         memset(&cd, 0, sizeof(CountdownData));
         if (persist_exists(HUB_PERSIST_COUNTDOWN) &&
-            persist_get_size(HUB_PERSIST_COUNTDOWN) == (int)sizeof(CountdownData)) {
+            persist_get_size(HUB_PERSIST_COUNTDOWN) ==
+                (int)sizeof(CountdownData)) {
           persist_read_data(HUB_PERSIST_COUNTDOWN, &cd, sizeof(CountdownData));
         }
         cd.ts = ts;

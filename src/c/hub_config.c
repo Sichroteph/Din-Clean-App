@@ -212,7 +212,7 @@ void hub_config_init(void) {
   g_hub_config.lp_down_data = HUB_APP_STOPWATCH;
   g_hub_config.lp_select_type = HUB_LP_PSEUDOAPP;
   g_hub_config.lp_select_data = HUB_APP_TIMER;
-  g_hub_config.view_count     = HUB_VIEW_COUNT;
+  g_hub_config.view_count = HUB_VIEW_COUNT;
   for (int i = 0; i < HUB_VIEW_COUNT; i++)
     g_hub_config.view_order[i] = i;
   g_hub_config.anim_enabled = 1;
@@ -262,7 +262,8 @@ uint8_t hub_config_load_menu(bool is_up, HubMenuItem *dst) {
     int size = persist_get_size(key);
     if (size > 0 && (size % sizeof(HubMenuItem)) == 0) {
       uint8_t count = size / sizeof(HubMenuItem);
-      if (count > HUB_MAX_MENU_ITEMS) count = HUB_MAX_MENU_ITEMS;
+      if (count > HUB_MAX_MENU_ITEMS)
+        count = HUB_MAX_MENU_ITEMS;
       persist_read_data(key, dst, count * sizeof(HubMenuItem));
       return count;
     }
