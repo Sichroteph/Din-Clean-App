@@ -238,7 +238,15 @@ static uint8_t widget_stocks_page_count(void) {
   return stock_panel_count > 0 ? stock_panel_count : 1;
 }
 static uint8_t widget_hourly_page_count(void) { return 2; }
-static uint8_t widget_daily_page_count(void) { return 3; }
+static uint8_t widget_daily_page_count(void) {
+  // Count days that have real data ("-" + "-" = unset default "--")
+  uint8_t n = 0;
+  for (uint8_t i = 0; i < 5; i++) {
+    if (days_temp[i][0] == '-' && days_temp[i][1] == '-') break;
+    n++;
+  }
+  return n > 0 ? (n + 1) / 2 : 1;
+}
 
 #ifdef PBL_PLATFORM_APLITE
 static void widget_stocks_draw(GContext *ctx, GRect bounds, uint8_t page) {
