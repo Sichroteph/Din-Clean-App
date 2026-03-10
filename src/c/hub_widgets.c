@@ -107,7 +107,9 @@ void hub_widgets_push(bool is_up, HubDirection direction) {
   ctx->widget_count = count;
   ctx->current_index = is_up ? (count - 1) : 0;
   ctx->current_page = 0;
-  ctx->nav_up_is_next = is_up; // repurposed: true = UP list (exit forward/DOWN), false = DOWN list (exit backward/UP)
+  ctx->nav_up_is_next =
+      is_up; // repurposed: true = UP list (exit forward/DOWN), false = DOWN
+             // list (exit backward/UP)
 
   ctx->window = window_create();
   window_set_user_data(ctx->window, ctx);
@@ -270,9 +272,9 @@ static void widget_stocks_draw(GContext *ctx, GRect bounds, uint8_t page) {
 
   // Change centered (gothic24bold for better readability)
   GRect chg_rect = GRect(0, 96, bounds.size.w, 28);
-  graphics_draw_text(ctx, p->change, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD),
-                     chg_rect, GTextOverflowModeTrailingEllipsis,
-                     GTextAlignmentCenter, NULL);
+  graphics_draw_text(
+      ctx, p->change, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD), chg_rect,
+      GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
 
   // Panel indicator
   if (stock_panel_count > 1) {
@@ -309,22 +311,26 @@ static void widget_stocks_draw(GContext *ctx, GRect bounds, uint8_t page) {
   // --- Row 1: symbol (left) + price (right), both gothic24bold ---
   GRect sym_rect = GRect(2, 0, bounds.size.w - 4, 28);
   graphics_draw_text(ctx, p->symbol, font24b, sym_rect,
-                     GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+                     GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft,
+                     NULL);
   GRect price_rect = GRect(2, 0, bounds.size.w - 4, 28);
   graphics_draw_text(ctx, p->price, font24b, price_rect,
-                     GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
+                     GTextOverflowModeTrailingEllipsis, GTextAlignmentRight,
+                     NULL);
 
   // --- Row 2: change (left, gothic18) + panel indicator (right, gothic14) ---
   GRect chg_rect = GRect(2, 30, bounds.size.w - 4, 22);
   graphics_draw_text(ctx, p->change, font18, chg_rect,
-                     GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+                     GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft,
+                     NULL);
 
   if (stock_panel_count > 1) {
     char ind[6];
     snprintf(ind, sizeof(ind), "%d/%d", page + 1, stock_panel_count);
     GRect ind_rect = GRect(bounds.size.w - 36, 34, 34, 16);
     graphics_draw_text(ctx, ind, font14, ind_rect,
-                       GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
+                       GTextOverflowModeTrailingEllipsis, GTextAlignmentRight,
+                       NULL);
   }
 
 // --- Graph area ---
@@ -526,10 +532,9 @@ static void widget_hourly_draw(GContext *ctx, GRect bounds, uint8_t page) {
     for (int i = 0; i < 4; i++) {
       char tbuf[6];
       snprintf(tbuf, sizeof(tbuf), "%d\xc2\xb0", temps[i]);
-      graphics_draw_text(ctx, tbuf, font18b,
-                         GRect(i * 36, HOURLY_TEMP_Y, 36, 22),
-                         GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter,
-                         NULL);
+      graphics_draw_text(
+          ctx, tbuf, font18b, GRect(i * 36, HOURLY_TEMP_Y, 36, 22),
+          GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
     }
   }
 

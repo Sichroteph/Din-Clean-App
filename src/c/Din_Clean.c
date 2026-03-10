@@ -546,6 +546,8 @@ static void assign_fonts() {
   status_offset_y = 0;
 }
 
+static void hub_timeout_fired(void);
+
 static void inbox_received_callback(DictionaryIterator *iterator,
                                     void *context) {
   // Read tuples for data
