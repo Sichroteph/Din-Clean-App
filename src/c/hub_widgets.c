@@ -107,7 +107,7 @@ void hub_widgets_push(bool is_up, HubDirection direction) {
   ctx->widget_count = count;
   ctx->current_index = is_up ? (count - 1) : 0;
   ctx->current_page = 0;
-  ctx->nav_up_is_next = false;
+  ctx->nav_up_is_next = is_up; // repurposed: true = UP list (exit forward/DOWN), false = DOWN list (exit backward/UP)
 
   ctx->window = window_create();
   window_set_user_data(ctx->window, ctx);
@@ -186,28 +186,32 @@ static void widget_navigate(WidgetCtx *ctx, bool forward) {
       ctx->current_index++;
       ctx->current_page = 0;
       layer_mark_dirty(ctx->canvas);
+    } else if (ctx->nav_up_is_next) {
+      // UP list: exit when pressing DOWN past the last widget
+      window_stack_pop(g_hub_config.anim_enabled ? true : false);
     }
-    // At last widget: do nothing (no wrap, no exit)
+    // DOWN list at last widget: do nothing
   } else {
     if (ctx->current_index > 0) {
       ctx->current_index--;
       ctx->current_page = 0;
       layer_mark_dirty(ctx->canvas);
-    } else {
-      // Past first widget: return to watchface
+    } else if (!ctx->nav_up_is_next) {
+      // DOWN list: exit when pressing UP past the first widget
       window_stack_pop(g_hub_config.anim_enabled ? true : false);
     }
+    // UP list at first widget: do nothing
   }
 }
 
 static void widget_up_handler(ClickRecognizerRef rec, void *context) {
   WidgetCtx *ctx = context;
-  widget_navigate(ctx, ctx->nav_up_is_next);
+  widget_navigate(ctx, false); // UP always goes toward lower index
 }
 
 static void widget_down_handler(ClickRecognizerRef rec, void *context) {
   WidgetCtx *ctx = context;
-  widget_navigate(ctx, !ctx->nav_up_is_next);
+  widget_navigate(ctx, true); // DOWN always goes toward higher index
 }
 
 static void widget_select_handler(ClickRecognizerRef rec, void *context) {

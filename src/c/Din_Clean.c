@@ -757,6 +757,9 @@ static void inbox_received_callback(DictionaryIterator *iterator,
                                 // config receive
     vibes_double_pulse();
 
+    // Return to main clock view and refresh
+    hub_timeout_fired();
+
     // Request immediate weather update to apply new units
     if (s_appmsg_open) {
       DictionaryIterator *iter;
