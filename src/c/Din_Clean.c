@@ -390,6 +390,11 @@ static void draw_alt_view(GContext *ctx, uint8_t vid, int icon_id, bool fresh) {
 
 static AppTimer *s_action_toast_timer = NULL;
 
+// --- Exit hint (double-back to exit) ---
+static uint8_t s_back_count = 0;
+static AppTimer *s_back_timer = NULL;
+static bool s_show_exit_hint = false;
+
 static void action_toast_clear_cb(void *context) {
   s_action_toast_timer = NULL;
   g_hub_action_toast = false;
@@ -522,6 +527,20 @@ static void update_proc(Layer *layer, GContext *ctx) {
   ui_draw_icon_bar(ctx, &icon_data);
 
   draw_action_toast(ctx);
+
+  // Exit hint toast (double-back to exit)
+  if (s_show_exit_hint) {
+    graphics_context_set_fill_color(ctx, GColorBlack);
+    graphics_fill_rect(ctx, GRect(10, 64, 124, 36), 4, GCornersAll);
+    graphics_context_set_stroke_color(ctx, GColorWhite);
+    graphics_draw_round_rect(ctx, GRect(10, 64, 124, 36), 4);
+    graphics_context_set_text_color(ctx, GColorWhite);
+    graphics_draw_text(ctx, "Press < to exit",
+                       fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
+                       GRect(12, 68, 120, 28),
+                       GTextOverflowModeTrailingEllipsis,
+                       GTextAlignmentCenter, NULL);
+  }
 
   APP_LOG(APP_LOG_LEVEL_INFO, "HEAP post-render: %zu", heap_bytes_free());
 }
@@ -1089,12 +1108,50 @@ static void hub_timeout_fired(void) {
 }
 
 // --- Button handlers ---
+static void back_exit_hint_clear(void *context) {
+  s_back_count = 0;
+  s_show_exit_hint = false;
+  s_back_timer = NULL;
+  layer_mark_dirty(layer);
+}
+
 static void back_click_handler(ClickRecognizerRef recognizer, void *context) {
-  // Reset to default view; don't exit app on back press
+  // If not on default view, switch back first and reset counter
   if (current_view_index != 0) {
     current_view_index = 0;
+    s_back_count = 0;
+    s_show_exit_hint = false;
+    if (s_back_timer) {
+      app_timer_cancel(s_back_timer);
+      s_back_timer = NULL;
+    }
+    layer_mark_dirty(layer);
+    return;
+  }
+
+  if (s_back_timer) {
+    app_timer_cancel(s_back_timer);
+    s_back_timer = NULL;
+  }
+
+  s_back_count++;
+
+  if (s_back_count >= 3) {
+    // Third press: exit app
+    window_stack_pop_all(false);
+    return;
+  }
+
+  if (s_back_count == 2) {
+    // Second press: show exit hint toast
+    s_show_exit_hint = true;
+    vibes_short_pulse();
     layer_mark_dirty(layer);
   }
+  // First press: screen wakes up, counter starts silently
+
+  // Auto-clear after 2 seconds
+  s_back_timer = app_timer_register(2000, back_exit_hint_clear, NULL);
 }
 
 static void up_click_handler(ClickRecognizerRef recognizer, void *context) {

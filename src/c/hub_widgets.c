@@ -82,7 +82,6 @@ static void widget_click_config(void *context);
 static void widget_up_handler(ClickRecognizerRef rec, void *context);
 static void widget_down_handler(ClickRecognizerRef rec, void *context);
 static void widget_select_handler(ClickRecognizerRef rec, void *context);
-static void widget_back_handler(ClickRecognizerRef rec, void *context);
 static void widget_window_load(Window *window);
 static void widget_window_unload(Window *window);
 
@@ -177,7 +176,6 @@ static void widget_click_config(void *context) {
   window_single_click_subscribe(BUTTON_ID_UP, widget_up_handler);
   window_single_click_subscribe(BUTTON_ID_DOWN, widget_down_handler);
   window_single_click_subscribe(BUTTON_ID_SELECT, widget_select_handler);
-  window_single_click_subscribe(BUTTON_ID_BACK, widget_back_handler);
 }
 
 static void widget_navigate(WidgetCtx *ctx, bool forward) {
@@ -224,10 +222,6 @@ static void widget_select_handler(ClickRecognizerRef rec, void *context) {
       layer_mark_dirty(ctx->canvas);
     }
   }
-}
-
-static void widget_back_handler(ClickRecognizerRef rec, void *context) {
-  window_stack_pop(g_hub_config.anim_enabled ? true : false);
 }
 
 // ========== Widget implementations (stubs) ==========
