@@ -193,18 +193,13 @@ static Window *s_main_window;
 static Layer *s_canvas_layer;
 static Layer *layer;
 
-static int hour_part_size = 0;
-
 static char week_day[4] = " ";
 static char mday[4] = " ";
 static char weather_temp_char[8] = " ";
 static char minTemp[6] = " ";
 static char maxTemp[6] = " ";
 
-// POOL DATA
-char poolTemp[8];
-char poolPH[8];
-char poolORP[6];
+// POOL DATA (numeric only — string formatting removed to save heap)
 int npoolTemp;
 int npoolPH;
 int npoolORP;
@@ -222,8 +217,6 @@ uint8_t humidity = 0;
 time_t last_refresh = 0;
 int duration = 3600;
 int offline_delay = 3600;
-
-AppTimer *timer_short;
 
 static char icon[20] = " ";
 static char icon1[20] = " ";
@@ -245,7 +238,6 @@ char days_icon[5][20] = {"", "", "", "", ""};
 char days_rain[5][5] = {"0mm", "0mm", "0mm", "0mm", "0mm"};
 char days_wind[5][5] = {"0km", "0km", "0km", "0km", "0km"};
 char wind_unit_str[6] = "km/h";
-uint8_t days_wmo[3] = {0};
 
 // Stock widget data count (panels stored in persist, loaded on demand)
 uint8_t stock_panel_count = 0;
@@ -270,8 +262,6 @@ typedef struct {
   uint16_t is_30mn : 1;
   uint16_t is_bt : 1;
   uint16_t is_vibration : 1;
-  uint16_t fontbig_loaded : 1;
-  uint16_t first_draw_logged : 1;
   uint16_t is_charging : 1;
   uint16_t is_connected : 1;
 } AppFlags;
@@ -279,8 +269,6 @@ static AppFlags flags = {.is_metric = 1,
                          .is_30mn = 1,
                          .is_bt = 0,
                          .is_vibration = 0,
-                         .fontbig_loaded = 0,
-                         .first_draw_logged = 0,
                          .is_charging = 0,
                          .is_connected = 0};
 
@@ -288,28 +276,14 @@ static GColor color_right;
 static GColor color_left;
 static GColor color_temp;
 
-static GPoint line1_p1 = {0, 84};
-static GPoint line1_p2 = {143, 84};
-static GPoint line2_p1 = {0, 0};
-static GPoint line2_p2 = {0, 0};
-
 static int8_t hour_offset_x = 0;
 static int8_t hour_offset_y = 0;
 static int8_t status_offset_x = 0;
 static int8_t status_offset_y = 0;
 
-static int hour_line_ypos = 84 + YOFFSET;
-
 static GFont fontsmall;
 static GFont fontsmallbold;
 static GFont fontmedium;
-static GFont fontbig;
-static uint16_t fontbig_resource_id = 0;
-
-static uint8_t line_interval = 4;
-static uint8_t segment_thickness = 2;
-
-static uint8_t battery_level = 0;
 
 static void app_focus_changed(bool focused) {
   if (focused) {
@@ -352,26 +326,6 @@ static int build_icon_with_pool_check(const char *text_icon) {
   return weather_utils_build_icon(text_icon, true);
 }
 
-int abs(int x) {
-  if (x >= 0)
-    return x;
-  else
-    return -x;
-}
-
-float my_sqrt(float num) {
-  float a, p, e = 0.001, b;
-
-  a = num;
-  p = a * a;
-  while (p - num >= e) {
-    b = (a + (num / a)) / 2;
-    a = b;
-    p = a * a;
-  }
-  return a;
-}
-
 static void update_proc(Layer *layer, GContext *ctx) {
   // Static locals for large structs to avoid stack overflow on real hardware
   // (Pebble watch has ~2KB app stack; IconBarData/TimeRenderData would overflow).
@@ -390,9 +344,6 @@ static void update_proc(Layer *layer, GContext *ctx) {
   }
 
   APP_LOG(APP_LOG_LEVEL_INFO, "HEAP pre-render: %zu", heap_bytes_free());
-
-  line_interval = 5;
-  segment_thickness = 3;
 
   // DRAW DIAL
   icon_data.rect_text_day = (GRect){{TEXT_DAY_STATUS_OFFSET_X + status_offset_x,
@@ -568,14 +519,6 @@ static void handle_tick(struct tm *cur, TimeUnits units_changed) {
   layer_mark_dirty(layer);
 }
 
-static void setHourLinePoints() {
-  line1_p1.y = line1_p2.y = hour_line_ypos;
-  line2_p1 = line1_p1;
-  line2_p2 = line1_p2;
-  line2_p1.y++;
-  line2_p2.y++;
-}
-
 void bt_handler(bool connected) {
   if (connected) {
     flags.is_connected = true;
@@ -588,19 +531,10 @@ void bt_handler(bool connected) {
   layer_mark_dirty(layer);
 }
 
-static void initBatteryLevel() {
-  BatteryChargeState battery_state = battery_state_service_peek();
-  battery_level = battery_state.charge_percent;
-}
-
 static void assign_fonts() {
   fontsmall = fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD);
   fontsmallbold = fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
   fontmedium = fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD);
-  fontbig = fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD);
-  flags.fontbig_loaded = false;
-  fontbig_resource_id =
-      0; // Custom 45pt font unused in rendering 2014 skip loading to save heap.
   hour_offset_x = 1;
   hour_offset_y = 9;
   status_offset_x = 1;
@@ -642,10 +576,6 @@ static void inbox_received_callback(DictionaryIterator *iterator,
       npoolPH = (int)poolPH_tuple->value->int32;
     if (poolORP_tuple)
       npoolORP = (int)poolORP_tuple->value->int32;
-    snprintf(poolTemp, sizeof(poolTemp), "%d.%d", npoolTemp / 10,
-             npoolTemp % 10);
-    snprintf(poolPH, sizeof(poolPH), "%d.%02d", npoolPH / 100, npoolPH % 100);
-    snprintf(poolORP, sizeof(poolORP), "%d", npoolORP);
 
     snprintf(icon, sizeof(icon), "%s", icon_tuple->value->cstring);
     weather_temp = (int)temp_tuple->value->int32;
@@ -1002,10 +932,6 @@ static void init_var() {
   fontsmall = fonts_get_system_font(FONT_KEY_GOTHIC_14);
   fontsmallbold = fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD);
   fontmedium = fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD);
-  fontbig = fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD);
-  flags.fontbig_loaded = false;
-  fontbig_resource_id =
-      0; // Custom 45pt font unused in rendering 2014 skip loading to save heap.
 
   if (persist_exists(KEY_RADIO_UNITS) && persist_exists(KEY_RADIO_REFRESH) &&
       persist_exists(KEY_TOGGLE_VIBRATION) && persist_exists(KEY_TOGGLE_BT)) {
@@ -1110,7 +1036,6 @@ static void init_var() {
     graph_hours[1] = 3;
     graph_hours[2] = 6;
     graph_hours[3] = 9;
-    memset(days_wmo, 0, sizeof(days_wmo));
 
     snprintf(days_icon[0], sizeof(days_icon[0]), " ");
     snprintf(days_icon[1], sizeof(days_icon[1]), " ");
@@ -1132,15 +1057,6 @@ static void init_var() {
   BatteryChargeState charge_state = battery_state_service_peek();
   flags.is_charging = charge_state.is_charging;
   flags.is_connected = connection_service_peek_pebble_app_connection();
-
-  line_interval = 4;
-  segment_thickness = 2;
-
-  setHourLinePoints();
-  initBatteryLevel();
-
-  int hour_size = 12 * line_interval;
-  hour_part_size = 26 * hour_size;
 
   if (flags.is_30mn)
     duration = 1800;
@@ -1233,7 +1149,7 @@ static void init() {
   app_message_register_inbox_received(inbox_received_callback);
   app_message_register_outbox_failed(outbox_failed_callback);
   app_message_register_outbox_sent(outbox_sent_callback);
-  AppMessageResult msg_result = app_message_open(512, 64);
+  AppMessageResult msg_result = app_message_open(512, 32);
   s_appmsg_open = (msg_result == APP_MSG_OK);
   APP_LOG(APP_LOG_LEVEL_INFO, "app_message_open: %d heap=%zu",
           (int)msg_result, heap_bytes_free());
@@ -1274,10 +1190,6 @@ static void deinit() {
   tick_timer_service_unsubscribe();
   bluetooth_connection_service_unsubscribe();
 
-  if (timer_short) {
-    app_timer_cancel(timer_short);
-    timer_short = NULL;
-  }
   if (s_weather_retry_timer) {
     app_timer_cancel(s_weather_retry_timer);
     s_weather_retry_timer = NULL;
@@ -1287,11 +1199,6 @@ static void deinit() {
 
   layer_destroy(layer);
   window_destroy(s_main_window);
-
-  if (flags.fontbig_loaded && fontbig_resource_id != 0) {
-    fonts_unload_custom_font(fontbig);
-    flags.fontbig_loaded = false;
-  }
 }
 
 int main(void) {

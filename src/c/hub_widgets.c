@@ -11,7 +11,6 @@ extern char days_temp[][8];
 extern char days_icon[][20];
 extern char days_rain[][5];
 extern char days_wind[][5];
-extern uint8_t days_wmo[];
 
 // Stock data — count in RAM, panels loaded on demand from persist
 extern uint8_t stock_panel_count;

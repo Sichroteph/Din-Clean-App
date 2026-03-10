@@ -328,7 +328,7 @@
           "name": "FORTEMENT_ORAGEUX_W",
           "targetPlatforms": null,
           "type": "bitmap",
-          "memoryFormat": "2BitPalette"
+          "memoryFormat": "1BitPalette"
         },
         {
           "file": "images/LEAF",
@@ -342,14 +342,14 @@
           "name": "WIND",
           "targetPlatforms": null,
           "type": "bitmap",
-          "memoryFormat": "2BitPalette"
+          "memoryFormat": "1BitPalette"
         },
         {
           "file": "images/SILENT",
           "name": "SILENT",
           "targetPlatforms": null,
           "type": "bitmap",
-          "memoryFormat": "2BitPalette"
+          "memoryFormat": "1BitPalette"
         }
       ]
     },
