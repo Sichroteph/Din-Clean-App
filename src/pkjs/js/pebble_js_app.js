@@ -1146,12 +1146,18 @@ function normalizeHistory(values) {
 // Build fake stock data for emulator testing
 function buildFakeStockData() {
   return [
-    { symbol: 'DJIA', price: '42,531', change: '+0.8%', positive: true,
-      history: [30, 35, 42, 50, 48, 55, 62, 70, 78, 85], price_min: 41800, price_max: 43200 },
-    { symbol: 'EUR/CHF', price: '0.9385', change: '-0.3%', positive: false,
-      history: [80, 75, 70, 65, 60, 55, 50, 48, 45, 40], price_min: 0.930, price_max: 0.960 },
-    { symbol: 'BTC', price: '97,500', change: '+2.1%', positive: true,
-      history: [10, 20, 15, 30, 45, 40, 60, 55, 80, 95], price_min: 88000, price_max: 102000 }
+    {
+      symbol: 'DJIA', price: '42,531', change: '+0.8%', positive: true,
+      history: [30, 35, 42, 50, 48, 55, 62, 70, 78, 85], price_min: 41800, price_max: 43200
+    },
+    {
+      symbol: 'EUR/CHF', price: '0.9385', change: '-0.3%', positive: false,
+      history: [80, 75, 70, 65, 60, 55, 50, 48, 45, 40], price_min: 0.930, price_max: 0.960
+    },
+    {
+      symbol: 'BTC', price: '97,500', change: '+2.1%', positive: true,
+      history: [10, 20, 15, 30, 45, 40, 60, 55, 80, 95], price_min: 88000, price_max: 102000
+    }
   ];
 }
 
@@ -1180,8 +1186,8 @@ function sendStockPanel(panels, idx) {
   var priceMin = (p.price_min !== undefined) ? formatStockPrice(p.price_min) : '?';
   var priceMax = (p.price_max !== undefined) ? formatStockPrice(p.price_max) : '?';
   var dataStr = idx + '|' + p.symbol + '|' + p.price + '|' +
-                (p.positive ? '+' : '') + p.change + '|' + histStr +
-                '|' + priceMin + '|' + priceMax;
+    (p.positive ? '+' : '') + p.change + '|' + histStr +
+    '|' + priceMin + '|' + priceMax;
 
   Pebble.sendAppMessage({ 'KEY_STOCK_DATA': dataStr }, function () {
     console.log('Stock panel ' + idx + ' sent: ' + p.symbol);
@@ -1216,8 +1222,8 @@ function fetchStockData() {
       var displayName = config.names[idx] || symbol;
       // Always fetch 5 days of hourly data; variation is computed over the last 24h
       var url = 'https://query1.finance.yahoo.com/v8/finance/chart/' +
-                encodeURIComponent(symbol) +
-                '?range=5d&interval=1h';
+        encodeURIComponent(symbol) +
+        '?range=5d&interval=1h';
 
       console.log('Fetching stock: ' + symbol + ' → ' + url);
 
@@ -1450,7 +1456,7 @@ Pebble.addEventListener('webviewclosed', function (e) {
     var hub_lp_select = parseInt(configData['hub_lp_select']) || 0x01; // pseudoapp:timer
 
     // Views: comma-separated enabled view IDs
-    var hub_views = configData['hub_views'] || '0,1,2,3';
+    var hub_views = configData['hub_views'] || '0,1,2';
 
     dict['KEY_HUB_TIMEOUT'] = hub_timeout;
     dict['KEY_HUB_ANIM'] = (hub_anim === 1) ? 1 : 2;          // 1=on, 2=off

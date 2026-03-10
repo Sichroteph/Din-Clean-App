@@ -739,26 +739,22 @@
       </div>
 
       <div class="card">
-        <div class="card-header">Enabled views (SELECT cycles)</div>
+        <div class="card-header">SELECT panels</div>
+        <div class="card-footer" style="margin-bottom:8px">Press SELECT on the time screen to cycle through enabled panels.</div>
         <div class="row">
-          <div class="row-label">Main view</div>
+          <div class="row-label">Time <span style="color:var(--text-muted);font-size:0.8rem">(always on)</span></div>
           <input type="checkbox" class="hidden-input" id="hub_view_0" checked disabled>
           <label class="toggle-track" style="opacity:0.5;pointer-events:none"><span style="display:none"></span></label>
         </div>
         <div class="row">
-          <div class="row-label">View 2</div>
+          <div class="row-label">Weather detail</div>
           <input type="checkbox" class="hidden-input" id="hub_view_1" checked>
           <label class="toggle-track" for="hub_view_1"></label>
         </div>
         <div class="row">
-          <div class="row-label">View 3</div>
+          <div class="row-label">Date &amp; info</div>
           <input type="checkbox" class="hidden-input" id="hub_view_2" checked>
           <label class="toggle-track" for="hub_view_2"></label>
-        </div>
-        <div class="row">
-          <div class="row-label">Analog</div>
-          <input type="checkbox" class="hidden-input" id="hub_view_3" checked>
-          <label class="toggle-track" for="hub_view_3"></label>
         </div>
       </div>
     </div></div>
@@ -1766,7 +1762,6 @@
     var views = ['0'];
     if (document.getElementById('hub_view_1').checked) views.push('1');
     if (document.getElementById('hub_view_2').checked) views.push('2');
-    if (document.getElementById('hub_view_3').checked) views.push('3');
     options['hub_views'] = views.join(',');
 
     // Stock panels
@@ -1865,11 +1860,10 @@
     restoreLp('down', 0);
     restoreLp('select', 1);
 
-    var savedViews = localStorage['hub_views'] || '0,1,2,3';
+    var savedViews = localStorage['hub_views'] || '0,1,2';
     var viewIds = savedViews.split(',');
     document.getElementById('hub_view_1').checked = viewIds.indexOf('1') >= 0;
     document.getElementById('hub_view_2').checked = viewIds.indexOf('2') >= 0;
-    document.getElementById('hub_view_3').checked = viewIds.indexOf('3') >= 0;
 
     // Update visibility after restore
     updateEditorVisibility();

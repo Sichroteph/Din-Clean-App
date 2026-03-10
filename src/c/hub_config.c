@@ -5,16 +5,16 @@ HubConfig g_hub_config;
 
 // --- Default menu items (const / in flash) ---
 static const HubMenuItem s_default_down_menu[] = {
-  { "Stopwatch", HUB_MI_PSEUDOAPP, -1, HUB_APP_STOPWATCH },
-  { "Timer",     HUB_MI_PSEUDOAPP, -1, HUB_APP_TIMER },
-  { "Alarm",     HUB_MI_PSEUDOAPP, -1, HUB_APP_ALARM },
+    {"Stopwatch", HUB_MI_PSEUDOAPP, -1, HUB_APP_STOPWATCH},
+    {"Timer", HUB_MI_PSEUDOAPP, -1, HUB_APP_TIMER},
+    {"Alarm", HUB_MI_PSEUDOAPP, -1, HUB_APP_ALARM},
 };
 #define DEFAULT_DOWN_MENU_COUNT 3
 
-static const uint8_t s_default_up_widgets[] = { HUB_WIDGET_STOCKS };
+static const uint8_t s_default_up_widgets[] = {HUB_WIDGET_STOCKS};
 #define DEFAULT_UP_WIDGET_COUNT 1
 
-static const uint8_t s_default_down_widgets[] = { HUB_WIDGET_STOCKS };
+static const uint8_t s_default_down_widgets[] = {HUB_WIDGET_STOCKS};
 #define DEFAULT_DOWN_WIDGET_COUNT 1
 
 // --- Dynamic (custom) menu/widget storage ---
@@ -43,12 +43,11 @@ static HubTimeoutCallback s_timeout_cb = NULL;
 
 static void timeout_fired(void *context) {
   s_timeout_timer = NULL;
-  if (s_timeout_cb) s_timeout_cb();
+  if (s_timeout_cb)
+    s_timeout_cb();
 }
 
-void hub_timeout_init(HubTimeoutCallback cb) {
-  s_timeout_cb = cb;
-}
+void hub_timeout_init(HubTimeoutCallback cb) { s_timeout_cb = cb; }
 
 void hub_timeout_reset(void) {
   if (s_timeout_timer) {
@@ -57,7 +56,7 @@ void hub_timeout_reset(void) {
   }
   if (g_hub_config.timeout_s > 0 && s_timeout_cb) {
     s_timeout_timer = app_timer_register(
-      (uint32_t)g_hub_config.timeout_s * 1000, timeout_fired, NULL);
+        (uint32_t)g_hub_config.timeout_s * 1000, timeout_fired, NULL);
   }
 }
 
@@ -74,12 +73,11 @@ void hub_timeout_deinit(void) {
 }
 
 // --- Main window reference ---
-void hub_set_main_window(Window *window) {
-  s_main_window_ref = window;
-}
+void hub_set_main_window(Window *window) { s_main_window_ref = window; }
 
 void hub_return_to_watchface(void) {
-  if (!s_main_window_ref) return;
+  if (!s_main_window_ref)
+    return;
   while (window_stack_get_top_window() != s_main_window_ref) {
     window_stack_pop(false);
   }
@@ -89,7 +87,10 @@ void hub_return_to_watchface(void) {
 static int parse_int_bounded(const char *s, const char *end) {
   int result = 0;
   int sign = 1;
-  if (s < end && *s == '-') { sign = -1; s++; }
+  if (s < end && *s == '-') {
+    sign = -1;
+    s++;
+  }
   while (s < end && *s >= '0' && *s <= '9') {
     result = result * 10 + (*s - '0');
     s++;
@@ -97,16 +98,20 @@ static int parse_int_bounded(const char *s, const char *end) {
   return sign * result;
 }
 
-// --- Parse menu string: "label;type;parent;data|label2;type2;parent2;data2|..." ---
-static void parse_menu_string(const char *str, HubMenuItem *out, uint8_t *count) {
+// --- Parse menu string:
+// "label;type;parent;data|label2;type2;parent2;data2|..." ---
+static void parse_menu_string(const char *str, HubMenuItem *out,
+                              uint8_t *count) {
   *count = 0;
-  if (!str || !*str) return;
+  if (!str || !*str)
+    return;
 
   const char *p = str;
   while (*p && *count < HUB_MAX_MENU_ITEMS) {
     // Find end of this item (next '|' or end of string)
     const char *item_end = p;
-    while (*item_end && *item_end != '|') item_end++;
+    while (*item_end && *item_end != '|')
+      item_end++;
 
     // Find semicolons to split fields
     const char *fields[4];
@@ -123,8 +128,10 @@ static void parse_menu_string(const char *str, HubMenuItem *out, uint8_t *count)
       // Field 0: label (from fields[0] to first ';')
       const char *label_end = fields[1] - 1; // points at the ';'
       int label_len = label_end - fields[0];
-      if (label_len >= HUB_MAX_LABEL) label_len = HUB_MAX_LABEL - 1;
-      if (label_len < 0) label_len = 0;
+      if (label_len >= HUB_MAX_LABEL)
+        label_len = HUB_MAX_LABEL - 1;
+      if (label_len < 0)
+        label_len = 0;
       memcpy(out[*count].label, fields[0], label_len);
       out[*count].label[label_len] = '\0';
 
@@ -143,14 +150,16 @@ static void parse_menu_string(const char *str, HubMenuItem *out, uint8_t *count)
     }
 
     p = item_end;
-    if (*p == '|') p++;
+    if (*p == '|')
+      p++;
   }
 }
 
 // --- Parse widget string: "0,1,2" ---
 static void parse_widget_string(const char *str, uint8_t *out, uint8_t *count) {
   *count = 0;
-  if (!str || !*str) return;
+  if (!str || !*str)
+    return;
 
   const char *p = str;
   while (*p && *count < HUB_MAX_WIDGETS) {
@@ -164,8 +173,10 @@ static void parse_widget_string(const char *str, uint8_t *out, uint8_t *count) {
     if (has_digit) {
       out[(*count)++] = (uint8_t)val;
     }
-    if (*p == ',') p++;
-    else if (*p && *p != ',') break;
+    if (*p == ',')
+      p++;
+    else if (*p && *p != ',')
+      break;
   }
 }
 
@@ -192,7 +203,8 @@ void hub_config_parse_widgets(const char *str, bool is_up) {
     persist_write_data(HUB_PERSIST_WIDGETS_UP, s_custom_widgets_up,
                        s_custom_widgets_up_count);
   } else {
-    parse_widget_string(str, s_custom_widgets_down, &s_custom_widgets_down_count);
+    parse_widget_string(str, s_custom_widgets_down,
+                        &s_custom_widgets_down_count);
     s_has_custom_widgets_down = true;
     persist_write_data(HUB_PERSIST_WIDGETS_DOWN, s_custom_widgets_down,
                        s_custom_widgets_down_count);
@@ -202,20 +214,19 @@ void hub_config_parse_widgets(const char *str, bool is_up) {
 // --- Config init/load/save ---
 void hub_config_init(void) {
   // Set defaults
-  g_hub_config.timeout_s      = 30;
-  g_hub_config.btn_up_type    = HUB_OBJ_WIDGETS;
-  g_hub_config.btn_down_type  = HUB_OBJ_MENU;
-  g_hub_config.lp_up_type     = HUB_LP_WEBHOOK;
-  g_hub_config.lp_up_data     = 0;
-  g_hub_config.lp_down_type   = HUB_LP_PSEUDOAPP;
-  g_hub_config.lp_down_data   = HUB_APP_STOPWATCH;
+  g_hub_config.timeout_s = 30;
+  g_hub_config.btn_up_type = HUB_OBJ_WIDGETS;
+  g_hub_config.btn_down_type = HUB_OBJ_MENU;
+  g_hub_config.lp_up_type = HUB_LP_WEBHOOK;
+  g_hub_config.lp_up_data = 0;
+  g_hub_config.lp_down_type = HUB_LP_PSEUDOAPP;
+  g_hub_config.lp_down_data = HUB_APP_STOPWATCH;
   g_hub_config.lp_select_type = HUB_LP_PSEUDOAPP;
   g_hub_config.lp_select_data = HUB_APP_TIMER;
-  g_hub_config.view_count     = 3;
-  g_hub_config.view_order[0]  = HUB_VIEW_MAIN;
-  g_hub_config.view_order[1]  = HUB_VIEW_2;
-  g_hub_config.view_order[2]  = HUB_VIEW_ANALOG;
-  g_hub_config.anim_enabled   = 1;
+  g_hub_config.view_count     = HUB_VIEW_COUNT;
+  for (int i = 0; i < HUB_VIEW_COUNT; i++)
+    g_hub_config.view_order[i] = i;
+  g_hub_config.anim_enabled = 1;
 
   // Override with persisted config if available
   hub_config_load();
@@ -231,7 +242,8 @@ void hub_config_load(void) {
     int size = persist_get_size(HUB_PERSIST_MENU_UP);
     if (size > 0 && (size % sizeof(HubMenuItem)) == 0) {
       s_custom_menu_up_count = size / sizeof(HubMenuItem);
-      if (s_custom_menu_up_count > HUB_MAX_MENU_ITEMS) s_custom_menu_up_count = HUB_MAX_MENU_ITEMS;
+      if (s_custom_menu_up_count > HUB_MAX_MENU_ITEMS)
+        s_custom_menu_up_count = HUB_MAX_MENU_ITEMS;
       persist_read_data(HUB_PERSIST_MENU_UP, s_custom_menu_up,
                         s_custom_menu_up_count * sizeof(HubMenuItem));
       s_has_custom_menu_up = true;
@@ -241,7 +253,8 @@ void hub_config_load(void) {
     int size = persist_get_size(HUB_PERSIST_MENU_DOWN);
     if (size > 0 && (size % sizeof(HubMenuItem)) == 0) {
       s_custom_menu_down_count = size / sizeof(HubMenuItem);
-      if (s_custom_menu_down_count > HUB_MAX_MENU_ITEMS) s_custom_menu_down_count = HUB_MAX_MENU_ITEMS;
+      if (s_custom_menu_down_count > HUB_MAX_MENU_ITEMS)
+        s_custom_menu_down_count = HUB_MAX_MENU_ITEMS;
       persist_read_data(HUB_PERSIST_MENU_DOWN, s_custom_menu_down,
                         s_custom_menu_down_count * sizeof(HubMenuItem));
       s_has_custom_menu_down = true;
@@ -253,7 +266,8 @@ void hub_config_load(void) {
     int size = persist_get_size(HUB_PERSIST_WIDGETS_UP);
     if (size > 0) {
       s_custom_widgets_up_count = size;
-      if (s_custom_widgets_up_count > HUB_MAX_WIDGETS) s_custom_widgets_up_count = HUB_MAX_WIDGETS;
+      if (s_custom_widgets_up_count > HUB_MAX_WIDGETS)
+        s_custom_widgets_up_count = HUB_MAX_WIDGETS;
       persist_read_data(HUB_PERSIST_WIDGETS_UP, s_custom_widgets_up,
                         s_custom_widgets_up_count);
       s_has_custom_widgets_up = true;
@@ -263,7 +277,8 @@ void hub_config_load(void) {
     int size = persist_get_size(HUB_PERSIST_WIDGETS_DOWN);
     if (size > 0) {
       s_custom_widgets_down_count = size;
-      if (s_custom_widgets_down_count > HUB_MAX_WIDGETS) s_custom_widgets_down_count = HUB_MAX_WIDGETS;
+      if (s_custom_widgets_down_count > HUB_MAX_WIDGETS)
+        s_custom_widgets_down_count = HUB_MAX_WIDGETS;
       persist_read_data(HUB_PERSIST_WIDGETS_DOWN, s_custom_widgets_down,
                         s_custom_widgets_down_count);
       s_has_custom_widgets_down = true;

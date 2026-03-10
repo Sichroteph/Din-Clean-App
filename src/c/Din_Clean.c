@@ -330,7 +330,8 @@ static int build_icon_with_pool_check(const char *text_icon) {
 // Compact centered text helper
 static void dtext(GContext *c, const char *s, GFont f, int y, int h) {
   graphics_draw_text(c, s, f, GRect(0, y, 144, h),
-    GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
+                     GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter,
+                     NULL);
 }
 
 // Alternative view renderer (0 heap alloc — draws on existing GContext)
@@ -342,7 +343,7 @@ static void draw_alt_view(GContext *ctx, uint8_t vid, int icon_id, bool fresh) {
   GFont fs = fonts_get_system_font(FONT_KEY_GOTHIC_14);
   char buf[24];
 
-  if (vid == 1) { // weather detail
+  if (vid == HUB_VIEW_WEATHER) {
     GBitmap *bmp = gbitmap_create_with_resource(icon_id);
     if (bmp) {
       graphics_draw_bitmap_in_rect(ctx, bmp, GRect(54, 10, 35, 35));
@@ -367,8 +368,8 @@ static void draw_alt_view(GContext *ctx, uint8_t vid, int icon_id, bool fresh) {
     int w = now.tm_wday ? now.tm_wday : 7;
     int yr = now.tm_year + 1900;
     int diy = (yr % 4 == 0 && (yr % 100 != 0 || yr % 400 == 0)) ? 366 : 365;
-    snprintf(buf, sizeof(buf), "S%d  Jour %d/%d",
-             (now.tm_yday + 8 - w) / 7, now.tm_yday + 1, diy);
+    snprintf(buf, sizeof(buf), "S%d  Jour %d/%d", (now.tm_yday + 8 - w) / 7,
+             now.tm_yday + 1, diy);
     dtext(ctx, buf, fs, 48, 18);
     BatteryChargeState bat = battery_state_service_peek();
     snprintf(buf, sizeof(buf), "Batterie %d%%", bat.charge_percent);
@@ -467,10 +468,13 @@ static void update_proc(Layer *layer, GContext *ctx) {
   snprintf(minTemp, sizeof(minTemp), "%i°", tmin_val);
   snprintf(maxTemp, sizeof(maxTemp), "%i°", tmax_val);
 
-  // Alternative views: 1=weather detail, 2=date/info
-  if (current_view_index > 0) {
-    draw_alt_view(ctx, current_view_index, icon_id, has_fresh_weather);
-    return;
+  // Alternative views: configurable via view_order
+  if (current_view_index > 0 && current_view_index < g_hub_config.view_count) {
+    uint8_t vid = g_hub_config.view_order[current_view_index];
+    if (vid == HUB_VIEW_WEATHER || vid == HUB_VIEW_DATE) {
+      draw_alt_view(ctx, vid, icon_id, has_fresh_weather);
+      return;
+    }
   }
 
   // Draw hours FIRST for instant display (only 4 small bitmaps)
@@ -1171,10 +1175,9 @@ static void down_click_handler(ClickRecognizerRef recognizer, void *context) {
   }
 }
 
-#define ALT_VIEW_COUNT 3 // Main + 2 alt views
 static void select_click_handler(ClickRecognizerRef recognizer, void *context) {
-  {
-    current_view_index = (current_view_index + 1) % ALT_VIEW_COUNT;
+  if (g_hub_config.view_count > 1) {
+    current_view_index = (current_view_index + 1) % g_hub_config.view_count;
     hub_timeout_reset();
     layer_mark_dirty(layer);
   }

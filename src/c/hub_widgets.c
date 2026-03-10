@@ -188,21 +188,19 @@ static void widget_navigate(WidgetCtx *ctx, bool forward) {
       ctx->current_index++;
       ctx->current_page = 0;
       layer_mark_dirty(ctx->canvas);
-    } else if (ctx->nav_up_is_next) {
-      // UP list: exit when pressing DOWN past the last widget
-      window_stack_pop(g_hub_config.anim_enabled ? true : false);
+    } else if (!ctx->nav_up_is_next) {
+      // DOWN list: exit when pressing DOWN past last widget
+      hub_return_to_watchface();
     }
-    // DOWN list at last widget: do nothing
   } else {
     if (ctx->current_index > 0) {
       ctx->current_index--;
       ctx->current_page = 0;
       layer_mark_dirty(ctx->canvas);
-    } else if (!ctx->nav_up_is_next) {
-      // DOWN list: exit when pressing UP past the first widget
-      window_stack_pop(g_hub_config.anim_enabled ? true : false);
+    } else if (ctx->nav_up_is_next) {
+      // UP list: exit when pressing UP past first widget
+      hub_return_to_watchface();
     }
-    // UP list at first widget: do nothing
   }
 }
 
