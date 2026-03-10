@@ -24,7 +24,8 @@ static bool stock_load_panel_lite(uint8_t idx, StockPanelLite *dst) {
   if (!persist_exists(key))
     return false;
   memset(dst, 0, sizeof(StockPanelLite));
-  // Read only the first fields (symbol+price+change) from the persisted full struct
+  // Read only the first fields (symbol+price+change) from the persisted full
+  // struct
   persist_read_data(key, dst, sizeof(StockPanelLite));
   return true;
 }
@@ -283,11 +284,10 @@ static void widget_stocks_draw(GContext *ctx, GRect bounds, uint8_t page) {
   StockPanelLite panel_buf;
   if (stock_panel_count == 0 || page >= stock_panel_count ||
       !stock_load_panel_lite(page, &panel_buf)) {
-    graphics_draw_text(ctx, "No stocks",
-                       fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD),
-                       GRect(0, 60, bounds.size.w, 30),
-                       GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter,
-                       NULL);
+    graphics_draw_text(
+        ctx, "No stocks", fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD),
+        GRect(0, 60, bounds.size.w, 30), GTextOverflowModeTrailingEllipsis,
+        GTextAlignmentCenter, NULL);
     return;
   }
 
@@ -295,37 +295,33 @@ static void widget_stocks_draw(GContext *ctx, GRect bounds, uint8_t page) {
 
   // Symbol centered, large
   GRect sym_rect = GRect(0, 30, bounds.size.w, 34);
-  graphics_draw_text(ctx, p->symbol,
-                     fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD), sym_rect,
-                     GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter,
-                     NULL);
+  graphics_draw_text(
+      ctx, p->symbol, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD), sym_rect,
+      GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
 
   // Price centered
   GRect price_rect = GRect(0, 62, bounds.size.w, 28);
-  graphics_draw_text(ctx, p->price,
-                     fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD), price_rect,
-                     GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter,
-                     NULL);
+  graphics_draw_text(
+      ctx, p->price, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD), price_rect,
+      GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
 
   // Change with trend indicator centered
   char change_buf[12];
   snprintf(change_buf, sizeof(change_buf), "%s %s",
            p->positive ? "\xe2\x96\xb2" : "\xe2\x96\xbc", p->change);
   GRect chg_rect = GRect(0, 92, bounds.size.w, 22);
-  graphics_draw_text(ctx, change_buf,
-                     fonts_get_system_font(FONT_KEY_GOTHIC_18), chg_rect,
-                     GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter,
-                     NULL);
+  graphics_draw_text(ctx, change_buf, fonts_get_system_font(FONT_KEY_GOTHIC_18),
+                     chg_rect, GTextOverflowModeTrailingEllipsis,
+                     GTextAlignmentCenter, NULL);
 
   // Panel indicator
   if (stock_panel_count > 1) {
     char ind[6];
     snprintf(ind, sizeof(ind), "%d/%d", page + 1, stock_panel_count);
     GRect ind_rect = GRect(0, 118, bounds.size.w, 18);
-    graphics_draw_text(ctx, ind,
-                       fonts_get_system_font(FONT_KEY_GOTHIC_14), ind_rect,
-                       GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter,
-                       NULL);
+    graphics_draw_text(ctx, ind, fonts_get_system_font(FONT_KEY_GOTHIC_14),
+                       ind_rect, GTextOverflowModeTrailingEllipsis,
+                       GTextAlignmentCenter, NULL);
   }
 }
 #else
