@@ -1345,12 +1345,30 @@ Pebble.addEventListener('ready',
 
     console.log("PebbleKit JS ready");
 
+    // Resend saved config to the watch (persistent storage may be wiped on reinstall)
+    var savedConfig = localStorage.getItem('saved_watch_config');
+    if (savedConfig) {
+      try {
+        var configDict = JSON.parse(savedConfig);
+        setTimeout(function () {
+          Pebble.sendAppMessage(configDict, function () {
+            console.log('JS: saved config resent to watch');
+          }, function (err) {
+            console.log('JS: saved config resend failed', err);
+          });
+        }, 500);
+        console.log('JS: saved config queued for resend');
+      } catch (e) {
+        console.log('JS: failed to parse saved config: ' + e);
+      }
+    }
+
     // Auto-trigger one weather fetch on startup
     try {
       setTimeout(function () {
         console.log('Auto weather fetch on startup');
         getWeather();
-      }, 500);
+      }, 1500);
       // Fetch stock data after weather (delayed to avoid message collision)
       setTimeout(function () {
         console.log('Auto stock fetch on startup');
@@ -1465,12 +1483,16 @@ Pebble.addEventListener('webviewclosed', function (e) {
 
     // Countdown event date (send as Unix timestamp int32; -1 = clear)
     var countdown_date = configData['countdown_date'];
+    var countdown_label = configData['countdown_label'] || '';
     if (countdown_date) {
       localStorage.setItem('countdown_date', countdown_date);
+      localStorage.setItem('countdown_label', countdown_label);
       var ts = Math.floor(new Date(countdown_date + 'T12:00:00').getTime() / 1000);
       dict['KEY_HUB_COUNTDOWN'] = ts;
+      dict['KEY_HUB_COUNTDOWN_LABEL'] = countdown_label;
     } else {
       localStorage.removeItem('countdown_date');
+      localStorage.removeItem('countdown_label');
       dict['KEY_HUB_COUNTDOWN'] = -1; // clear countdown on watch
     }
     dict['KEY_HUB_LP_UP'] = hub_lp_up;
@@ -1519,6 +1541,8 @@ Pebble.addEventListener('webviewclosed', function (e) {
 
     console.log('[CFG] Sending dict keys: ' + Object.keys(dict).join(', '));
     console.log('[CFG] KEY_RADIO_UNITS=' + dict['KEY_RADIO_UNITS'] + ' KEY_HUB_TIMEOUT=' + dict['KEY_HUB_TIMEOUT'] + ' KEY_HUB_WIDGETS_UP=' + dict['KEY_HUB_WIDGETS_UP']);
+    // Save full config dict so it can be automatically resent on next app start
+    localStorage.setItem('saved_watch_config', JSON.stringify(dict));
     Pebble.sendAppMessage(dict, function () {
       // Refresh weather data after configuration changes (e.g., API provider, units)
       console.log("Configuration sent successfully, fetching weather data");

@@ -378,15 +378,51 @@ static void draw_alt_view(GContext *ctx, uint8_t vid, int icon_id, bool fresh) {
     snprintf(buf, sizeof(buf), "Batterie %d%%", bat.charge_percent);
     dtext(ctx, buf, fs, 92, 18);
     if (persist_exists(HUB_PERSIST_COUNTDOWN)) {
-      time_t target;
-      persist_read_data(HUB_PERSIST_COUNTDOWN, &target, sizeof(time_t));
-      int days = (int)((target - time(NULL)) / 86400);
+      CountdownData cd;
+      memset(&cd, 0, sizeof(CountdownData));
+      persist_read_data(HUB_PERSIST_COUNTDOWN, &cd, sizeof(CountdownData));
+      int days = (int)((cd.ts - time(NULL)) / 86400);
       if (days > 0) {
+        if (cd.label[0]) {
+          dtext(ctx, cd.label, fs, 112, 16);
+        }
         snprintf(buf, sizeof(buf), "J-%d", days);
-        dtext(ctx, buf, fb, 118, 34);
+        dtext(ctx, buf, fb, cd.label[0] ? 130 : 118, 34);
       }
     }
   }
+}
+
+// --- Action toast overlay (zero heap in BSS; only the AppTimer entry is heap) ---
+
+static AppTimer *s_action_toast_timer = NULL;
+
+static void action_toast_clear_cb(void *context) {
+  s_action_toast_timer = NULL;
+  g_hub_action_toast = false;
+  layer_mark_dirty(layer);
+}
+
+// Draws the "Action sent!" overlay over whatever is currently on screen.
+// Registers a 1.5-second timer the first time it is called so the overlay
+// disappears automatically. Safe to call from update_proc.
+static void draw_action_toast(GContext *ctx) {
+  if (!g_hub_action_toast)
+    return;
+  if (!s_action_toast_timer)
+    s_action_toast_timer = app_timer_register(1500, action_toast_clear_cb, NULL);
+  // Rounded rectangle backdrop
+  graphics_context_set_fill_color(ctx, GColorBlack);
+  graphics_fill_rect(ctx, GRect(10, 64, 124, 36), 4, GCornersAll);
+  graphics_context_set_stroke_color(ctx, GColorWhite);
+  graphics_draw_round_rect(ctx, GRect(10, 64, 124, 36), 4);
+  // Label
+  graphics_context_set_text_color(ctx, GColorWhite);
+  graphics_draw_text(ctx, "Action sent!",
+                     fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
+                     GRect(12, 68, 120, 28),
+                     GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter,
+                     NULL);
 }
 
 static void update_proc(Layer *layer, GContext *ctx) {
@@ -476,6 +512,7 @@ static void update_proc(Layer *layer, GContext *ctx) {
     uint8_t vid = g_hub_config.view_order[current_view_index];
     if (vid == HUB_VIEW_WEATHER || vid == HUB_VIEW_DATE) {
       draw_alt_view(ctx, vid, icon_id, has_fresh_weather);
+      draw_action_toast(ctx);
       return;
     }
   }
@@ -530,6 +567,8 @@ static void update_proc(Layer *layer, GContext *ctx) {
   icon_data.icon_id = icon_id;
   icon_data.icon_id6 = icon_id6;
   ui_draw_icon_bar(ctx, &icon_data);
+
+  draw_action_toast(ctx);
 
   APP_LOG(APP_LOG_LEVEL_INFO, "HEAP post-render: %zu", heap_bytes_free());
 }
@@ -872,8 +911,18 @@ static void inbox_received_callback(DictionaryIterator *iterator,
       if (ts == -1) {
         persist_delete(HUB_PERSIST_COUNTDOWN);
       } else {
-        time_t target = (time_t)ts;
-        persist_write_data(HUB_PERSIST_COUNTDOWN, &target, sizeof(time_t));
+        CountdownData cd;
+        memset(&cd, 0, sizeof(CountdownData));
+        if (persist_exists(HUB_PERSIST_COUNTDOWN) &&
+            persist_get_size(HUB_PERSIST_COUNTDOWN) == (int)sizeof(CountdownData)) {
+          persist_read_data(HUB_PERSIST_COUNTDOWN, &cd, sizeof(CountdownData));
+        }
+        cd.ts = ts;
+        Tuple *lt = dict_find(iterator, KEY_HUB_COUNTDOWN_LABEL);
+        if (lt && lt->value->cstring[0]) {
+          strncpy(cd.label, lt->value->cstring, sizeof(cd.label) - 1);
+        }
+        persist_write_data(HUB_PERSIST_COUNTDOWN, &cd, sizeof(CountdownData));
       }
     }
 
@@ -1202,6 +1251,9 @@ static void execute_long_press(uint8_t type, uint8_t data) {
     hub_pseudoapp_push(data);
   } else if (type == HUB_LP_WEBHOOK) {
     hub_action_execute(data);
+    // Force an immediate redraw so the toast overlay appears right away.
+    // (app_focus_changed won't fire since we stay on the main window.)
+    layer_mark_dirty(layer);
   }
 }
 
@@ -1281,6 +1333,11 @@ static void deinit() {
   if (s_weather_retry_timer) {
     app_timer_cancel(s_weather_retry_timer);
     s_weather_retry_timer = NULL;
+  }
+
+  if (s_action_toast_timer) {
+    app_timer_cancel(s_action_toast_timer);
+    s_action_toast_timer = NULL;
   }
 
   app_message_deregister_callbacks();

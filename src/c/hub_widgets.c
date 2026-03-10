@@ -241,8 +241,10 @@ static uint8_t widget_daily_page_count(void) {
   uint8_t n = 0;
   for (uint8_t i = 0; i < 5; i++) {
     char c0 = days_temp[i][0];
-    if (c0 == '\0') break;                          // empty string
-    if (c0 == '-' && days_temp[i][1] == '-') break; // default "--"
+    if (c0 == '\0')
+      break; // empty string
+    if (c0 == '-' && days_temp[i][1] == '-')
+      break; // default "--"
     n++;
   }
   return n > 0 ? (n + 1) / 2 : 1;

@@ -232,6 +232,10 @@ static void menu_select(MenuLayer *ml, MenuIndex *idx, void *data) {
   case HUB_MI_ACTION:
     vibes_double_pulse();
     hub_action_execute(item->data);
+    // Deferred return: calling hub_return_to_watchface() directly here would
+    // free MenuCtx from within its own callback (use-after-free). A 0ms timer
+    // defers the pop to the next event-loop iteration when the stack is safe.
+    app_timer_register(0, delayed_return_to_watchface, NULL);
     break;
   }
 }

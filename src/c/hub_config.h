@@ -23,9 +23,14 @@
 #define KEY_HUB_WIDGETS_DOWN 361
 #define KEY_HUB_ANIM 362
 #define KEY_HUB_COUNTDOWN 363
+#define KEY_HUB_COUNTDOWN_LABEL 364
 
-// Countdown persist key (time_t target date)
+// Countdown persist: CountdownData struct (16 bytes)
 #define HUB_PERSIST_COUNTDOWN 320
+typedef struct {
+  int32_t ts;
+  char label[12];
+} CountdownData;
 
 // Stock widget message keys & persist
 #define KEY_STOCK_DATA 370

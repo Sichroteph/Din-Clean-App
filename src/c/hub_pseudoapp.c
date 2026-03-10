@@ -16,6 +16,7 @@ typedef struct {
 } PA;
 static PA *s_v;       /* visible PA (NULL when closed) */
 static char s_buf[6]; /* "HH:MM\0" */
+static const uint32_t s_3lp[] = {1000, 500, 1000, 500, 1000}; /* 3 long pulses */
 static const char *s_names[] = {"Stopwatch", "Timer", "Alarm"};
 
 static void fmt(int a, int b) {
@@ -63,14 +64,14 @@ static void pa_tick(void *d) {
   s_at = NULL;
   if (s_tend && time(NULL) >= s_tend) {
     s_tend = 0;
-    vibes_long_pulse();
+    vibes_enqueue_custom_pattern((VibePattern){.durations=(uint32_t*)s_3lp,.num_segments=5});
   }
   if (s_ast == 2) {
     time_t now = time(NULL);
     struct tm *tm = localtime(&now);
     if (tm->tm_hour == s_ah && tm->tm_min == s_am) {
       s_ast = 0;
-      vibes_long_pulse();
+      vibes_enqueue_custom_pattern((VibePattern){.durations=(uint32_t*)s_3lp,.num_segments=5});
     }
   }
   if (s_v)

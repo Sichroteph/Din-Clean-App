@@ -764,6 +764,10 @@
           <div class="row-label">Date de l'événement</div>
           <input type="date" class="input-field" id="countdown_date">
         </div>
+        <div class="row">
+          <div class="row-label">Label (11 car. max)</div>
+          <input type="text" class="input-field" id="countdown_label" maxlength="11" placeholder="ex: Vacances">
+        </div>
         <div class="card-footer">Affiche "J-X" sur le panneau Date &amp; info. Laisser vide pour désactiver.</div>
       </div>
     </div></div>
@@ -1774,6 +1778,7 @@
     options['hub_views'] = views.join(',');
 
     options['countdown_date'] = document.getElementById('countdown_date').value || '';
+    options['countdown_label'] = document.getElementById('countdown_label').value || '';
 
     // Stock panels
     persistStockPanels();
@@ -1877,6 +1882,7 @@
     document.getElementById('hub_view_2').checked = viewIds.indexOf('2') >= 0;
 
     document.getElementById('countdown_date').value = localStorage['countdown_date'] || '';
+    document.getElementById('countdown_label').value = localStorage['countdown_label'] || '';
 
     // Update visibility after restore
     updateEditorVisibility();
