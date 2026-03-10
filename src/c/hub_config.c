@@ -249,6 +249,26 @@ void hub_config_load(void) {
       s_has_custom_widgets_down = true;
     }
   }
+
+  // Migration: ensure HUB_WIDGET_STOCKS (0) is in each list
+  // (old persist data may lack it if saved before stocks widget was added)
+  uint8_t *wlists[2] = {s_custom_widgets_up, s_custom_widgets_down};
+  uint8_t *wcounts[2] = {&s_custom_widgets_up_count, &s_custom_widgets_down_count};
+  bool *whas[2] = {&s_has_custom_widgets_up, &s_has_custom_widgets_down};
+  uint32_t wkeys[2] = {HUB_PERSIST_WIDGETS_UP, HUB_PERSIST_WIDGETS_DOWN};
+  for (int w = 0; w < 2; w++) {
+    if (!*whas[w]) continue;
+    bool found = false;
+    for (int i = 0; i < *wcounts[w]; i++) {
+      if (wlists[w][i] == HUB_WIDGET_STOCKS) { found = true; break; }
+    }
+    if (!found && *wcounts[w] < HUB_MAX_WIDGETS) {
+      memmove(wlists[w] + 1, wlists[w], *wcounts[w]);
+      wlists[w][0] = HUB_WIDGET_STOCKS;
+      (*wcounts[w])++;
+      persist_write_data(wkeys[w], wlists[w], *wcounts[w]);
+    }
+  }
 }
 
 void hub_config_save(void) {
