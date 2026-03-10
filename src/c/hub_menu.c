@@ -252,12 +252,9 @@ static void handle_up_click(ClickRecognizerRef recognizer, void *context) {
   MenuIndex current = menu_layer_get_selected_index(ctx->menu);
   uint16_t first_real_row = (uint16_t)ctx->padding;
 
-  if (ctx->depth == 0 && ctx->direction == HUB_DIR_UP) {
-    // Menu opened by UP: pressing UP at first real item cycles back
-    if (current.row <= first_real_row) {
-      app_timer_register(0, delayed_return_to_watchface, NULL);
-      return;
-    }
+  if (ctx->depth == 0 && current.row <= first_real_row) {
+    app_timer_register(0, delayed_return_to_watchface, NULL);
+    return;
   }
   // Navigate up, but not past first real row
   if (current.row > first_real_row) {
@@ -272,12 +269,9 @@ static void handle_down_click(ClickRecognizerRef recognizer, void *context) {
   MenuIndex current = menu_layer_get_selected_index(ctx->menu);
   uint16_t last_real_row = (uint16_t)(ctx->padding + ctx->visible_count - 1);
 
-  if (ctx->depth == 0 && ctx->direction == HUB_DIR_DOWN) {
-    // Menu opened by DOWN: pressing DOWN at last real item cycles back
-    if (current.row >= last_real_row) {
-      app_timer_register(0, delayed_return_to_watchface, NULL);
-      return;
-    }
+  if (ctx->depth == 0 && current.row >= last_real_row) {
+    app_timer_register(0, delayed_return_to_watchface, NULL);
+    return;
   }
   // Navigate down, but not past last real row
   if (current.row < last_real_row) {

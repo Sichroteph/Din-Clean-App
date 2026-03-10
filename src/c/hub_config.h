@@ -22,6 +22,7 @@
 #define KEY_HUB_WIDGETS_UP 360
 #define KEY_HUB_WIDGETS_DOWN 361
 #define KEY_HUB_ANIM 362
+#define KEY_HUB_COUNTDOWN 363
 
 // Countdown persist key (time_t target date)
 #define HUB_PERSIST_COUNTDOWN 320

@@ -100,6 +100,7 @@
       "KEY_HUB_WIDGETS_UP": 360,
       "KEY_HUB_WIDGETS_DOWN": 361,
       "KEY_HUB_ANIM": 362,
+      "KEY_HUB_COUNTDOWN": 363,
       "KEY_STOCK_DATA": 370,
       "KEY_STOCK_COUNT": 371
     },

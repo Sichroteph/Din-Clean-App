@@ -363,24 +363,27 @@ static void draw_alt_view(GContext *ctx, uint8_t vid, int icon_id, bool fresh) {
     }
     dtext(ctx, buf, fs, 140, 18);
   } else {
-    strftime(buf, sizeof(buf), "%a %d %b %Y", &now);
+    GFont fm = fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
+    strftime(buf, sizeof(buf), "%a %d %b", &now);
     dtext(ctx, buf, fb, 8, 34);
+    strftime(buf, sizeof(buf), "%Y", &now);
+    dtext(ctx, buf, fm, 44, 22);
     int w = now.tm_wday ? now.tm_wday : 7;
     int yr = now.tm_year + 1900;
     int diy = (yr % 4 == 0 && (yr % 100 != 0 || yr % 400 == 0)) ? 366 : 365;
     snprintf(buf, sizeof(buf), "S%d  Jour %d/%d", (now.tm_yday + 8 - w) / 7,
              now.tm_yday + 1, diy);
-    dtext(ctx, buf, fs, 48, 18);
+    dtext(ctx, buf, fs, 70, 18);
     BatteryChargeState bat = battery_state_service_peek();
     snprintf(buf, sizeof(buf), "Batterie %d%%", bat.charge_percent);
-    dtext(ctx, buf, fs, 70, 18);
+    dtext(ctx, buf, fs, 92, 18);
     if (persist_exists(HUB_PERSIST_COUNTDOWN)) {
       time_t target;
       persist_read_data(HUB_PERSIST_COUNTDOWN, &target, sizeof(time_t));
       int days = (int)((target - time(NULL)) / 86400);
       if (days > 0) {
         snprintf(buf, sizeof(buf), "J-%d", days);
-        dtext(ctx, buf, fb, 104, 28);
+        dtext(ctx, buf, fb, 118, 34);
       }
     }
   }
@@ -863,6 +866,16 @@ static void inbox_received_callback(DictionaryIterator *iterator,
       hub_config_parse_widgets(t->value->cstring, false);
     if ((t = dict_find(iterator, KEY_HUB_ANIM)))
       g_hub_config.anim_enabled = (t->value->int32 == 1) ? 1 : 0;
+
+    if ((t = dict_find(iterator, KEY_HUB_COUNTDOWN))) {
+      int32_t ts = t->value->int32;
+      if (ts == -1) {
+        persist_delete(HUB_PERSIST_COUNTDOWN);
+      } else {
+        time_t target = (time_t)ts;
+        persist_write_data(HUB_PERSIST_COUNTDOWN, &target, sizeof(time_t));
+      }
+    }
 
     hub_config_save();
     hub_timeout_reset();

@@ -1462,6 +1462,17 @@ Pebble.addEventListener('webviewclosed', function (e) {
     dict['KEY_HUB_ANIM'] = (hub_anim === 1) ? 1 : 2;          // 1=on, 2=off
     dict['KEY_HUB_BTN_UP'] = (hub_btn_up === 1) ? 1 : 2;      // 1=widgets, 2=menu
     dict['KEY_HUB_BTN_DOWN'] = (hub_btn_down === 1) ? 1 : 2;  // 1=widgets, 2=menu
+
+    // Countdown event date (send as Unix timestamp int32; -1 = clear)
+    var countdown_date = configData['countdown_date'];
+    if (countdown_date) {
+      localStorage.setItem('countdown_date', countdown_date);
+      var ts = Math.floor(new Date(countdown_date + 'T12:00:00').getTime() / 1000);
+      dict['KEY_HUB_COUNTDOWN'] = ts;
+    } else {
+      localStorage.removeItem('countdown_date');
+      dict['KEY_HUB_COUNTDOWN'] = -1; // clear countdown on watch
+    }
     dict['KEY_HUB_LP_UP'] = hub_lp_up;
     dict['KEY_HUB_LP_DOWN'] = hub_lp_down;
     dict['KEY_HUB_LP_SELECT'] = hub_lp_select;

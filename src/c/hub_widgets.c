@@ -188,8 +188,7 @@ static void widget_navigate(WidgetCtx *ctx, bool forward) {
       ctx->current_index++;
       ctx->current_page = 0;
       layer_mark_dirty(ctx->canvas);
-    } else if (!ctx->nav_up_is_next) {
-      // DOWN list: exit when pressing DOWN past last widget
+    } else {
       hub_return_to_watchface();
     }
   } else {
@@ -197,8 +196,7 @@ static void widget_navigate(WidgetCtx *ctx, bool forward) {
       ctx->current_index--;
       ctx->current_page = 0;
       layer_mark_dirty(ctx->canvas);
-    } else if (ctx->nav_up_is_next) {
-      // UP list: exit when pressing UP past first widget
+    } else {
       hub_return_to_watchface();
     }
   }
@@ -239,10 +237,12 @@ static uint8_t widget_stocks_page_count(void) {
 }
 static uint8_t widget_hourly_page_count(void) { return 2; }
 static uint8_t widget_daily_page_count(void) {
-  // Count days that have real data ("-" + "-" = unset default "--")
+  // A day is valid if days_temp is non-empty and not the default "--"
   uint8_t n = 0;
   for (uint8_t i = 0; i < 5; i++) {
-    if (days_temp[i][0] == '-' && days_temp[i][1] == '-') break;
+    char c0 = days_temp[i][0];
+    if (c0 == '\0') break;                          // empty string
+    if (c0 == '-' && days_temp[i][1] == '-') break; // default "--"
     n++;
   }
   return n > 0 ? (n + 1) / 2 : 1;
@@ -575,6 +575,10 @@ static void widget_hourly_draw(GContext *ctx, GRect bounds, uint8_t page) {
 static void draw_daily_row(GContext *ctx, int y, int day_index, int bounds_w) {
   if (day_index >= 5)
     return; // only 5 days available
+  // Skip rows with no data (empty or default "--" temperature)
+  char c0 = days_temp[day_index][0];
+  if (c0 == '\0' || (c0 == '-' && days_temp[day_index][1] == '-'))
+    return;
   graphics_context_set_text_color(ctx, GColorWhite);
 
   // Day abbreviation (compute from current weekday + offset)

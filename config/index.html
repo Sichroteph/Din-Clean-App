@@ -757,6 +757,15 @@
           <label class="toggle-track" for="hub_view_2"></label>
         </div>
       </div>
+
+      <div class="card">
+        <div class="card-header">Countdown J&#8209;X</div>
+        <div class="row">
+          <div class="row-label">Date de l'événement</div>
+          <input type="date" class="input-field" id="countdown_date">
+        </div>
+        <div class="card-footer">Affiche "J-X" sur le panneau Date &amp; info. Laisser vide pour désactiver.</div>
+      </div>
     </div></div>
   </div>
 
@@ -1764,6 +1773,8 @@
     if (document.getElementById('hub_view_2').checked) views.push('2');
     options['hub_views'] = views.join(',');
 
+    options['countdown_date'] = document.getElementById('countdown_date').value || '';
+
     // Stock panels
     persistStockPanels();
     options['stock_symbols'] = localStorage['stock_symbols'] || '[]';
@@ -1864,6 +1875,8 @@
     var viewIds = savedViews.split(',');
     document.getElementById('hub_view_1').checked = viewIds.indexOf('1') >= 0;
     document.getElementById('hub_view_2').checked = viewIds.indexOf('2') >= 0;
+
+    document.getElementById('countdown_date').value = localStorage['countdown_date'] || '';
 
     // Update visibility after restore
     updateEditorVisibility();
