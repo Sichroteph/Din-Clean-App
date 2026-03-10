@@ -351,23 +351,7 @@ static void widget_stocks_draw(GContext *ctx, GRect bounds, uint8_t page) {
     }
   }
 
-  // Price range labels: max at top, min at bottom (right-aligned, small font)
-  if (p->price_max[0] != '\0') {
-    GRect max_rect = GRect(STOCK_GRAPH_LEFT, STOCK_GRAPH_TOP - 1,
-                           STOCK_GRAPH_RIGHT - STOCK_GRAPH_LEFT, 14);
-    graphics_draw_text(ctx, p->price_max, font14, max_rect,
-                       GTextOverflowModeTrailingEllipsis, GTextAlignmentRight,
-                       NULL);
-  }
-  if (p->price_min[0] != '\0') {
-    GRect min_rect = GRect(STOCK_GRAPH_LEFT, STOCK_GRAPH_BOT - 14,
-                           STOCK_GRAPH_RIGHT - STOCK_GRAPH_LEFT, 14);
-    graphics_draw_text(ctx, p->price_min, font14, min_rect,
-                       GTextOverflowModeTrailingEllipsis, GTextAlignmentRight,
-                       NULL);
-  }
-
-  // X positions for 10 history points, evenly spaced
+  // X positions for history points, evenly spaced
   int px[STOCK_HISTORY_POINTS];
   for (int i = 0; i < STOCK_HISTORY_POINTS; i++) {
     px[i] = STOCK_GRAPH_LEFT + i * (STOCK_GRAPH_RIGHT - STOCK_GRAPH_LEFT) /

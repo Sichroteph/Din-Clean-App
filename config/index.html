@@ -1109,6 +1109,20 @@
             </select>
           </div>
         </div>
+        <div class="card">
+          <div class="card-header">Graph Period</div>
+          <div class="card-footer" style="margin-bottom: 8px">Time range for the stock price graph.</div>
+          <div style="padding: 8px 12px;">
+            <div class="segmented" data-seg="stock_period">
+              <button class="seg-btn active" data-val="5d" onclick="setSeg(this)">1W</button>
+              <button class="seg-btn" data-val="1mo" onclick="setSeg(this)">1M</button>
+              <button class="seg-btn" data-val="3mo" onclick="setSeg(this)">3M</button>
+            </div>
+            <input type="radio" class="real-radio" name="stock_period" id="stock_period_5d" value="5d" checked>
+            <input type="radio" class="real-radio" name="stock_period" id="stock_period_1mo" value="1mo">
+            <input type="radio" class="real-radio" name="stock_period" id="stock_period_3mo" value="3mo">
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -1904,7 +1918,7 @@
     }
 
     function setStockPeriod(btn) {
-      // no-op: period is now fixed at 24h
+      // handled by generic setSeg()
     }
 
     function persistStockPanels() {
@@ -1982,6 +1996,9 @@
       persistStockPanels();
       options['stock_symbols'] = localStorage['stock_symbols'] || '[]';
       options['stock_names'] = localStorage['stock_names'] || '[]';
+      // Stock period (read from segmented radio)
+      var periodEl = document.querySelector('input[name="stock_period"]:checked');
+      options['stock_period'] = periodEl ? periodEl.value : '5d';
 
       for (var key in options) {
         localStorage[key] = options[key];
@@ -2081,6 +2098,12 @@
 
       document.getElementById('countdown_date').value = localStorage['countdown_date'] || '';
       document.getElementById('countdown_label').value = localStorage['countdown_label'] || '';
+
+      // Stock period
+      var savedStockPeriod = localStorage['stock_period'] || '5d';
+      var periodRadio = document.getElementById('stock_period_' + savedStockPeriod);
+      if (periodRadio) periodRadio.checked = true;
+      restoreSeg('stock_period', savedStockPeriod);
 
       // Update visibility after restore
       updateEditorVisibility();

@@ -908,33 +908,14 @@ static void inbox_received_callback(DictionaryIterator *iterator,
       p.positive = (p.change[0] != '-');
       if (*s == '|')
         s++;
-      // Parse history points (comma-separated uint8)
-      for (int h = 0; h < STOCK_HISTORY_POINTS && *s; h++) {
-        int val = 0;
-        while (*s >= '0' && *s <= '9') {
-          val = val * 10 + (*s - '0');
-          s++;
-        }
-        if (val > 100)
-          val = 100;
+      // Parse history points (binary: each char = value + 33)
+      for (int h = 0; h < STOCK_HISTORY_POINTS && *s && *s != '|'; h++) {
+        int val = (int)(*s) - 33;
+        if (val < 0) val = 0;
+        if (val > 100) val = 100;
         p.history[h] = (uint8_t)val;
-        if (*s == ',')
-          s++;
+        s++;
       }
-      // Parse price_min
-      if (*s == '|')
-        s++;
-      i = 0;
-      while (*s && *s != '|' && i < (int)sizeof(p.price_min) - 1)
-        p.price_min[i++] = *s++;
-      p.price_min[i] = '\0';
-      // Parse price_max
-      if (*s == '|')
-        s++;
-      i = 0;
-      while (*s && *s != '|' && i < (int)sizeof(p.price_max) - 1)
-        p.price_max[i++] = *s++;
-      p.price_max[i] = '\0';
       // Persist this panel individually
       persist_write_data(HUB_PERSIST_STOCK0 + idx, &p, sizeof(StockPanel));
       if (idx == stock_panel_count - 1) {

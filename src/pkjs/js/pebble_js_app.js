@@ -1124,15 +1124,15 @@ function buildFakeStockData() {
   return [
     {
       symbol: 'DJIA', price: '42,531', change: '+0.8%', positive: true,
-      history: [30, 35, 42, 50, 48, 55, 62, 70, 78, 85], price_min: 41800, price_max: 43200
+      history: [30, 35, 42, 50, 55, 62, 70, 85]
     },
     {
       symbol: 'EUR/CHF', price: '0.9385', change: '-0.3%', positive: false,
-      history: [80, 75, 70, 65, 60, 55, 50, 48, 45, 40], price_min: 0.930, price_max: 0.960
+      history: [80, 75, 70, 65, 55, 50, 45, 40]
     },
     {
       symbol: 'BTC', price: '97,500', change: '+2.1%', positive: true,
-      history: [10, 20, 15, 30, 45, 40, 60, 55, 80, 95], price_min: 88000, price_max: 102000
+      history: [10, 20, 30, 45, 40, 60, 80, 95]
     }
   ];
 }
@@ -1158,12 +1158,9 @@ function sendStockPanel(panels, idx) {
     return;
   }
   var p = panels[idx];
-  var histStr = normalizeHistory(p.history).join(',');
-  var priceMin = (p.price_min !== undefined) ? formatStockPrice(p.price_min) : '?';
-  var priceMax = (p.price_max !== undefined) ? formatStockPrice(p.price_max) : '?';
+  var histStr = normalizeHistory(p.history).map(function(v){ return String.fromCharCode(v + 33); }).join('');
   var dataStr = idx + '|' + p.symbol + '|' + p.price + '|' +
-    (p.positive ? '+' : '') + p.change + '|' + histStr +
-    '|' + priceMin + '|' + priceMax;
+    (p.positive ? '+' : '') + p.change + '|' + histStr;
 
   Pebble.sendAppMessage({ 'KEY_STOCK_DATA': dataStr }, function () {
     console.log('Stock panel ' + idx + ' sent: ' + p.symbol);
@@ -1196,10 +1193,15 @@ function fetchStockData() {
     (function (idx) {
       var symbol = config.symbols[idx];
       var displayName = config.names[idx] || symbol;
-      // Always fetch 5 days of hourly data; variation is computed over the last 24h
+      // Read period from config (default 5d = 1 week)
+      var period = localStorage.getItem('stock_period') || '5d';
+      var rangeMap = { '5d': '5d', '1mo': '1mo', '3mo': '3mo' };
+      var intervalMap = { '5d': '1h', '1mo': '1d', '3mo': '1d' };
+      var range = rangeMap[period] || '5d';
+      var interval = intervalMap[period] || '1h';
       var url = 'https://query1.finance.yahoo.com/v8/finance/chart/' +
         encodeURIComponent(symbol) +
-        '?range=5d&interval=1h';
+        '?range=' + range + '&interval=' + interval;
 
       console.log('Fetching stock: ' + symbol + ' → ' + url);
 
@@ -1227,53 +1229,44 @@ function fetchStockData() {
             return;
           }
 
-          var sampled = sampleArray(validCloses, 10);
+          var sampled = sampleArray(validCloses, 8);
           var lastPrice = validCloses[validCloses.length - 1];
           var lastTs = validTs[validTs.length - 1];
 
-          // Find the last point recorded on the previous trading day
-          // (i.e. last point whose local calendar date is strictly before today's)
+          // For short ranges (5d), use previous day close as base;
+          // for longer ranges, use the first data point
           var lastDate = new Date(lastTs * 1000);
           var lastDay = lastDate.toDateString();
           var baseIdx = 0;
-          var foundPrevDay = false;
-          for (var ti = validTs.length - 2; ti >= 0; ti--) {
-            var d = new Date(validTs[ti] * 1000).toDateString();
-            if (d !== lastDay) {
-              // Walk forward to the last point of that previous day
-              var prevDay = d;
-              var prevDayLastIdx = ti;
-              for (var tj = ti + 1; tj < validTs.length - 1; tj++) {
-                if (new Date(validTs[tj] * 1000).toDateString() === prevDay) prevDayLastIdx = tj;
-                else break;
+          if (range === '5d') {
+            var foundPrevDay = false;
+            for (var ti = validTs.length - 2; ti >= 0; ti--) {
+              var d = new Date(validTs[ti] * 1000).toDateString();
+              if (d !== lastDay) {
+                var prevDay = d;
+                var prevDayLastIdx = ti;
+                for (var tj = ti + 1; tj < validTs.length - 1; tj++) {
+                  if (new Date(validTs[tj] * 1000).toDateString() === prevDay) prevDayLastIdx = tj;
+                  else break;
+                }
+                baseIdx = prevDayLastIdx;
+                foundPrevDay = true;
+                break;
               }
-              baseIdx = prevDayLastIdx;
-              foundPrevDay = true;
-              break;
             }
+            if (!foundPrevDay) baseIdx = 0;
           }
-          // Fallback: use oldest available point
-          if (!foundPrevDay) baseIdx = 0;
           var basePrice = validCloses[baseIdx];
 
           var changePct = ((lastPrice - basePrice) / basePrice * 100);
           var changeStr = (changePct >= 0 ? '+' : '') + changePct.toFixed(1) + '%';
-
-          // Compute raw min/max of the valid history window
-          var rawMin = validCloses[0], rawMax = validCloses[0];
-          for (var vi = 1; vi < validCloses.length; vi++) {
-            if (validCloses[vi] < rawMin) rawMin = validCloses[vi];
-            if (validCloses[vi] > rawMax) rawMax = validCloses[vi];
-          }
 
           panels[idx] = {
             symbol: displayName.substring(0, 9),
             price: formatStockPrice(lastPrice),
             change: changeStr,
             positive: changePct >= 0,
-            history: sampled,
-            price_min: rawMin,
-            price_max: rawMax
+            history: sampled
           };
         } catch (e) {
           console.error('Error parsing stock data for ' + symbol + ': ' + e);

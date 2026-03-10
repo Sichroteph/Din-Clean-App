@@ -43,17 +43,15 @@ typedef struct {
 
 // Stock widget limits
 #define STOCK_MAX_PANELS 5
-#define STOCK_HISTORY_POINTS 10
+#define STOCK_HISTORY_POINTS 8
 
 // Stock panel data (pre-formatted by JS, no float math on watch)
 typedef struct {
   char symbol[10]; // Display name: "DJIA", "EUR/CHF", "BTC"
   char price[12];  // Pre-formatted: "42,531", "0.9385"
   char change[8];  // "+0.8%", "-1.2%"
-  uint8_t history[STOCK_HISTORY_POINTS]; // 0-100 normalized
+  uint8_t history[STOCK_HISTORY_POINTS]; // 0-100 normalized (binary: char+33)
   bool positive;      // true if change >= 0 (for trend indicator)
-  char price_min[10]; // Pre-formatted min price of history window
-  char price_max[10]; // Pre-formatted max price of history window
 } StockPanel;
 
 #ifdef PBL_PLATFORM_APLITE
