@@ -47,6 +47,8 @@ def build(ctx):
         ctx.set_env(ctx.all_envs[p])
         ctx.set_group(ctx.env.PLATFORM_NAME)
         app_elf='{}/pebble-app.elf'.format(p)
+        # Uncomment to enable demo step data (no real health data needed):
+        ctx.env.CFLAGS += ['-DDEMO_STEPS']
         ctx.pbl_program(source=ctx.path.ant_glob('src/c/**/*.c'),
         target=app_elf)
 

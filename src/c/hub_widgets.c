@@ -653,6 +653,9 @@ static void widget_steps_draw(GContext *ctx, GRect bounds, uint8_t page) {
   }
 #endif
 
+#ifdef DEMO_STEPS
+  today = 8432;
+#endif
   // Display today's count (large, centered)
   char buf[8];
   snprintf(buf, sizeof(buf), "%lu", (unsigned long)today);
@@ -696,6 +699,10 @@ static void widget_steps_draw(GContext *ctx, GRect bounds, uint8_t page) {
     if (hist[i] > hist_max)
       hist_max = hist[i];
   }
+#ifdef DEMO_STEPS
+  { static const uint16_t d[7]={6100,9200,7400,11200,5800,8800,3500};
+    for(int j=0;j<7;j++) hist[j]=d[j]; hist_max=11200; }
+#endif
 
   // Bar chart: 7 bars, bottom-aligned
   int bar_area_top = 72;
