@@ -741,6 +741,58 @@
     .section:nth-child(6) {
       animation-delay: 0.25s;
     }
+
+    /* ============================================================
+       HEAP MEMORY INDICATOR
+       ============================================================ */
+    .heap-indicator {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      margin: 0 16px 16px;
+      padding: 10px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      gap: 6px;
+    }
+
+    .heap-indicator-top {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      gap: 8px;
+    }
+
+    .heap-label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .heap-bar-wrap {
+      flex: 1;
+      height: 6px;
+      background: var(--bg);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .heap-bar {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.4s ease, background 0.4s ease;
+    }
+
+    .heap-value {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      width: 100%;
+      text-align: right;
+    }
   </style>
 </head>
 
@@ -750,6 +802,15 @@
   <div class="app-header">
     <h1>Din Clean</h1>
     <div class="subtitle">App Configuration</div>
+  </div>
+
+  <!-- HEAP MEMORY INDICATOR (populated by JS from URL params) -->
+  <div class="heap-indicator" id="heap_indicator">
+    <div class="heap-indicator-top">
+      <span class="heap-label">Heap</span>
+      <div class="heap-bar-wrap"><div class="heap-bar" id="heap_bar"></div></div>
+    </div>
+    <div class="heap-value" id="heap_value"></div>
   </div>
 
   <!-- ==========================================================
@@ -2108,6 +2169,34 @@
       // Update visibility after restore
       updateEditorVisibility();
       updateWindUnitVisibility();
+
+      // ================================================================
+      // Heap memory indicator (from URL params)
+      // ================================================================
+      (function () {
+        var params = new URLSearchParams(window.location.search);
+        var heapFree = parseInt(params.get('heap_free'), 10);
+        var platform = params.get('platform') || '';
+        if (!isNaN(heapFree) && heapFree > 0) {
+          // Scale: aplite has ~24KB total; indicate relative to a 4KB display max
+          var displayMax = 4096;
+          var pct = Math.min(100, Math.round(heapFree / displayMax * 100));
+          var color = heapFree > 2000 ? '#4ae68a'
+                    : heapFree > 900  ? '#ffb84d'
+                    :                   '#ff6c6c';
+          var bar = document.getElementById('heap_bar');
+          bar.style.width = pct + '%';
+          bar.style.background = color;
+          var label = heapFree >= 1024
+            ? (heapFree / 1024).toFixed(1) + ' KB'
+            : heapFree + ' B';
+          var note = heapFree < 900 ? ' ⚠️ Critique !' : (heapFree < 2000 ? ' Limité' : ' OK');
+          var platformStr = platform ? ' · ' + platform : '';
+          document.getElementById('heap_value').textContent =
+            label + ' libre' + platformStr + note;
+          document.getElementById('heap_indicator').style.display = 'flex';
+        }
+      })();
     })();
   </script>
 </body>

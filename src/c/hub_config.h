@@ -35,6 +35,9 @@ typedef struct {
 // Stock widget message keys & persist
 #define KEY_STOCK_DATA 370
 #define KEY_STOCK_COUNT 371
+
+// Diagnostics (watch → phone)
+#define KEY_HEAP_FREE 372
 #define HUB_PERSIST_STOCK0 310
 #define HUB_PERSIST_STOCK1 311
 #define HUB_PERSIST_STOCK2 312
@@ -54,15 +57,6 @@ typedef struct {
   bool positive;      // true if change >= 0 (for trend indicator)
 } StockPanel;
 
-#ifdef PBL_PLATFORM_APLITE
-// Lightweight stock panel for Aplite — no graph data, saves ~35 bytes/panel
-typedef struct {
-  char symbol[10];
-  char price[12];
-  char change[8];
-  bool positive;
-} StockPanelLite;
-#endif
 
 // Limits
 #define HUB_MAX_MENU_ITEMS 5 // Reduced from 8 to save 90 bytes BSS on APLITE

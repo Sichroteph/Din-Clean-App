@@ -15,21 +15,6 @@ extern char days_wind[][5];
 // Stock data — count in RAM, panels loaded on demand from persist
 extern uint8_t stock_panel_count;
 
-#ifdef PBL_PLATFORM_APLITE
-// Load a lite stock panel (no graph) from persist into dst.
-static bool stock_load_panel_lite(uint8_t idx, StockPanelLite *dst) {
-  if (idx >= STOCK_MAX_PANELS)
-    return false;
-  int key = HUB_PERSIST_STOCK0 + idx;
-  // Accept only exact-size match (avoids reading stale struct from old version)
-  int sz = persist_get_size(key);
-  if (!persist_exists(key) || sz < (int)sizeof(StockPanelLite))
-    return false;
-  memset(dst, 0, sizeof(StockPanelLite));
-  persist_read_data(key, dst, sizeof(StockPanelLite));
-  return true;
-}
-#else
 // Load a single stock panel from persist into dst. Returns true on success.
 static bool stock_load_panel(uint8_t idx, StockPanel *dst) {
   if (idx >= STOCK_MAX_PANELS)
@@ -41,7 +26,6 @@ static bool stock_load_panel(uint8_t idx, StockPanel *dst) {
   persist_read_data(key, dst, sizeof(StockPanel));
   return true;
 }
-#endif
 
 // --- Widget draw/page functions ---
 static void widget_stocks_draw(GContext *ctx, GRect bounds, uint8_t page);
@@ -244,51 +228,7 @@ static uint8_t widget_daily_page_count(void) {
   return n > 0 ? (n + 1) / 2 : 1;
 }
 
-#ifdef PBL_PLATFORM_APLITE
-static void widget_stocks_draw(GContext *ctx, GRect bounds, uint8_t page) {
-  graphics_context_set_text_color(ctx, GColorWhite);
 
-  StockPanelLite panel_buf;
-  if (stock_panel_count == 0 || page >= stock_panel_count ||
-      !stock_load_panel_lite(page, &panel_buf)) {
-    graphics_draw_text(
-        ctx, "No stocks", fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD),
-        GRect(0, 60, bounds.size.w, 30), GTextOverflowModeTrailingEllipsis,
-        GTextAlignmentCenter, NULL);
-    return;
-  }
-
-  StockPanelLite *p = &panel_buf;
-
-  // Symbol centered, large
-  GRect sym_rect = GRect(0, 26, bounds.size.w, 34);
-  graphics_draw_text(
-      ctx, p->symbol, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD), sym_rect,
-      GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
-
-  // Price centered (large)
-  GRect price_rect = GRect(0, 64, bounds.size.w, 28);
-  graphics_draw_text(
-      ctx, p->price, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD), price_rect,
-      GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
-
-  // Change centered (gothic24bold for better readability)
-  GRect chg_rect = GRect(0, 96, bounds.size.w, 28);
-  graphics_draw_text(
-      ctx, p->change, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD), chg_rect,
-      GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
-
-  // Panel indicator
-  if (stock_panel_count > 1) {
-    char ind[6];
-    snprintf(ind, sizeof(ind), "%d/%d", page + 1, stock_panel_count);
-    GRect ind_rect = GRect(0, 128, bounds.size.w, 16);
-    graphics_draw_text(ctx, ind, fonts_get_system_font(FONT_KEY_GOTHIC_14),
-                       ind_rect, GTextOverflowModeTrailingEllipsis,
-                       GTextAlignmentCenter, NULL);
-  }
-}
-#else
 static void widget_stocks_draw(GContext *ctx, GRect bounds, uint8_t page) {
   graphics_context_set_text_color(ctx, GColorWhite);
   graphics_context_set_stroke_color(ctx, GColorWhite);
@@ -392,7 +332,6 @@ static void widget_stocks_draw(GContext *ctx, GRect bounds, uint8_t page) {
       ctx, GPoint(px[STOCK_HISTORY_POINTS - 1], py[STOCK_HISTORY_POINTS - 1]),
       3);
 }
-#endif // !PBL_PLATFORM_APLITE
 
 // ========== Hourly Weather Widget ==========
 

@@ -294,6 +294,7 @@ static void app_focus_changed(bool focused) {
       AppMessageResult result = app_message_outbox_begin(&iter);
       if (result == APP_MSG_OK) {
         dict_write_uint8(iter, 0, 0);
+    dict_write_uint32(iter, KEY_HEAP_FREE, (uint32_t)heap_bytes_free());
         result = app_message_outbox_send();
         if (result == APP_MSG_OK) {
           s_weather_request_pending = false;
@@ -570,6 +571,7 @@ static void handle_tick(struct tm *cur, TimeUnits units_changed) {
       AppMessageResult result = app_message_outbox_begin(&iter);
       if (result == APP_MSG_OK) {
         dict_write_uint8(iter, 0, 0);
+    dict_write_uint32(iter, KEY_HEAP_FREE, (uint32_t)heap_bytes_free());
         result = app_message_outbox_send();
         if (result == APP_MSG_OK) {
           s_weather_request_pending = false;
@@ -781,6 +783,7 @@ static void inbox_received_callback(DictionaryIterator *iterator,
       AppMessageResult outbox_result = app_message_outbox_begin(&iter);
       if (outbox_result == APP_MSG_OK) {
         dict_write_uint8(iter, 0, 0);
+    dict_write_uint32(iter, KEY_HEAP_FREE, (uint32_t)heap_bytes_free());
         app_message_outbox_send();
       }
     }
@@ -942,6 +945,7 @@ static void do_send_weather_request(void) {
   AppMessageResult result = app_message_outbox_begin(&iter);
   if (result == APP_MSG_OK) {
     dict_write_uint8(iter, 0, 0);
+    dict_write_uint32(iter, KEY_HEAP_FREE, (uint32_t)heap_bytes_free());
     result = app_message_outbox_send();
     if (result == APP_MSG_OK) {
       s_weather_request_pending = false;
