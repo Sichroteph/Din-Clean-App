@@ -227,46 +227,25 @@ void hub_config_load(void) {
   }
 
   // Load custom widget data
-  if (persist_exists(HUB_PERSIST_WIDGETS_UP)) {
-    int size = persist_get_size(HUB_PERSIST_WIDGETS_UP);
-    if (size > 0) {
-      s_custom_widgets_up_count = size;
-      if (s_custom_widgets_up_count > HUB_MAX_WIDGETS)
-        s_custom_widgets_up_count = HUB_MAX_WIDGETS;
-      persist_read_data(HUB_PERSIST_WIDGETS_UP, s_custom_widgets_up,
-                        s_custom_widgets_up_count);
-      s_has_custom_widgets_up = true;
-    }
-  }
-  if (persist_exists(HUB_PERSIST_WIDGETS_DOWN)) {
-    int size = persist_get_size(HUB_PERSIST_WIDGETS_DOWN);
-    if (size > 0) {
-      s_custom_widgets_down_count = size;
-      if (s_custom_widgets_down_count > HUB_MAX_WIDGETS)
-        s_custom_widgets_down_count = HUB_MAX_WIDGETS;
-      persist_read_data(HUB_PERSIST_WIDGETS_DOWN, s_custom_widgets_down,
-                        s_custom_widgets_down_count);
-      s_has_custom_widgets_down = true;
-    }
-  }
-
-  // Migration: ensure HUB_WIDGET_STOCKS (0) is in each list
-  // (old persist data may lack it if saved before stocks widget was added)
+  uint32_t wkeys[2] = {HUB_PERSIST_WIDGETS_UP, HUB_PERSIST_WIDGETS_DOWN};
   uint8_t *wlists[2] = {s_custom_widgets_up, s_custom_widgets_down};
   uint8_t *wcounts[2] = {&s_custom_widgets_up_count, &s_custom_widgets_down_count};
   bool *whas[2] = {&s_has_custom_widgets_up, &s_has_custom_widgets_down};
-  uint32_t wkeys[2] = {HUB_PERSIST_WIDGETS_UP, HUB_PERSIST_WIDGETS_DOWN};
+
   for (int w = 0; w < 2; w++) {
-    if (!*whas[w]) continue;
+    if (!persist_exists(wkeys[w])) continue;
+    int size = persist_get_size(wkeys[w]);
+    if (size <= 0) continue;
+    *wcounts[w] = (size > HUB_MAX_WIDGETS) ? HUB_MAX_WIDGETS : size;
+    persist_read_data(wkeys[w], wlists[w], *wcounts[w]);
+    // If stocks widget is absent, discard this list → defaults take over
     bool found = false;
-    for (int i = 0; i < *wcounts[w]; i++) {
+    for (int i = 0; i < *wcounts[w]; i++)
       if (wlists[w][i] == HUB_WIDGET_STOCKS) { found = true; break; }
-    }
-    if (!found && *wcounts[w] < HUB_MAX_WIDGETS) {
-      memmove(wlists[w] + 1, wlists[w], *wcounts[w]);
-      wlists[w][0] = HUB_WIDGET_STOCKS;
-      (*wcounts[w])++;
-      persist_write_data(wkeys[w], wlists[w], *wcounts[w]);
+    if (found) {
+      *whas[w] = true;
+    } else {
+      persist_delete(wkeys[w]);
     }
   }
 }
