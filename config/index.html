@@ -991,14 +991,14 @@
         <div class="card">
           <div class="card-header">Countdown J&#8209;X</div>
           <div class="row">
-            <div class="row-label">Date de l'événement</div>
+            <div class="row-label">Event date</div>
             <input type="date" class="input-field" id="countdown_date">
           </div>
           <div class="row">
-            <div class="row-label">Label (10 car. max)</div>
-            <input type="text" class="input-field" id="countdown_label" maxlength="10" placeholder="ex: Vacances">
+            <div class="row-label">Label (10 chars max)</div>
+            <input type="text" class="input-field" id="countdown_label" maxlength="10" placeholder="e.g.: Holiday">
           </div>
-          <div class="card-footer">Affiche "J-X" sur le panneau Date &amp; info. Laisser vide pour désactiver.</div>
+          <div class="card-footer">Displays "D-X" on the Date &amp; info panel. Leave empty to disable.</div>
         </div>
       </div>
     </div>
@@ -2203,10 +2203,10 @@
           var label = heapFree >= 1024
             ? (heapFree / 1024).toFixed(1) + ' KB'
             : heapFree + ' B';
-          var note = heapFree < 900 ? ' ⚠️ Critique !' : (heapFree < 2000 ? ' Limité' : ' OK');
+          var note = heapFree < 900 ? ' ⚠️ Critical!' : (heapFree < 2000 ? ' Limited' : ' OK');
           var platformStr = platform ? ' · ' + platform : '';
           document.getElementById('heap_value').textContent =
-            label + ' libre' + platformStr + note;
+            label + ' free' + platformStr + note;
           document.getElementById('heap_indicator').style.display = 'flex';
         }
       })();
