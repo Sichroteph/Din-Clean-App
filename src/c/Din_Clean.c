@@ -396,6 +396,9 @@ static void draw_alt_view(GContext *ctx, uint8_t vid, int icon_id, bool fresh) {
     // --- Borne positive (nub) à droite ---
     graphics_context_set_fill_color(ctx, GColorWhite);
     graphics_fill_rect(ctx, GRect(100, 31, 7, 16), 0, GCornerNone);
+    // --- Heap free ---
+    snprintf(buf, sizeof(buf), "Heap %zuB", heap_bytes_free());
+    dtext(ctx, buf, fs, 56, 16);
     // --- Countdown ---
     if (persist_exists(HUB_PERSIST_COUNTDOWN)) {
       CountdownData cd;
