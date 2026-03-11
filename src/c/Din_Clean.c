@@ -961,6 +961,7 @@ static void do_send_weather_request(void) {
   AppMessageResult result = app_message_outbox_begin(&iter);
   if (result == APP_MSG_OK) {
     dict_write_uint8(iter, 0, 0);
+    dict_write_uint8(iter, KEY_HEAP_FREE, (uint8_t)(heap_bytes_free() >> 7));
     result = app_message_outbox_send();
     if (result == APP_MSG_OK) {
       s_weather_request_pending = false;
