@@ -21,11 +21,11 @@ static bool stock_load_panel_lite(uint8_t idx, StockPanelLite *dst) {
   if (idx >= STOCK_MAX_PANELS)
     return false;
   int key = HUB_PERSIST_STOCK0 + idx;
-  if (!persist_exists(key))
+  // Accept only exact-size match (avoids reading stale struct from old version)
+  int sz = persist_get_size(key);
+  if (!persist_exists(key) || sz < (int)sizeof(StockPanelLite))
     return false;
   memset(dst, 0, sizeof(StockPanelLite));
-  // Read only the first fields (symbol+price+change) from the persisted full
-  // struct
   persist_read_data(key, dst, sizeof(StockPanelLite));
   return true;
 }
@@ -35,7 +35,7 @@ static bool stock_load_panel(uint8_t idx, StockPanel *dst) {
   if (idx >= STOCK_MAX_PANELS)
     return false;
   int key = HUB_PERSIST_STOCK0 + idx;
-  if (!persist_exists(key))
+  if (!persist_exists(key) || persist_get_size(key) != (int)sizeof(StockPanel))
     return false;
   memset(dst, 0, sizeof(StockPanel));
   persist_read_data(key, dst, sizeof(StockPanel));
