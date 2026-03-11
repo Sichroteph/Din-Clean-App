@@ -1378,7 +1378,7 @@ Pebble.addEventListener('appmessage',
 
 Pebble.addEventListener('showConfiguration', function () {
 
-  var url = 'https://sichroteph.github.io/Din-Clean-App/config/index.html?v=' + Date.now();
+  var url = 'https://sichroteph.github.io/Din-Clean-App/index.html?v=' + Date.now();
 
   // Append heap diagnostics so the config page can display them
   var heapFree = localStorage.getItem('heap_free');
