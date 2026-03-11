@@ -42,7 +42,8 @@ typedef struct {
 
 static const WidgetDef s_widget_defs[] = {
     [HUB_WIDGET_STOCKS] = {widget_stocks_draw, widget_stocks_page_count},
-    [HUB_WIDGET_WEATHER_HOURLY] = {widget_hourly_draw, widget_hourly_page_count},
+    [HUB_WIDGET_WEATHER_HOURLY] = {widget_hourly_draw,
+                                   widget_hourly_page_count},
     [HUB_WIDGET_WEATHER_DAILY] = {widget_daily_draw, widget_daily_page_count},
 };
 
@@ -534,27 +535,30 @@ static void draw_daily_row(GContext *ctx, int y, int day_index, int bounds_w) {
   // Temperature (right of icon)
   char tbuf[7];
   snprintf(tbuf, sizeof(tbuf), "%d\xc2\xb0", days_temp_v[day_index]);
-  graphics_draw_text(
-      ctx, tbuf, font24b, GRect(84, y - 2, 58, 28),
-      GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
+  graphics_draw_text(ctx, tbuf, font24b, GRect(84, y - 2, 58, 28),
+                     GTextOverflowModeTrailingEllipsis, GTextAlignmentRight,
+                     NULL);
 
   // Rain (below temp, right side)
   char rbuf[6];
   snprintf(rbuf, sizeof(rbuf), "%dmm", days_rain_v[day_index]);
-  graphics_draw_text(
-      ctx, rbuf, font14, GRect(84, y + 24, 58, 16),
-      GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
+  graphics_draw_text(ctx, rbuf, font14, GRect(84, y + 24, 58, 16),
+                     GTextOverflowModeTrailingEllipsis, GTextAlignmentRight,
+                     NULL);
 
   // Wind (below rain, right side)
   char wbuf[6];
   const char *wu = wind_unit_str;
   // Abbreviate unit for compact display
-  if (wu[0] == 'k') snprintf(wbuf, sizeof(wbuf), "%dkm", days_wind_v[day_index]);
-  else if (wu[0] == 'm' && wu[1] == '/') snprintf(wbuf, sizeof(wbuf), "%dms", days_wind_v[day_index]);
-  else snprintf(wbuf, sizeof(wbuf), "%dmp", days_wind_v[day_index]);
-  graphics_draw_text(
-      ctx, wbuf, font14, GRect(84, y + 38, 58, 16),
-      GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
+  if (wu[0] == 'k')
+    snprintf(wbuf, sizeof(wbuf), "%dkm", days_wind_v[day_index]);
+  else if (wu[0] == 'm' && wu[1] == '/')
+    snprintf(wbuf, sizeof(wbuf), "%dms", days_wind_v[day_index]);
+  else
+    snprintf(wbuf, sizeof(wbuf), "%dmp", days_wind_v[day_index]);
+  graphics_draw_text(ctx, wbuf, font14, GRect(84, y + 38, 58, 16),
+                     GTextOverflowModeTrailingEllipsis, GTextAlignmentRight,
+                     NULL);
 }
 
 static void widget_daily_draw(GContext *ctx, GRect bounds, uint8_t page) {

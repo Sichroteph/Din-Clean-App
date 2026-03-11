@@ -128,8 +128,8 @@ void ui_draw_icon_bar(GContext *ctx, const IconBarData *d) {
     graphics_draw_text(ctx, d->week_day, fsmall, dayw_r,
                        GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
     if (d->is_connected) {
-      graphics_draw_text(ctx, d->mday, fmed, day_r,
-                         GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
+      graphics_draw_text(ctx, d->mday, fmed, day_r, GTextOverflowModeWordWrap,
+                         GTextAlignmentCenter, NULL);
     } else {
       GBitmap *bt = gbitmap_create_with_resource(RESOURCE_ID_BT_DISCONECT);
       if (bt) {
