@@ -216,6 +216,7 @@ void hub_config_init(void) {
   for (int i = 0; i < HUB_VIEW_COUNT; i++)
     g_hub_config.view_order[i] = i;
   g_hub_config.anim_enabled = 1;
+  g_hub_config.vibe_pattern = 1; // default: long
 
   // Override with persisted config if available
   hub_config_load();

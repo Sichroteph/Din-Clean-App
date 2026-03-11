@@ -1129,6 +1129,17 @@
             <input type="checkbox" class="hidden-input" id="toggle_vibration">
             <label class="toggle-track" for="toggle_vibration"></label>
           </div>
+          <div class="row">
+            <div class="row-label">
+              Timer / Alarm vibration
+              <div class="row-sublabel">Pattern when timer or alarm expires</div>
+            </div>
+            <select id="hub_vibe_pattern" style="padding:4px 8px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:0.8rem;">
+              <option value="0">Short</option>
+              <option value="1" selected>Long</option>
+              <option value="2">Urgent</option>
+            </select>
+          </div>
         </div>
       </div>
     </div>
@@ -2010,6 +2021,7 @@
         'wind_speed_unit': document.getElementById('wind_unit_kmh').checked ? 'kmh' : 'ms',
         'hub_timeout': document.getElementById('hub_timeout').value,
         'hub_anim': document.getElementById('hub_anim').checked ? '1' : '0',
+        'hub_vibe_pattern': document.getElementById('hub_vibe_pattern').value,
         'hub_btn_up': document.getElementById('hub_btn_up_widgets').checked ? '1' : '0',
         'hub_btn_down': document.getElementById('hub_btn_down_menu').checked ? '0' : '1',
         'hub_lp_up': document.getElementById('hub_lp_up').value,
@@ -2094,6 +2106,7 @@
       document.getElementById('input_iopool_token').value = localStorage['input_iopool_token'] || '';
       document.getElementById('toggle_vibration').checked = JSON.parse(localStorage['toggle_vibration'] || 'false');
       document.getElementById('toggle_bt').checked = JSON.parse(localStorage['toggle_bt'] || 'false');
+      document.getElementById('hub_vibe_pattern').value = localStorage['hub_vibe_pattern'] || '1';
       document.getElementById('color_right_back').value = localStorage['color_right_back'] || '0x000000';
       document.getElementById('color_left_back').value = localStorage['color_left_back'] || '0x000000';
 

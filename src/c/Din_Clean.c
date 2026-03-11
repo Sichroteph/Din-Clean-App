@@ -411,23 +411,25 @@ static void action_toast_clear_cb(void *context) {
 // Draws the "Action sent!" overlay over whatever is currently on screen.
 // Registers a 1.5-second timer the first time it is called so the overlay
 // disappears automatically. Safe to call from update_proc.
+static void draw_toast(GContext *ctx, const char *text) {
+  graphics_context_set_fill_color(ctx, GColorBlack);
+  graphics_fill_rect(ctx, GRect(10, 64, 124, 36), 4, GCornersAll);
+  graphics_context_set_stroke_color(ctx, GColorWhite);
+  graphics_draw_round_rect(ctx, GRect(10, 64, 124, 36), 4);
+  graphics_context_set_text_color(ctx, GColorWhite);
+  graphics_draw_text(ctx, text,
+                     fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
+                     GRect(12, 68, 120, 28), GTextOverflowModeTrailingEllipsis,
+                     GTextAlignmentCenter, NULL);
+}
+
 static void draw_action_toast(GContext *ctx) {
   if (!g_hub_action_toast)
     return;
   if (!s_action_toast_timer)
     s_action_toast_timer =
         app_timer_register(1500, action_toast_clear_cb, NULL);
-  // Rounded rectangle backdrop
-  graphics_context_set_fill_color(ctx, GColorBlack);
-  graphics_fill_rect(ctx, GRect(10, 64, 124, 36), 4, GCornersAll);
-  graphics_context_set_stroke_color(ctx, GColorWhite);
-  graphics_draw_round_rect(ctx, GRect(10, 64, 124, 36), 4);
-  // Label
-  graphics_context_set_text_color(ctx, GColorWhite);
-  graphics_draw_text(ctx, "Action sent!",
-                     fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
-                     GRect(12, 68, 120, 28), GTextOverflowModeTrailingEllipsis,
-                     GTextAlignmentCenter, NULL);
+  draw_toast(ctx, "Action sent!");
 }
 
 static void update_proc(Layer *layer, GContext *ctx) {
@@ -482,6 +484,8 @@ static void update_proc(Layer *layer, GContext *ctx) {
     if (vid == HUB_VIEW_WEATHER || vid == HUB_VIEW_DATE) {
       draw_alt_view(ctx, vid, icon_id, has_fresh_weather);
       draw_action_toast(ctx);
+      if (g_hub_ring_active)
+        draw_toast(ctx, g_hub_ring_active == 1 ? "Timer!" : "Alarm!");
       return;
     }
   }
@@ -535,18 +539,13 @@ static void update_proc(Layer *layer, GContext *ctx) {
 
   draw_action_toast(ctx);
 
+  // Ring alert toast (timer/alarm expiry — stays until dismissed)
+  if (g_hub_ring_active)
+    draw_toast(ctx, g_hub_ring_active == 1 ? "Timer!" : "Alarm!");
+
   // Exit hint toast (double-back to exit)
-  if (s_show_exit_hint) {
-    graphics_context_set_fill_color(ctx, GColorBlack);
-    graphics_fill_rect(ctx, GRect(10, 64, 124, 36), 4, GCornersAll);
-    graphics_context_set_stroke_color(ctx, GColorWhite);
-    graphics_draw_round_rect(ctx, GRect(10, 64, 124, 36), 4);
-    graphics_context_set_text_color(ctx, GColorWhite);
-    graphics_draw_text(
-        ctx, "Press < to exit", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
-        GRect(12, 68, 120, 28), GTextOverflowModeTrailingEllipsis,
-        GTextAlignmentCenter, NULL);
-  }
+  if (s_show_exit_hint)
+    draw_toast(ctx, "Press < to exit");
 
   APP_LOG(APP_LOG_LEVEL_INFO, "HEAP post-render: %zu", heap_bytes_free());
 }
@@ -835,6 +834,8 @@ static void inbox_received_callback(DictionaryIterator *iterator,
       hub_config_parse_widgets(t->value->cstring, false);
     if ((t = dict_find(iterator, KEY_HUB_ANIM)))
       g_hub_config.anim_enabled = (t->value->int32 == 1) ? 1 : 0;
+    if ((t = dict_find(iterator, KEY_HUB_VIBE_PATTERN)))
+      g_hub_config.vibe_pattern = (uint8_t)t->value->int32;
 
     if ((t = dict_find(iterator, KEY_HUB_COUNTDOWN))) {
       int32_t ts = t->value->int32;
@@ -911,8 +912,10 @@ static void inbox_received_callback(DictionaryIterator *iterator,
       // Parse history points (binary: each char = value + 33, range 0-90)
       for (int h = 0; h < STOCK_HISTORY_POINTS && *s && *s != '|'; h++) {
         int val = (int)(*s) - 33;
-        if (val < 0) val = 0;
-        if (val > 90) val = 90;
+        if (val < 0)
+          val = 0;
+        if (val > 90)
+          val = 90;
         p.history[h] = (uint8_t)val;
         s++;
       }
@@ -942,7 +945,7 @@ static void do_send_weather_request(void) {
   AppMessageResult result = app_message_outbox_begin(&iter);
   if (result == APP_MSG_OK) {
     dict_write_uint8(iter, 0, 0);
-    dict_write_uint32(iter, KEY_HEAP_FREE, (uint32_t)heap_bytes_free());
+    dict_write_uint8(iter, KEY_HEAP_FREE, (uint8_t)(heap_bytes_free() >> 7));
     result = app_message_outbox_send();
     if (result == APP_MSG_OK) {
       s_weather_request_pending = false;
@@ -1105,6 +1108,12 @@ static void back_exit_hint_clear(void *context) {
 }
 
 static void back_click_handler(ClickRecognizerRef recognizer, void *context) {
+  // Dismiss ring alert if active
+  if (g_hub_ring_active) {
+    hub_ring_dismiss();
+    layer_mark_dirty(layer);
+    return;
+  }
   // If not on default view, switch back first and reset counter
   if (current_view_index != 0) {
     current_view_index = 0;
@@ -1144,6 +1153,7 @@ static void back_click_handler(ClickRecognizerRef recognizer, void *context) {
 }
 
 static void up_click_handler(ClickRecognizerRef recognizer, void *context) {
+  if (g_hub_ring_active) { hub_ring_dismiss(); layer_mark_dirty(layer); return; }
   hub_timeout_reset();
   if (g_hub_config.btn_up_type == HUB_OBJ_MENU) {
     hub_menu_push(true, HUB_DIR_UP);
@@ -1153,6 +1163,7 @@ static void up_click_handler(ClickRecognizerRef recognizer, void *context) {
 }
 
 static void down_click_handler(ClickRecognizerRef recognizer, void *context) {
+  if (g_hub_ring_active) { hub_ring_dismiss(); layer_mark_dirty(layer); return; }
   hub_timeout_reset();
   if (g_hub_config.btn_down_type == HUB_OBJ_MENU) {
     hub_menu_push(false, HUB_DIR_DOWN);
@@ -1162,6 +1173,7 @@ static void down_click_handler(ClickRecognizerRef recognizer, void *context) {
 }
 
 static void select_click_handler(ClickRecognizerRef recognizer, void *context) {
+  if (g_hub_ring_active) { hub_ring_dismiss(); layer_mark_dirty(layer); return; }
   if (g_hub_config.view_count > 1) {
     current_view_index = (current_view_index + 1) % g_hub_config.view_count;
     hub_timeout_reset();

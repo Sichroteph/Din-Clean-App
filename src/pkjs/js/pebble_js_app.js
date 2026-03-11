@@ -1363,8 +1363,9 @@ Pebble.addEventListener('appmessage',
 
     // Capture heap diagnostics sent by the watch alongside weather requests
     if (e.payload && e.payload['KEY_HEAP_FREE'] !== undefined) {
-      localStorage.setItem('heap_free', e.payload['KEY_HEAP_FREE']);
-      console.log('[DIAG] heap_free=' + e.payload['KEY_HEAP_FREE']);
+      var heapFree = e.payload['KEY_HEAP_FREE'] * 128;
+      localStorage.setItem('heap_free', heapFree);
+      console.log('[DIAG] heap_free~' + heapFree + 'B');
     }
 
     if ((navigator.onLine) || (b_force_internet)) {
@@ -1448,6 +1449,8 @@ Pebble.addEventListener('webviewclosed', function (e) {
     // --- Hub configuration ---
     var hub_timeout = parseInt(configData['hub_timeout']) || 30;
     var hub_anim = (configData['hub_anim'] !== undefined) ? parseInt(configData['hub_anim']) : 1;
+    var hub_vibe_pattern = parseInt(configData['hub_vibe_pattern']) || 1;
+    localStorage.setItem('hub_vibe_pattern', hub_vibe_pattern);
     var hub_btn_up = (configData['hub_btn_up'] !== undefined) ? parseInt(configData['hub_btn_up']) : 1;  // 0=menu, 1=widgets
     var hub_btn_down = (configData['hub_btn_down'] !== undefined) ? parseInt(configData['hub_btn_down']) : 0; // 0=menu, 1=widgets
 
@@ -1462,6 +1465,7 @@ Pebble.addEventListener('webviewclosed', function (e) {
 
     dict['KEY_HUB_TIMEOUT'] = hub_timeout;
     dict['KEY_HUB_ANIM'] = (hub_anim === 1) ? 1 : 2;          // 1=on, 2=off
+    dict['KEY_HUB_VIBE_PATTERN'] = hub_vibe_pattern;            // 0=short, 1=long, 2=urgent
     dict['KEY_HUB_BTN_UP'] = (hub_btn_up === 1) ? 1 : 2;      // 1=widgets, 2=menu
     dict['KEY_HUB_BTN_DOWN'] = (hub_btn_down === 1) ? 1 : 2;  // 1=widgets, 2=menu
 
