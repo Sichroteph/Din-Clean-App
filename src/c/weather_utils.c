@@ -1,31 +1,20 @@
 #include "weather_utils.h"
 
-// Abbreviated weekday names (3 chars)
-static const char *const s_weekday_abbrev_fr[] = {"DIM", "LUN", "MAR", "MER",
-                                                  "JEU", "VEN", "SAM"};
-static const char *const s_weekday_abbrev_en[] = {"SUN", "MON", "TUE", "WED",
-                                                  "THU", "FRI", "SAT"};
-static const char *const s_weekday_abbrev_de[] = {"SON", "MON", "DIE", "MIT",
-                                                  "DON", "FRE", "SAM"};
-static const char *const s_weekday_abbrev_es[] = {"DOM", "LUN", "MAR", "MIE",
-                                                  "JUE", "VIE", "SAB"};
+// Packed weekday abbreviations (3 chars each, NUL-separated, indexed by day*4)
+static const char s_wd_fr[] = "DIM\0LUN\0MAR\0MER\0JEU\0VEN\0SAM";
+static const char s_wd_en[] = "SUN\0MON\0TUE\0WED\0THU\0FRI\0SAT";
+static const char s_wd_de[] = "SON\0MON\0DIE\0MIT\0DON\0FRE\0SAM";
+static const char s_wd_es[] = "DOM\0LUN\0MAR\0MIE\0JUE\0VIE\0SAB";
 
 const char *weather_utils_get_weekday_abbrev(const char *locale,
                                              int day_index) {
-  if (day_index < 0 || day_index > 6) {
+  if (day_index < 0 || day_index > 6)
     return "";
-  }
-
-  if (locale && locale[0] == 'f' && locale[1] == 'r') {
-    return s_weekday_abbrev_fr[day_index];
-  }
-  if (locale && locale[0] == 'd' && locale[1] == 'e') {
-    return s_weekday_abbrev_de[day_index];
-  }
-  if (locale && locale[0] == 'e' && locale[1] == 's') {
-    return s_weekday_abbrev_es[day_index];
-  }
-  return s_weekday_abbrev_en[day_index];
+  const char *base = s_wd_en;
+  if (locale && locale[0] == 'f' && locale[1] == 'r') base = s_wd_fr;
+  else if (locale && locale[0] == 'd' && locale[1] == 'e') base = s_wd_de;
+  else if (locale && locale[0] == 'e' && locale[1] == 's') base = s_wd_es;
+  return base + day_index * 4;
 }
 
 int weather_utils_build_icon(const char *code) {

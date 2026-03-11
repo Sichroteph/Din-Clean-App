@@ -7,10 +7,10 @@ extern uint8_t graph_rains[];
 extern uint8_t graph_wind_val[];
 extern uint8_t graph_hours[];
 extern char wind_unit_str[];
-extern char days_temp[][8];
-extern char days_icon[][4];
-extern char days_rain[][5];
-extern char days_wind[][5];
+extern int8_t days_temp_v[];
+extern char days_icon[][3];
+extern uint8_t days_rain_v[];
+extern uint8_t days_wind_v[];
 
 // Stock data — count in RAM, panels loaded on demand from persist
 extern uint8_t stock_panel_count;
@@ -38,16 +38,12 @@ static uint8_t widget_daily_page_count(void);
 typedef struct {
   void (*draw)(GContext *ctx, GRect bounds, uint8_t page);
   uint8_t (*page_count)(void);
-  const char *name;
 } WidgetDef;
 
 static const WidgetDef s_widget_defs[] = {
-    [HUB_WIDGET_STOCKS] = {widget_stocks_draw, widget_stocks_page_count,
-                           "Stocks"},
-    [HUB_WIDGET_WEATHER_HOURLY] = {widget_hourly_draw, widget_hourly_page_count,
-                                   "Hourly"},
-    [HUB_WIDGET_WEATHER_DAILY] = {widget_daily_draw, widget_daily_page_count,
-                                  "Daily"},
+    [HUB_WIDGET_STOCKS] = {widget_stocks_draw, widget_stocks_page_count},
+    [HUB_WIDGET_WEATHER_HOURLY] = {widget_hourly_draw, widget_hourly_page_count},
+    [HUB_WIDGET_WEATHER_DAILY] = {widget_daily_draw, widget_daily_page_count},
 };
 
 typedef struct {
@@ -215,14 +211,11 @@ static uint8_t widget_stocks_page_count(void) {
 }
 static uint8_t widget_hourly_page_count(void) { return 2; }
 static uint8_t widget_daily_page_count(void) {
-  // A day is valid if days_temp is non-empty and not the default "--"
+  // A day is valid if days_temp_v is not the sentinel -128
   uint8_t n = 0;
   for (uint8_t i = 0; i < 5; i++) {
-    char c0 = days_temp[i][0];
-    if (c0 == '\0')
-      break; // empty string
-    if (c0 == '-' && days_temp[i][1] == '-')
-      break; // default "--"
+    if (days_temp_v[i] == -128)
+      break;
     n++;
   }
   return n > 0 ? (n + 1) / 2 : 1;
@@ -508,10 +501,9 @@ static void widget_hourly_draw(GContext *ctx, GRect bounds, uint8_t page) {
 
 static void draw_daily_row(GContext *ctx, int y, int day_index, int bounds_w) {
   if (day_index >= 5)
-    return; // only 5 days available
-  // Skip rows with no data (empty or default "--" temperature)
-  char c0 = days_temp[day_index][0];
-  if (c0 == '\0' || (c0 == '-' && days_temp[day_index][1] == '-'))
+    return;
+  // Skip rows with no data (sentinel -128)
+  if (days_temp_v[day_index] == -128)
     return;
   graphics_context_set_text_color(ctx, GColorWhite);
 
@@ -531,7 +523,7 @@ static void draw_daily_row(GContext *ctx, int y, int day_index, int bounds_w) {
                      GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft,
                      NULL);
 
-  // Weather icon (center-left) — use text icon name
+  // Weather icon (center-left)
   int icon_id = weather_utils_build_icon(days_icon[day_index]);
   GBitmap *bmp = gbitmap_create_with_resource(icon_id);
   if (bmp) {
@@ -540,18 +532,28 @@ static void draw_daily_row(GContext *ctx, int y, int day_index, int bounds_w) {
   }
 
   // Temperature (right of icon)
+  char tbuf[7];
+  snprintf(tbuf, sizeof(tbuf), "%d\xc2\xb0", days_temp_v[day_index]);
   graphics_draw_text(
-      ctx, days_temp[day_index], font24b, GRect(84, y - 2, 58, 28),
+      ctx, tbuf, font24b, GRect(84, y - 2, 58, 28),
       GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
 
   // Rain (below temp, right side)
+  char rbuf[6];
+  snprintf(rbuf, sizeof(rbuf), "%dmm", days_rain_v[day_index]);
   graphics_draw_text(
-      ctx, days_rain[day_index], font14, GRect(84, y + 24, 58, 16),
+      ctx, rbuf, font14, GRect(84, y + 24, 58, 16),
       GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
 
   // Wind (below rain, right side)
+  char wbuf[6];
+  const char *wu = wind_unit_str;
+  // Abbreviate unit for compact display
+  if (wu[0] == 'k') snprintf(wbuf, sizeof(wbuf), "%dkm", days_wind_v[day_index]);
+  else if (wu[0] == 'm' && wu[1] == '/') snprintf(wbuf, sizeof(wbuf), "%dms", days_wind_v[day_index]);
+  else snprintf(wbuf, sizeof(wbuf), "%dmp", days_wind_v[day_index]);
   graphics_draw_text(
-      ctx, days_wind[day_index], font14, GRect(84, y + 38, 58, 16),
+      ctx, wbuf, font14, GRect(84, y + 38, 58, 16),
       GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
 }
 
@@ -567,7 +569,7 @@ static void widget_daily_draw(GContext *ctx, GRect bounds, uint8_t page) {
   }
 
   // Dotted separator + second row only when two days are available
-  bool has_second = (first_day + 1 < 5);
+  bool has_second = (first_day + 1 < 5) && (days_temp_v[first_day + 1] != -128);
   if (has_second) {
     for (int x = 4; x < bounds.size.w - 4; x += 3) {
       graphics_draw_pixel(ctx, GPoint(x, 78));

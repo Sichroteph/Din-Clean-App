@@ -102,11 +102,15 @@ void ui_draw_icon_bar(GContext *ctx, const IconBarData *d) {
   }
 
   graphics_context_set_compositing_mode(ctx, GCompOpSet);
-  graphics_context_set_text_color(ctx, d->color_temp);
+  graphics_context_set_text_color(ctx, GColorWhite);
 
   if (!d->has_fresh_weather) {
     return;
   }
+
+  GFont fsmall = fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD);
+  GFont fmed = fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD);
+  GFont fbold = fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
 
   // Draw background bitmap (34×168) at sidebar origin
   GBitmap *background = gbitmap_create_with_resource(RESOURCE_ID_BACKGROUND);
@@ -121,10 +125,10 @@ void ui_draw_icon_bar(GContext *ctx, const IconBarData *d) {
 
   // Connection / quiet time status
   if (!d->is_quiet_time) {
-    graphics_draw_text(ctx, d->week_day, d->fontsmall, dayw_r,
+    graphics_draw_text(ctx, d->week_day, fsmall, dayw_r,
                        GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
     if (d->is_connected) {
-      graphics_draw_text(ctx, d->mday, d->fontmedium, day_r,
+      graphics_draw_text(ctx, d->mday, fmed, day_r,
                          GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
     } else {
       GBitmap *bt = gbitmap_create_with_resource(RESOURCE_ID_BT_DISCONECT);
@@ -134,7 +138,7 @@ void ui_draw_icon_bar(GContext *ctx, const IconBarData *d) {
       }
     }
   } else {
-    graphics_draw_text(ctx, d->week_day, d->fontsmall, dayw_r,
+    graphics_draw_text(ctx, d->week_day, fsmall, dayw_r,
                        GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
     GBitmap *silent = gbitmap_create_with_resource(RESOURCE_ID_SILENT);
     if (silent) {
@@ -158,13 +162,13 @@ void ui_draw_icon_bar(GContext *ctx, const IconBarData *d) {
 
   draw_wind_overlays(ctx, d->wind_speed_val, d->met_unit);
 
-  graphics_draw_text(ctx, d->weather_temp_text, d->fontmedium,
+  graphics_draw_text(ctx, d->weather_temp_text, fmed,
                      GRect(IB_TEMP_X, IB_TEMP_Y, 60, 60),
                      GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
-  graphics_draw_text(ctx, d->min_temp_text, d->fontsmallbold,
+  graphics_draw_text(ctx, d->min_temp_text, fbold,
                      GRect(IB_TMIN_X, IB_TMIN_Y, 45, 35),
                      GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
-  graphics_draw_text(ctx, d->max_temp_text, d->fontsmallbold,
+  graphics_draw_text(ctx, d->max_temp_text, fbold,
                      GRect(IB_TMAX_X, IB_TMAX_Y, 45, 35),
                      GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
 }

@@ -3,22 +3,18 @@
 #include <pebble.h>
 
 typedef struct {
-  GFont fontsmall;
-  GFont fontsmallbold;
-  GFont fontmedium;
-  GColor color_temp;
   const char *week_day;
   const char *mday;
   const char *min_temp_text;
   const char *max_temp_text;
   const char *weather_temp_text;
+  uint16_t icon_id;
+  uint8_t humidity;
+  uint8_t wind_speed_val;
+  uint8_t met_unit;
   bool has_fresh_weather;
   bool is_connected;
   bool is_quiet_time;
-  int humidity;
-  int wind_speed_val;
-  int met_unit;
-  int icon_id;
 } IconBarData;
 
 void ui_draw_icon_bar(GContext *ctx, const IconBarData *data);

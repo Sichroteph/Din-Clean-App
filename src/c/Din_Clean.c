@@ -195,8 +195,8 @@ static Layer *layer;
 Layer *g_main_layer;
 
 static char week_day[4] = " ";
-static char mday[4] = " ";
-static char weather_temp_char[8] = " ";
+static char mday[3] = " ";
+static char weather_temp_char[7] = " ";
 static char minTemp[6] = " ";
 static char maxTemp[6] = " ";
 
@@ -219,7 +219,7 @@ time_t last_refresh = 0;
 int duration = 3600;
 int offline_delay = 3600;
 
-static char icon[4] = " ";
+static char icon[3] = " ";
 
 // Hourly forecast data (9 temps for 0-24h, 12 rain bars, 8 winds for 0-24h, 4
 // hours for 0-12h)
@@ -228,11 +228,11 @@ uint8_t graph_rains[12] = {0};
 uint8_t graph_wind_val[8] = {0};
 uint8_t graph_hours[4] = {0, 3, 6, 9};
 
-// 3-day forecast data
-char days_temp[5][8] = {"--", "--", "--", "--", "--"};
-char days_icon[5][4] = {"", "", "", "", ""};
-char days_rain[5][5] = {"0mm", "0mm", "0mm", "0mm", "0mm"};
-char days_wind[5][5] = {"0km", "0km", "0km", "0km", "0km"};
+// 3-day forecast data (integer storage — formatted on draw)
+int8_t days_temp_v[5] = {-128, -128, -128, -128, -128}; // -128 = no data
+char days_icon[5][3] = {"", "", "", "", ""};
+uint8_t days_rain_v[5] = {0};
+uint8_t days_wind_v[5] = {0};
 char wind_unit_str[5] = "km/h";
 
 // Stock widget data count (panels stored in persist, loaded on demand)
@@ -267,17 +267,6 @@ static AppFlags flags = {.is_metric = 1,
                          .is_vibration = 0,
                          .is_charging = 0,
                          .is_connected = 0};
-
-static GColor color_temp;
-
-static int8_t hour_offset_x = 0;
-static int8_t hour_offset_y = 0;
-static int8_t status_offset_x = 0;
-static int8_t status_offset_y = 0;
-
-static GFont fontsmall;
-static GFont fontsmallbold;
-static GFont fontmedium;
 
 static void app_focus_changed(bool focused) {
   if (focused) {
@@ -467,19 +456,13 @@ static void draw_action_toast(GContext *ctx) {
 }
 
 static void update_proc(Layer *layer, GContext *ctx) {
-  // Static locals for large structs to avoid stack overflow on real hardware
-  // (Pebble watch has ~2KB app stack; IconBarData/TimeRenderData would
-  // overflow).
-  static TimeRenderData time_data;
+  // Static local for IconBarData to avoid stack overflow on real hardware
   static IconBarData icon_data;
 
   if (!s_init_done) {
-    // Called during window_stack_push before init() finishes — skip drawing.
     return;
   }
 
-  // Skip rendering when a hub window is on top (menu/widgets/actions) —
-  // avoids loading bitmaps that would be hidden anyway.
   if (window_stack_get_top_window() != s_main_window) {
     return;
   }
@@ -489,9 +472,7 @@ static void update_proc(Layer *layer, GContext *ctx) {
 
   // Draw background
   graphics_context_set_fill_color(ctx, GColorBlack);
-  graphics_fill_rect(ctx, GRect(RULER_XOFFSET, 0, 160, 180), 0, GCornerNone);
-  graphics_context_set_fill_color(ctx, GColorBlack);
-  graphics_fill_rect(ctx, GRect(0, 0, RULER_XOFFSET, 180), 0, GCornerNone);
+  graphics_fill_rect(ctx, GRect(0, 0, 160, 180), 0, GCornerNone);
 
   t = time(NULL);
   now = *(localtime(&t));
@@ -501,14 +482,14 @@ static void update_proc(Layer *layer, GContext *ctx) {
            weather_utils_get_weekday_abbrev(locale, now.tm_wday));
 
   snprintf(mday, sizeof(mday), "%i", now.tm_mday);
-  graphics_context_set_text_color(ctx, color_temp);
+  graphics_context_set_text_color(ctx, GColorWhite);
 
   bool has_fresh_weather =
       ((mktime(&now) - last_refresh) < duration + offline_delay);
 
-  snprintf(weather_temp_char, sizeof(weather_temp_char), "%i°", weather_temp);
-  snprintf(minTemp, sizeof(minTemp), "%i°", tmin_val);
-  snprintf(maxTemp, sizeof(maxTemp), "%i°", tmax_val);
+  snprintf(weather_temp_char, sizeof(weather_temp_char), "%i\xc2\xb0", weather_temp);
+  snprintf(minTemp, sizeof(minTemp), "%i\xc2\xb0", tmin_val);
+  snprintf(maxTemp, sizeof(maxTemp), "%i\xc2\xb0", tmax_val);
 
   // Alternative views: configurable via view_order
   if (current_view_index > 0 && current_view_index < g_hub_config.view_count) {
@@ -524,38 +505,15 @@ static void update_proc(Layer *layer, GContext *ctx) {
   }
 
   // Draw hours FIRST for instant display (only 4 small bitmaps)
-  static char heure[10];
-  t = time(NULL);
-  now = *(localtime(&t));
-
-  if (clock_is_24h_style() == true) {
+  char heure[5];
+  if (clock_is_24h_style()) {
     strftime(heure, sizeof(heure), "%H%M", &now);
   } else {
     strftime(heure, sizeof(heure), "%I%M", &now);
   }
-
-  if (IS_HOUR_FICTIVE) {
-    snprintf(heure, sizeof(heure), "%i%i", FICTIVE_HOUR, FICTIVE_MINUTE);
-  }
-
-  int offset_x = 41;
-  int offset_y = 85;
-  int num_x = 60;
-  int num_y = 1;
-
-  time_data.digit_rects[0] = (GRect){{num_x, num_y}, {46, 81}};
-  time_data.digit_rects[1] = (GRect){{num_x + offset_x, num_y}, {46, 81}};
-  time_data.digit_rects[2] = (GRect){{num_x, num_y + offset_y}, {46, 81}};
-  time_data.digit_rects[3] =
-      (GRect){{num_x + offset_x, num_y + offset_y}, {46, 81}};
-  snprintf(time_data.digits, sizeof(time_data.digits), "%s", heure);
-  ui_draw_time(ctx, &time_data);
+  ui_draw_time(ctx, heure);
 
   // Draw icon bar AFTER time (loads many bitmaps, slower)
-  icon_data.fontsmall = fontsmall;
-  icon_data.fontsmallbold = fontsmallbold;
-  icon_data.fontmedium = fontmedium;
-  icon_data.color_temp = color_temp;
   icon_data.week_day = week_day;
   icon_data.mday = mday;
   icon_data.min_temp_text = minTemp;
@@ -579,8 +537,6 @@ static void update_proc(Layer *layer, GContext *ctx) {
   // Exit hint toast (double-back to exit)
   if (s_show_exit_hint)
     draw_toast(ctx, "Press < to exit");
-
-  APP_LOG(APP_LOG_LEVEL_INFO, "H%zu", heap_bytes_free());
 }
 
 // Forward declaration (used in handle_tick, inbox handler, and retry callback)
@@ -610,42 +566,29 @@ static void handle_tick(struct tm *cur, TimeUnits units_changed) {
 }
 
 void bt_handler(bool connected) {
-  if (connected) {
-    flags.is_connected = true;
-  } else {
-    flags.is_connected = false;
-  }
+  flags.is_connected = connected;
   if (flags.is_bt) {
     vibes_double_pulse();
   }
   layer_mark_dirty(layer);
 }
 
-static void assign_fonts() {
-  fontsmall = fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD);
-  fontsmallbold = fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
-  fontmedium = fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD);
-  hour_offset_x = 1;
-  hour_offset_y = 9;
-  status_offset_x = 1;
-  status_offset_y = 0;
-}
-
 static void hub_timeout_fired(void);
+
+// Helper: copy chars from s until '|' or end, into dst (max n-1 chars + NUL).
+static const char *cpf(const char *s, char *dst, int n) {
+  int i = 0;
+  while (*s && *s != '|' && i < n - 1) dst[i++] = *s++;
+  dst[i] = '\0';
+  if (*s == '|') s++;
+  return s;
+}
 
 static void inbox_received_callback(DictionaryIterator *iterator,
                                     void *context) {
   // Read tuples for data
   Tuple *radio_tuple = dict_find(iterator, KEY_RADIO_UNITS);
   Tuple *temp_tuple = dict_find(iterator, KEY_TEMPERATURE);
-
-  APP_LOG(APP_LOG_LEVEL_INFO,
-          "INBOX: radio=%s(%d) temp=%s hub_tmo=%s wgt_up=%s",
-          radio_tuple ? "OK" : "NULL",
-          radio_tuple ? (int)radio_tuple->value->int32 : -1,
-          temp_tuple ? "OK" : "NULL",
-          dict_find(iterator, KEY_HUB_TIMEOUT) ? "OK" : "NULL",
-          dict_find(iterator, KEY_HUB_WIDGETS_UP) ? "OK" : "NULL");
 
   // If all data is available, use it
   if (temp_tuple) {
@@ -734,23 +677,19 @@ static void inbox_received_callback(DictionaryIterator *iterator,
     for (int d = 0; d < 5; d++) {
       uint32_t base = (d < 3 ? 200 : 204) + d * 4;
       if ((t = dict_find(iterator, base)))
-        snprintf(days_temp[d], sizeof(days_temp[d]), "%s", t->value->cstring);
+        days_temp_v[d] = (int8_t)atoi(t->value->cstring);
       if ((t = dict_find(iterator, base + 1)))
         snprintf(days_icon[d], sizeof(days_icon[d]), "%s", t->value->cstring);
       if ((t = dict_find(iterator, base + 2)))
-        snprintf(days_rain[d], sizeof(days_rain[d]), "%s", t->value->cstring);
+        days_rain_v[d] = (uint8_t)atoi(t->value->cstring);
       if ((t = dict_find(iterator, base + 3))) {
-        snprintf(days_wind[d], sizeof(days_wind[d]), "%s", t->value->cstring);
+        days_wind_v[d] = (uint8_t)atoi(t->value->cstring);
         if (d == 0) {
           const char *p = t->value->cstring;
-          while (*p >= '0' && *p <= '9')
-            p++;
-          if (strncmp(p, "m/s", 3) == 0)
-            snprintf(wind_unit_str, sizeof(wind_unit_str), "m/s");
-          else if (strncmp(p, "mph", 3) == 0)
-            snprintf(wind_unit_str, sizeof(wind_unit_str), "mph");
-          else
-            snprintf(wind_unit_str, sizeof(wind_unit_str), "km/h");
+          while (*p >= '0' && *p <= '9') p++;
+          const char *u = "km/h";
+          if (*p == 'm') u = (p[1] == '/') ? "m/s" : "mph";
+          memcpy(wind_unit_str, u, 5);
         }
       }
     }
@@ -763,10 +702,10 @@ static void inbox_received_callback(DictionaryIterator *iterator,
         graph_wind_val[4 + i] = atoi(t->value->cstring);
     }
 
-    persist_write_data(KEY_DAY1_TEMP, days_temp, sizeof(days_temp));
+    persist_write_data(KEY_DAY1_TEMP, days_temp_v, sizeof(days_temp_v));
     persist_write_data(KEY_DAY1_ICON, days_icon, sizeof(days_icon));
-    persist_write_data(KEY_DAY1_RAIN, days_rain, sizeof(days_rain));
-    persist_write_data(KEY_DAY1_WIND, days_wind, sizeof(days_wind));
+    persist_write_data(KEY_DAY1_RAIN, days_rain_v, sizeof(days_rain_v));
+    persist_write_data(KEY_DAY1_WIND, days_wind_v, sizeof(days_wind_v));
 
     layer_mark_dirty(layer);
   }
@@ -790,10 +729,7 @@ static void inbox_received_callback(DictionaryIterator *iterator,
     persist_write_bool(KEY_TOGGLE_BT, flags.is_bt);
     persist_write_bool(KEY_TOGGLE_VIBRATION, flags.is_vibration);
 
-    APP_LOG(APP_LOG_LEVEL_INFO, "CONFIG: applying, is_metric=%d, vibrating",
-            (int)flags.is_metric);
-    light_enable_interaction(); // visual confirmation: backlight flashes on
-                                // config receive
+    light_enable_interaction();
     vibes_double_pulse();
 
     // Return to main clock view and refresh
@@ -906,28 +842,10 @@ static void inbox_received_callback(DictionaryIterator *iterator,
     if (idx < STOCK_MAX_PANELS) {
       StockPanel p;
       memset(&p, 0, sizeof(p));
-      // Parse symbol
-      int i = 0;
-      while (*s && *s != '|' && i < (int)sizeof(p.symbol) - 1)
-        p.symbol[i++] = *s++;
-      p.symbol[i] = '\0';
-      if (*s == '|')
-        s++;
-      // Parse price
-      i = 0;
-      while (*s && *s != '|' && i < (int)sizeof(p.price) - 1)
-        p.price[i++] = *s++;
-      p.price[i] = '\0';
-      if (*s == '|')
-        s++;
-      // Parse change
-      i = 0;
-      while (*s && *s != '|' && i < (int)sizeof(p.change) - 1)
-        p.change[i++] = *s++;
-      p.change[i] = '\0';
+      s = cpf(s, p.symbol, sizeof(p.symbol));
+      s = cpf(s, p.price, sizeof(p.price));
+      s = cpf(s, p.change, sizeof(p.change));
       p.positive = (p.change[0] != '-');
-      if (*s == '|')
-        s++;
       // Parse history points (comma-separated uint8)
       for (int h = 0; h < STOCK_HISTORY_POINTS && *s; h++) {
         int val = 0;
@@ -941,20 +859,10 @@ static void inbox_received_callback(DictionaryIterator *iterator,
         if (*s == ',')
           s++;
       }
-      // Parse price_min
-      if (*s == '|')
-        s++;
-      i = 0;
-      while (*s && *s != '|' && i < (int)sizeof(p.price_min) - 1)
-        p.price_min[i++] = *s++;
-      p.price_min[i] = '\0';
-      // Parse price_max
-      if (*s == '|')
-        s++;
-      i = 0;
-      while (*s && *s != '|' && i < (int)sizeof(p.price_max) - 1)
-        p.price_max[i++] = *s++;
-      p.price_max[i] = '\0';
+      // Parse price_min/max
+      if (*s == '|') s++;
+      s = cpf(s, p.price_min, sizeof(p.price_min));
+      s = cpf(s, p.price_max, sizeof(p.price_max));
       // Persist this panel individually
       persist_write_data(HUB_PERSIST_STOCK0 + idx, &p, sizeof(StockPanel));
       if (idx == stock_panel_count - 1) {
@@ -1015,10 +923,6 @@ static void init_var() {
   t = time(NULL);
   now = *(localtime(&t));
 
-  fontsmall = fonts_get_system_font(FONT_KEY_GOTHIC_14);
-  fontsmallbold = fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD);
-  fontmedium = fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD);
-
   if (persist_exists(KEY_RADIO_UNITS) && persist_exists(KEY_RADIO_REFRESH) &&
       persist_exists(KEY_TOGGLE_VIBRATION) && persist_exists(KEY_TOGGLE_BT)) {
 
@@ -1069,15 +973,19 @@ static void init_var() {
     if (persist_exists(KEY_FORECAST_H1))
       persist_read_data(KEY_FORECAST_H1, graph_hours, sizeof(graph_hours));
 
-    // 3-day forecast
-    if (persist_exists(KEY_DAY1_TEMP))
-      persist_read_data(KEY_DAY1_TEMP, days_temp, sizeof(days_temp));
-    if (persist_exists(KEY_DAY1_ICON))
+    // 3-day forecast (integer storage)
+    if (persist_exists(KEY_DAY1_TEMP) &&
+        persist_get_size(KEY_DAY1_TEMP) == (int)sizeof(days_temp_v))
+      persist_read_data(KEY_DAY1_TEMP, days_temp_v, sizeof(days_temp_v));
+    if (persist_exists(KEY_DAY1_ICON) &&
+        persist_get_size(KEY_DAY1_ICON) == (int)sizeof(days_icon))
       persist_read_data(KEY_DAY1_ICON, days_icon, sizeof(days_icon));
-    if (persist_exists(KEY_DAY1_RAIN))
-      persist_read_data(KEY_DAY1_RAIN, days_rain, sizeof(days_rain));
-    if (persist_exists(KEY_DAY1_WIND))
-      persist_read_data(KEY_DAY1_WIND, days_wind, sizeof(days_wind));
+    if (persist_exists(KEY_DAY1_RAIN) &&
+        persist_get_size(KEY_DAY1_RAIN) == (int)sizeof(days_rain_v))
+      persist_read_data(KEY_DAY1_RAIN, days_rain_v, sizeof(days_rain_v));
+    if (persist_exists(KEY_DAY1_WIND) &&
+        persist_get_size(KEY_DAY1_WIND) == (int)sizeof(days_wind_v))
+      persist_read_data(KEY_DAY1_WIND, days_wind_v, sizeof(days_wind_v));
 
   } else {
     last_refresh = 0;
@@ -1108,10 +1016,6 @@ static void init_var() {
     if (stock_panel_count > STOCK_MAX_PANELS)
       stock_panel_count = STOCK_MAX_PANELS;
   }
-
-  color_temp = GColorWhite;
-
-  assign_fonts();
 
   BatteryChargeState charge_state = battery_state_service_peek();
   flags.is_charging = charge_state.is_charging;
@@ -1269,7 +1173,7 @@ static void init() {
   app_message_register_inbox_received(inbox_received_callback);
   app_message_register_outbox_failed(outbox_failed_callback);
   app_message_register_outbox_sent(outbox_sent_callback);
-  AppMessageResult msg_result = app_message_open(512, 32);
+  AppMessageResult msg_result = app_message_open(480, 32);
   s_appmsg_open = (msg_result == APP_MSG_OK);
 
   init_var();
