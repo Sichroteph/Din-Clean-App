@@ -87,10 +87,10 @@ var xhrRequest = function (url, type, callback, errorCallback) {
 // WMO Weather Code → 2-char icon code
 function wmoToIcon(wmoCode, isNight) {
   switch (wmoCode) {
-    case 0:  return isNight ? 'cn' : 'sd';
-    case 1:  return isNight ? 'fn' : 'fd';
-    case 2:  return isNight ? 'pn' : 'pd';
-    case 3:  return 'cl';
+    case 0: return isNight ? 'cn' : 'sd';
+    case 1: return isNight ? 'fn' : 'fd';
+    case 2: return isNight ? 'pn' : 'pd';
+    case 3: return 'cl';
     case 45: case 48: return 'fg';
     case 51: case 53: case 55: case 63: case 65:
       return 'ra';
@@ -263,7 +263,7 @@ function processOpenMeteoResponse(responseText) {
   }
 
   // --- 3-day forecast data extraction using DAILY data ---
-  var day_temps = ["-128°","-128°","-128°","-128°","-128°"]; // sentinel = no data
+  var day_temps = ["-128°", "-128°", "-128°", "-128°", "-128°"]; // sentinel = no data
   var day_icons = ["", "", "", "", ""];
   var day_rains = ["", "", "", "", ""];
   var day_winds = ["", "", "", "", ""];

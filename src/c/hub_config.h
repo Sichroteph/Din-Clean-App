@@ -47,8 +47,8 @@ typedef struct {
 
 // Step counter persist keys (written by background worker, read by widget)
 #define HUB_PERSIST_STEPS_TODAY 230
-#define HUB_PERSIST_STEPS_DAY0  231  // yesterday
-#define HUB_PERSIST_STEPS_DATE  238  // julian day of "today"
+#define HUB_PERSIST_STEPS_DAY0 231 // yesterday
+#define HUB_PERSIST_STEPS_DATE 238 // julian day of "today"
 
 // Stock widget limits
 #define STOCK_MAX_PANELS 5
@@ -60,14 +60,14 @@ typedef struct {
   char price[12];  // Pre-formatted: "42,531", "0.9385"
   char change[8];  // "+0.8%", "-1.2%"
   uint8_t history[STOCK_HISTORY_POINTS]; // 0-90 normalized (binary: char+33)
-  bool positive;      // true if change >= 0 (for trend indicator)
-  char price_min[8];  // Graph range min label
-  char price_max[8];  // Graph range max label
+  bool positive;     // true if change >= 0 (for trend indicator)
+  char price_min[8]; // Graph range min label
+  char price_max[8]; // Graph range max label
 } StockPanel;
 
-
 // Limits
-#define HUB_MAX_MENU_ITEMS 16 // Heap-allocated: supports up to 16-item menu trees
+#define HUB_MAX_MENU_ITEMS                                                     \
+  16 // Heap-allocated: supports up to 16-item menu trees
 #define HUB_MAX_WIDGETS 6
 #define HUB_MAX_VIEWS 4
 #define HUB_MAX_LABEL 12 // Reduced from 16 to save 64 bytes BSS on APLITE
@@ -160,7 +160,7 @@ void hub_config_parse_widgets(const char *str, bool is_up);
 
 // Ring alert (timer/alarm expiry vibration loop)
 extern uint8_t g_hub_ring_active; // 0=off, 1=timer, 2=alarm
-extern Layer *g_main_layer;       // child layer in Din_Clean.c carrying update_proc
+extern Layer *g_main_layer; // child layer in Din_Clean.c carrying update_proc
 void hub_ring_dismiss(void);
 
 // Menu helper: get children of a parent (-1 for root)

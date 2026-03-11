@@ -168,8 +168,10 @@ static void menu_window_load(Window *window) {
 
 static void menu_window_unload(Window *window) {
   MenuCtx *ctx = window_get_user_data(window);
-  if (ctx->menu) menu_layer_destroy(ctx->menu);
-  if (ctx->owned_items) free(ctx->owned_items);
+  if (ctx->menu)
+    menu_layer_destroy(ctx->menu);
+  if (ctx->owned_items)
+    free(ctx->owned_items);
   window_destroy(ctx->window);
   free(ctx);
 }
