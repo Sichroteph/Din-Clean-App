@@ -1196,10 +1196,11 @@ function fetchStockData() {
     (function (idx) {
       var symbol = config.symbols[idx];
       var displayName = config.names[idx] || symbol;
-      // Always fetch 5 days of hourly data; variation is computed over the last 24h
+      var stockPeriod = localStorage.getItem('stock_period') || '5d';
+      var stockInterval = (stockPeriod === '5d') ? '1h' : '1d';
       var url = 'https://query1.finance.yahoo.com/v8/finance/chart/' +
         encodeURIComponent(symbol) +
-        '?range=5d&interval=1h';
+        '?range=' + stockPeriod + '&interval=' + stockInterval;
 
       console.log('Fetching stock: ' + symbol + ' → ' + url);
 
@@ -1208,15 +1209,12 @@ function fetchStockData() {
           var json = JSON.parse(responseText);
           var result = json.chart.result[0];
           var closes = result.indicators.quote[0].close;
-          var timestamps = result.timestamp || [];
 
-          // Filter out null values, keeping paired (timestamp, close)
+          // Filter out null values
           var validCloses = [];
-          var validTs = [];
           for (var c = 0; c < closes.length; c++) {
             if (closes[c] !== null) {
               validCloses.push(closes[c]);
-              validTs.push(timestamps[c] || 0);
             }
           }
 
@@ -1229,32 +1227,10 @@ function fetchStockData() {
 
           var sampled = sampleArray(validCloses, 10);
           var lastPrice = validCloses[validCloses.length - 1];
-          var lastTs = validTs[validTs.length - 1];
 
-          // Find the last point recorded on the previous trading day
-          // (i.e. last point whose local calendar date is strictly before today's)
-          var lastDate = new Date(lastTs * 1000);
-          var lastDay = lastDate.toDateString();
-          var baseIdx = 0;
-          var foundPrevDay = false;
-          for (var ti = validTs.length - 2; ti >= 0; ti--) {
-            var d = new Date(validTs[ti] * 1000).toDateString();
-            if (d !== lastDay) {
-              // Walk forward to the last point of that previous day
-              var prevDay = d;
-              var prevDayLastIdx = ti;
-              for (var tj = ti + 1; tj < validTs.length - 1; tj++) {
-                if (new Date(validTs[tj] * 1000).toDateString() === prevDay) prevDayLastIdx = tj;
-                else break;
-              }
-              baseIdx = prevDayLastIdx;
-              foundPrevDay = true;
-              break;
-            }
-          }
-          // Fallback: use oldest available point
-          if (!foundPrevDay) baseIdx = 0;
-          var basePrice = validCloses[baseIdx];
+          // Use the first point of the fetched period as base price,
+          // so the delta matches the period selected by the user (5d / 1mo / 3mo).
+          var basePrice = validCloses[0];
 
           var changePct = ((lastPrice - basePrice) / basePrice * 100);
           var changeStr = (changePct >= 0 ? '+' : '') + changePct.toFixed(1) + '%';

@@ -1297,6 +1297,10 @@
       } else if (segName === 'wind_unit') {
         document.getElementById('wind_unit_kmh').checked = (val === 'kmh');
         document.getElementById('wind_unit_ms').checked = (val === 'ms');
+      } else if (segName === 'stock_period') {
+        document.getElementById('stock_period_5d').checked = (val === '5d');
+        document.getElementById('stock_period_1mo').checked = (val === '1mo');
+        document.getElementById('stock_period_3mo').checked = (val === '3mo');
       }
     }
 
