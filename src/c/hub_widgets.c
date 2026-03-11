@@ -57,8 +57,8 @@ typedef struct {
   uint8_t widget_count;
   uint8_t current_index;
   uint8_t current_page;
-  bool nav_up_is_next;      // true if UP = next widget
-  AppTimer *refresh_timer;  // 5s live refresh when Steps widget is visible
+  bool nav_up_is_next;     // true if UP = next widget
+  AppTimer *refresh_timer; // 5s live refresh when Steps widget is visible
 } WidgetCtx;
 
 // Forward declarations
@@ -666,17 +666,18 @@ static void widget_steps_draw(GContext *ctx, GRect bounds, uint8_t page) {
 
   // Label
   GFont font14 = fonts_get_system_font(FONT_KEY_GOTHIC_14);
-  graphics_draw_text(ctx, "steps today", font14,
-                     GRect(0, 44, bounds.size.w, 16),
-                     GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter,
-                     NULL);
+  graphics_draw_text(
+      ctx, "steps today", font14, GRect(0, 44, bounds.size.w, 16),
+      GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
 
   // --- 7-day history histogram ---
 #ifdef PBL_HEALTH
   // Pre-compute today's midnight for day-boundary queries
   time_t now_hs = time(NULL);
   struct tm tm_mid = *localtime(&now_hs);
-  tm_mid.tm_hour = 0; tm_mid.tm_min = 0; tm_mid.tm_sec = 0;
+  tm_mid.tm_hour = 0;
+  tm_mid.tm_min = 0;
+  tm_mid.tm_sec = 0;
   time_t today_start = mktime(&tm_mid);
 #endif
 
@@ -685,9 +686,10 @@ static void widget_steps_draw(GContext *ctx, GRect bounds, uint8_t page) {
   for (int i = 0; i < 7; i++) {
     hist[i] = 0;
 #ifdef PBL_HEALTH
-    time_t day_end   = today_start - (time_t)i * 86400;
+    time_t day_end = today_start - (time_t)i * 86400;
     time_t day_start = day_end - 86400;
-    HealthValue hv = health_service_sum(HealthMetricStepCount, day_start, day_end);
+    HealthValue hv =
+        health_service_sum(HealthMetricStepCount, day_start, day_end);
     hist[i] = (hv > 0 && hv < 65535) ? (uint16_t)hv : 0;
 #else
     int key = HUB_PERSIST_STEPS_DAY0 + i;
@@ -700,8 +702,12 @@ static void widget_steps_draw(GContext *ctx, GRect bounds, uint8_t page) {
       hist_max = hist[i];
   }
 #ifdef DEMO_STEPS
-  { static const uint16_t d[7]={6100,9200,7400,11200,5800,8800,3500};
-    for(int j=0;j<7;j++) hist[j]=d[j]; hist_max=11200; }
+  {
+    static const uint16_t d[7] = {6100, 9200, 7400, 11200, 5800, 8800, 3500};
+    for (int j = 0; j < 7; j++)
+      hist[j] = d[j];
+    hist_max = 11200;
+  }
 #endif
 
   // Bar chart: 7 bars, bottom-aligned
@@ -727,9 +733,8 @@ static void widget_steps_draw(GContext *ctx, GRect bounds, uint8_t page) {
     char lbl[4];
     snprintf(lbl, sizeof(lbl), "-%d", 7 - i);
     int bx = gap + i * (bar_w + gap);
-    graphics_draw_text(ctx, lbl, font14,
-                       GRect(bx - 2, bar_area_bot, bar_w + 4, 14),
-                       GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter,
-                       NULL);
+    graphics_draw_text(
+        ctx, lbl, font14, GRect(bx - 2, bar_area_bot, bar_w + 4, 14),
+        GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
   }
 }
