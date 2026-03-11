@@ -24,6 +24,7 @@
 #define KEY_HUB_ANIM 362
 #define KEY_HUB_COUNTDOWN 363
 #define KEY_HUB_COUNTDOWN_LABEL 364
+#define KEY_HUB_VIBE_PATTERN 365
 
 // Countdown persist: CountdownData struct (16 bytes)
 #define HUB_PERSIST_COUNTDOWN 320
@@ -115,6 +116,7 @@ typedef struct {
   uint8_t view_count;
   uint8_t view_order[HUB_MAX_VIEWS];
   uint8_t anim_enabled; // 1 = animated transitions, 0 = instant
+  uint8_t vibe_pattern; // 0=short, 1=long(default), 2=urgent
 } HubConfig;
 
 // Global config
@@ -146,6 +148,10 @@ const uint8_t *hub_config_get_down_widgets(uint8_t *count);
 // Parse incoming menu/widget config strings from JS
 void hub_config_parse_menu(const char *str, bool is_up);
 void hub_config_parse_widgets(const char *str, bool is_up);
+
+// Ring alert (timer/alarm expiry vibration loop)
+extern uint8_t g_hub_ring_active; // 0=off, 1=timer, 2=alarm
+void hub_ring_dismiss(void);
 
 // Menu helper: get children of a parent (-1 for root)
 uint8_t hub_menu_get_children(const HubMenuItem *items, uint8_t total,
