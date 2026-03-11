@@ -1,0 +1,2249 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>Keystone</title>
+  <style>
+    /* ============================================================
+       RESET & BASE
+       ============================================================ */
+    *,
+    *::before,
+    *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg: #0f0f13;
+      --surface: #1a1a24;
+      --surface2: #22222e;
+      --border: #2a2a3a;
+      --border-light: #3a3a4e;
+      --text: #e8e8f0;
+      --text-dim: #8888a0;
+      --text-muted: #5a5a72;
+      --accent: #6c8cff;
+      --accent-glow: rgba(108, 140, 255, 0.25);
+      --accent2: #ff6c6c;
+      --success: #4ae68a;
+      --warning: #ffb84d;
+      --radius: 14px;
+      --radius-sm: 8px;
+      --shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+      --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    html {
+      font-size: 15px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro', 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      -webkit-user-select: none;
+      user-select: none;
+      padding: 0 0 100px 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ============================================================
+       HEADER
+       ============================================================ */
+    .app-header {
+      text-align: center;
+      padding: 32px 16px 20px;
+      background: linear-gradient(180deg, #1a1a2e 0%, var(--bg) 100%);
+    }
+
+    .app-header h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      background: linear-gradient(135deg, var(--accent), #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .app-header .subtitle {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+      letter-spacing: 0.5px;
+    }
+
+    /* ============================================================
+       SECTIONS
+       ============================================================ */
+    .section {
+      margin: 12px 12px 0;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      padding: 14px 16px;
+      background: var(--surface);
+      border-radius: var(--radius) var(--radius) 0 0;
+      border: 1px solid var(--border);
+      border-bottom: none;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: background var(--transition);
+    }
+
+    .section-header:active {
+      background: var(--surface2);
+    }
+
+    .section-header .icon {
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--accent-glow);
+      border-radius: 8px;
+      margin-right: 12px;
+      flex-shrink: 0;
+      font-size: 15px;
+    }
+
+    .section-header .label {
+      flex: 1;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .section-header .chevron {
+      width: 20px;
+      height: 20px;
+      color: var(--text-muted);
+      transition: transform var(--transition);
+      flex-shrink: 0;
+    }
+
+    .section.open .section-header {
+      border-radius: var(--radius) var(--radius) 0 0;
+    }
+
+    .section:not(.open) .section-header {
+      border-radius: var(--radius);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section.open .chevron {
+      transform: rotate(180deg);
+    }
+
+    .section-body {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-top: none;
+      border-radius: 0 0 var(--radius) var(--radius);
+    }
+
+    .section.open .section-body {
+      max-height: 5000px;
+      transition: max-height 0.6s cubic-bezier(0, 0.5, 0.2, 1);
+    }
+
+    .section-body-inner {
+      padding: 4px 0 12px;
+    }
+
+    /* ============================================================
+       CARDS (items inside sections)
+       ============================================================ */
+    .card {
+      margin: 8px 12px;
+      background: var(--surface2);
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 10px 14px 3px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--accent);
+    }
+
+    .card-footer {
+      padding: 3px 14px 10px;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    /* ============================================================
+       ROWS (toggle, radio, input, select)
+       ============================================================ */
+    .row {
+      display: flex;
+      align-items: center;
+      padding: 12px 14px;
+      min-height: 48px;
+    }
+
+    .row+.row {
+      border-top: 1px solid var(--border);
+    }
+
+    .row-label {
+      flex: 1;
+      font-size: 0.9rem;
+      color: var(--text);
+    }
+
+    .row-sublabel {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* Toggle switch (iOS-style) */
+    .toggle-track {
+      position: relative;
+      width: 48px;
+      height: 28px;
+      background: #3a3a4e;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: background var(--transition);
+      flex-shrink: 0;
+    }
+
+    .toggle-track::after {
+      content: '';
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      background: #fff;
+      border-radius: 11px;
+      top: 3px;
+      left: 3px;
+      transition: transform var(--transition);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    input[type="checkbox"]:checked+.toggle-track {
+      background: var(--accent);
+    }
+
+    input[type="checkbox"]:checked+.toggle-track::after {
+      transform: translateX(20px);
+    }
+
+    input[type="checkbox"].hidden-input {
+      display: none;
+    }
+
+    /* Segmented control (for radio groups) */
+    .segmented {
+      display: flex;
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 3px;
+      gap: 2px;
+      flex-shrink: 0;
+    }
+
+    .seg-btn {
+      padding: 6px 14px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-dim);
+      background: transparent;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all var(--transition);
+      white-space: nowrap;
+    }
+
+    .seg-btn.active {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(108, 140, 255, 0.3);
+    }
+
+    /* Number/text input */
+    .input-field {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 0.9rem;
+      color: var(--text);
+      width: 100%;
+      outline: none;
+      transition: border-color var(--transition);
+      font-family: inherit;
+    }
+
+    .input-field:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .input-field::placeholder {
+      color: var(--text-muted);
+    }
+
+    .input-narrow {
+      max-width: 80px;
+      text-align: center;
+    }
+
+    /* Native select override */
+    .select-field {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 0.9rem;
+      color: var(--text);
+      width: 100%;
+      outline: none;
+      -webkit-appearance: menulist;
+      appearance: menulist;
+      font-family: inherit;
+    }
+
+    /* Hidden original inputs */
+    input[type="radio"].real-radio,
+    input[type="checkbox"].real-toggle {
+      display: none;
+    }
+
+    /* ============================================================
+       SUB-HEADER (inside sections)
+       ============================================================ */
+    .sub-header {
+      padding: 14px 14px 4px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+    }
+
+    /* ============================================================
+       MENU TREE EDITOR
+       ============================================================ */
+    .menu-editor {
+      margin: 6px 14px 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg);
+      overflow: hidden;
+    }
+
+    .menu-item-row {
+      display: flex;
+      align-items: center;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface2);
+      transition: background 0.15s;
+    }
+
+    .menu-item-row:last-child {
+      border-bottom: none;
+    }
+
+    .menu-item-icon {
+      width: 24px;
+      font-size: 14px;
+      text-align: center;
+      margin-right: 8px;
+      flex-shrink: 0;
+    }
+
+    .menu-item-label {
+      flex: 1;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .menu-item-type {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      margin-right: 8px;
+      flex-shrink: 0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .menu-item-btn {
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-dim);
+      cursor: pointer;
+      border-radius: 6px;
+      font-size: 13px;
+      margin: 0 1px;
+      flex-shrink: 0;
+      transition: all 0.15s;
+    }
+
+    .menu-item-btn:active {
+      background: var(--accent-glow);
+    }
+
+    .menu-item-btn.danger {
+      color: var(--accent2);
+    }
+
+    .menu-add-row {
+      padding: 8px 12px;
+    }
+
+    .menu-add-row button {
+      width: 100%;
+      border: 1px dashed var(--accent);
+      background: transparent;
+      color: var(--accent);
+      padding: 8px;
+      cursor: pointer;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      transition: all 0.15s;
+    }
+
+    .menu-add-row button:active {
+      background: var(--accent-glow);
+    }
+
+    .menu-count {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      text-align: right;
+      padding: 4px 12px 6px;
+    }
+
+    .empty-msg {
+      padding: 20px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      font-style: italic;
+    }
+
+    /* Menu form */
+    .menu-form {
+      background: var(--surface);
+      border: 1px solid var(--accent);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      margin: 8px 14px;
+    }
+
+    .menu-form label {
+      display: block;
+      margin: 10px 0 4px;
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .menu-form label:first-child {
+      margin-top: 0;
+    }
+
+    .menu-form input[type="text"] {
+      width: 100%;
+      padding: 8px 10px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 0.85rem;
+      outline: none;
+      font-family: inherit;
+    }
+
+    .menu-form input[type="text"]:focus {
+      border-color: var(--accent);
+    }
+
+    .menu-form select {
+      display: block;
+      width: 100%;
+      padding: 8px 10px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 0.85rem;
+      -webkit-appearance: menulist;
+      appearance: menulist;
+      font-family: inherit;
+    }
+
+    .menu-form-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .menu-form-buttons button {
+      flex: 1;
+      padding: 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border: none;
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+
+    .btn-save {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn-save:active {
+      background: #5570dd;
+    }
+
+    .btn-cancel {
+      background: var(--surface2);
+      color: var(--text-dim);
+      border: 1px solid var(--border) !important;
+    }
+
+    /* ============================================================
+       WIDGET EDITOR
+       ============================================================ */
+    .widget-editor {
+      margin: 6px 14px 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg);
+      overflow: hidden;
+    }
+
+    .widget-item-row {
+      display: flex;
+      align-items: center;
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface2);
+    }
+
+    .widget-item-row:last-child {
+      border-bottom: none;
+    }
+
+    .widget-item-row.disabled {
+      opacity: 0.4;
+    }
+
+    .widget-item-check {
+      width: 20px;
+      height: 20px;
+      margin-right: 12px;
+      accent-color: var(--accent);
+      flex-shrink: 0;
+    }
+
+    .widget-item-name {
+      flex: 1;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .widget-item-desc {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      margin-right: 8px;
+    }
+
+    /* Editor panels */
+    .editor-panel {
+      margin: 4px 0;
+    }
+
+    .editor-panel.hidden {
+      display: none;
+    }
+
+    .editor-label {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      padding: 6px 14px 2px;
+      font-style: italic;
+    }
+
+    /* ============================================================
+       LP webhook URL
+       ============================================================ */
+    .lp-url-row {
+      margin-top: 8px;
+    }
+
+    /* ============================================================
+       SUBMIT BUTTON (floating)
+       ============================================================ */
+    .submit-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 12px 16px;
+      padding-bottom: max(12px, env(safe-area-inset-bottom));
+      background: linear-gradient(180deg, transparent 0%, var(--bg) 30%);
+      z-index: 100;
+    }
+
+    .submit-btn {
+      display: block;
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, var(--accent), #8b6cff);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(108, 140, 255, 0.35);
+      transition: all var(--transition);
+      font-family: inherit;
+    }
+
+    .submit-btn:active {
+      transform: scale(0.97);
+      box-shadow: 0 2px 10px rgba(108, 140, 255, 0.2);
+    }
+
+    .reset-btn {
+      display: block;
+      width: 100%;
+      margin-top: 8px;
+      padding: 10px;
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid rgba(255, 80, 80, 0.35);
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all var(--transition);
+      font-family: inherit;
+    }
+
+    .reset-btn:hover {
+      background: rgba(255, 80, 80, 0.12);
+      color: #ff5050;
+      border-color: #ff5050;
+    }
+
+    /* ============================================================
+       FOOTER
+       ============================================================ */
+    .app-footer {
+      text-align: center;
+      padding: 20px 16px 8px;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    .app-footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    /* ============================================================
+       UTILITY
+       ============================================================ */
+    .hidden {
+      display: none !important;
+    }
+
+    .color-hidden {
+      display: none;
+    }
+
+    /* ============================================================
+       ANIMATIONS
+       ============================================================ */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .section {
+      animation: fadeIn 0.3s ease both;
+    }
+
+    .section:nth-child(2) {
+      animation-delay: 0.05s;
+    }
+
+    .section:nth-child(3) {
+      animation-delay: 0.1s;
+    }
+
+    .section:nth-child(4) {
+      animation-delay: 0.15s;
+    }
+
+    .section:nth-child(5) {
+      animation-delay: 0.2s;
+    }
+
+    .section:nth-child(6) {
+      animation-delay: 0.25s;
+    }
+
+    /* ============================================================
+       HEAP MEMORY INDICATOR
+       ============================================================ */
+    .heap-indicator {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      margin: 0 16px 16px;
+      padding: 10px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      gap: 6px;
+    }
+
+    .heap-indicator-top {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      gap: 8px;
+    }
+
+    .heap-label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .heap-bar-wrap {
+      flex: 1;
+      height: 6px;
+      background: var(--bg);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .heap-bar {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.4s ease, background 0.4s ease;
+    }
+
+    .heap-value {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      width: 100%;
+      text-align: right;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- HEADER -->
+  <div class="app-header">
+    <h1>Keystone</h1>
+    <div class="subtitle">App Configuration</div>
+  </div>
+
+  <!-- HEAP MEMORY INDICATOR (populated by JS from URL params) -->
+  <div class="heap-indicator" id="heap_indicator">
+    <div class="heap-indicator-top">
+      <span class="heap-label">Heap</span>
+      <div class="heap-bar-wrap"><div class="heap-bar" id="heap_bar"></div></div>
+    </div>
+    <div class="heap-value" id="heap_value"></div>
+    <div class="heap-value" id="heap_nav_budget" style="display:none"></div>
+  </div>
+
+  <!-- ==========================================================
+       SECTION 1: BUTTONS
+       ========================================================== -->
+  <div class="section open" data-section>
+    <div class="section-header" onclick="toggleSection(this)">
+      <div class="icon">&#9881;</div>
+      <div class="label">Button Configuration</div>
+      <svg class="chevron" viewBox="0 0 20 20" fill="currentColor">
+        <path
+          d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" />
+      </svg>
+    </div>
+    <div class="section-body">
+      <div class="section-body-inner">
+
+        <!-- SHORT PRESS -->
+        <div class="sub-header">Short press</div>
+
+        <!-- UP -->
+        <div class="card">
+          <div class="card-header">UP button</div>
+          <div class="row">
+            <div class="row-label">Action</div>
+            <div class="segmented" data-seg="hub_btn_up">
+              <button class="seg-btn active" data-val="1" onclick="setSeg(this)">Widgets</button>
+              <button class="seg-btn" data-val="0" onclick="setSeg(this)">Menu</button>
+            </div>
+          </div>
+          <!-- Hidden real radios for data collection -->
+          <input type="radio" class="real-radio" name="hub_btn_up" id="hub_btn_up_widgets" value="1" checked>
+          <input type="radio" class="real-radio" name="hub_btn_up" id="hub_btn_up_menu" value="0">
+
+          <div id="editor_up_widgets" class="editor-panel">
+            <div class="editor-label">Widgets shown on UP press:</div>
+            <div class="widget-editor" id="widget_tree_up"></div>
+          </div>
+          <div id="editor_up_menu" class="editor-panel hidden">
+            <div class="editor-label">Menu shown on UP press:</div>
+            <div class="menu-editor" id="menu_tree_up"></div>
+          </div>
+        </div>
+
+        <!-- DOWN -->
+        <div class="card">
+          <div class="card-header">DOWN button</div>
+          <div class="row">
+            <div class="row-label">Action</div>
+            <div class="segmented" data-seg="hub_btn_down">
+              <button class="seg-btn active" data-val="0" onclick="setSeg(this)">Menu</button>
+              <button class="seg-btn" data-val="1" onclick="setSeg(this)">Widgets</button>
+            </div>
+          </div>
+          <input type="radio" class="real-radio" name="hub_btn_down" id="hub_btn_down_menu" value="0" checked>
+          <input type="radio" class="real-radio" name="hub_btn_down" id="hub_btn_down_widgets" value="1">
+
+          <div id="editor_down_menu" class="editor-panel">
+            <div class="editor-label">Menu shown on DOWN press:</div>
+            <div class="menu-editor" id="menu_tree_down"></div>
+          </div>
+          <div id="editor_down_widgets" class="editor-panel hidden">
+            <div class="editor-label">Widgets shown on DOWN press:</div>
+            <div class="widget-editor" id="widget_tree_down"></div>
+          </div>
+        </div>
+
+        <!-- LONG PRESS -->
+        <div class="sub-header">Long press</div>
+
+        <div class="card">
+          <div class="card-header">UP long press</div>
+          <div class="row" style="flex-wrap:wrap">
+            <select class="select-field" id="hub_lp_up" onchange="onLpChange('up')">
+              <option value="26">Webhook</option>
+              <option value="0">Stopwatch</option>
+              <option value="1">Timer</option>
+              <option value="2">Alarm</option>
+            </select>
+            <div id="lp_url_up" class="lp-url-row" style="display:none;width:100%;margin-top:8px">
+              <input type="text" class="input-field" id="lp_webhook_url_up" placeholder="https://example.com/hook">
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">DOWN long press</div>
+          <div class="row" style="flex-wrap:wrap">
+            <select class="select-field" id="hub_lp_down" onchange="onLpChange('down')">
+              <option value="0" selected>Stopwatch</option>
+              <option value="1">Timer</option>
+              <option value="2">Alarm</option>
+              <option value="27">Webhook</option>
+            </select>
+            <div id="lp_url_down" class="lp-url-row" style="display:none;width:100%;margin-top:8px">
+              <input type="text" class="input-field" id="lp_webhook_url_down" placeholder="https://example.com/hook">
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">SELECT long press</div>
+          <div class="row" style="flex-wrap:wrap">
+            <select class="select-field" id="hub_lp_select" onchange="onLpChange('select')">
+              <option value="0">Stopwatch</option>
+              <option value="1" selected>Timer</option>
+              <option value="2">Alarm</option>
+              <option value="28">Webhook</option>
+            </select>
+            <div id="lp_url_select" class="lp-url-row" style="display:none;width:100%;margin-top:8px">
+              <input type="text" class="input-field" id="lp_webhook_url_select" placeholder="https://example.com/hook">
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================
+       SECTION 2: VIEWS & BEHAVIOR
+       ========================================================== -->
+  <div class="section" data-section>
+    <div class="section-header" onclick="toggleSection(this)">
+      <div class="icon">&#128368;</div>
+      <div class="label">Navigation &amp; Behavior</div>
+      <svg class="chevron" viewBox="0 0 20 20" fill="currentColor">
+        <path
+          d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" />
+      </svg>
+    </div>
+    <div class="section-body">
+      <div class="section-body-inner">
+        <!-- Timeout -->
+        <div class="card">
+          <div class="card-header">Inactivity timeout</div>
+          <div class="row">
+            <div class="row-label">
+              Return to watchface
+              <div class="row-sublabel">0 = disabled</div>
+            </div>
+            <input type="number" class="input-field input-narrow" id="hub_timeout" value="30" min="0" max="300">
+            <span style="margin-left:6px;color:var(--text-muted);font-size:0.8rem">sec</span>
+          </div>
+        </div>
+
+        <!-- Animation -->
+        <div class="card">
+          <div class="row">
+            <div class="row-label">Transition animation</div>
+            <input type="checkbox" class="hidden-input" id="hub_anim">
+            <label class="toggle-track" for="hub_anim"></label>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">SELECT panels</div>
+          <div class="card-footer" style="margin-bottom:8px">Press SELECT on the time screen to cycle through enabled
+            panels.</div>
+          <div class="row">
+            <div class="row-label">Time <span style="color:var(--text-muted);font-size:0.8rem">(always on)</span></div>
+            <input type="checkbox" class="hidden-input" id="hub_view_0" checked disabled>
+            <label class="toggle-track" style="opacity:0.5;pointer-events:none"><span
+                style="display:none"></span></label>
+          </div>
+          <div class="row">
+            <div class="row-label">Weather detail</div>
+            <input type="checkbox" class="hidden-input" id="hub_view_1" checked>
+            <label class="toggle-track" for="hub_view_1"></label>
+          </div>
+          <div class="row">
+            <div class="row-label">Date &amp; info</div>
+            <input type="checkbox" class="hidden-input" id="hub_view_2" checked>
+            <label class="toggle-track" for="hub_view_2"></label>
+          </div>
+          <div class="row">
+            <div class="row-label">Analog clock</div>
+            <input type="checkbox" class="hidden-input" id="hub_view_3" checked>
+            <label class="toggle-track" for="hub_view_3"></label>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">Countdown J&#8209;X</div>
+          <div class="row">
+            <div class="row-label">Event date</div>
+            <input type="date" class="input-field" id="countdown_date">
+          </div>
+          <div class="row">
+            <div class="row-label">Label (10 chars max)</div>
+            <input type="text" class="input-field" id="countdown_label" maxlength="10" placeholder="e.g.: Holiday">
+          </div>
+          <div class="card-footer">Displays "D-X" on the Date &amp; info panel. Leave empty to disable.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================
+       SECTION 3: WEATHER
+       ========================================================== -->
+  <div class="section" data-section>
+    <div class="section-header" onclick="toggleSection(this)">
+      <div class="icon">&#9729;</div>
+      <div class="label">Weather</div>
+      <svg class="chevron" viewBox="0 0 20 20" fill="currentColor">
+        <path
+          d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" />
+      </svg>
+    </div>
+    <div class="section-body">
+      <div class="section-body-inner">
+
+        <div class="card">
+          <div class="card-header">Weather provider</div>
+          <div class="row">
+            <div class="row-label" style="flex:none;margin-right:auto">Provider</div>
+            <div class="segmented" data-seg="weather_api">
+              <button class="seg-btn active" data-val="openmeteo" onclick="setSeg(this)">Open-Meteo</button>
+              <button class="seg-btn" data-val="metno" onclick="setSeg(this)">MET Norway</button>
+            </div>
+          </div>
+          <input type="radio" class="real-radio" name="radio_api" id="weather_api_openmeteo" value="openmeteo" checked>
+          <input type="radio" class="real-radio" name="radio_api" id="weather_api_metno" value="metno">
+          <div class="card-footer">Open-Meteo uses AROME model (1.5km) - recommended for France.</div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">Weather update</div>
+          <div class="row">
+            <div class="row-label">Refresh interval</div>
+            <div class="segmented" data-seg="radio_refresh">
+              <button class="seg-btn" data-val="a" onclick="setSeg(this)">30 min</button>
+              <button class="seg-btn active" data-val="b" onclick="setSeg(this)">60 min</button>
+            </div>
+          </div>
+          <input type="radio" class="real-radio" name="radio2" id="radio_refresh" value="a">
+          <input type="radio" class="real-radio" name="radio2" id="radio_refresh_b" value="b" checked>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================
+       SECTION 4: DISPLAY & UNITS
+       ========================================================== -->
+  <div class="section" data-section>
+    <div class="section-header" onclick="toggleSection(this)">
+      <div class="icon">&#9874;</div>
+      <div class="label">Display &amp; Units</div>
+      <svg class="chevron" viewBox="0 0 20 20" fill="currentColor">
+        <path
+          d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" />
+      </svg>
+    </div>
+    <div class="section-body">
+      <div class="section-body-inner">
+
+        <div class="card">
+          <div class="card-header">Units</div>
+          <div class="row">
+            <div class="row-label">Temperature</div>
+            <div class="segmented" data-seg="radio_units">
+              <button class="seg-btn active" data-val="b" onclick="setSeg(this)">Metric</button>
+              <button class="seg-btn" data-val="a" onclick="setSeg(this)">Imperial</button>
+            </div>
+          </div>
+          <input type="radio" class="real-radio" name="radio1" id="radio_units" value="b" checked>
+          <input type="radio" class="real-radio" name="radio1" id="radio_units_imperial" value="a">
+        </div>
+
+        <div class="card" id="wind_speed_container">
+          <div class="card-header">Wind speed unit (metric)</div>
+          <div class="row">
+            <div class="row-label">Wind</div>
+            <div class="segmented" data-seg="wind_unit">
+              <button class="seg-btn active" data-val="kmh" onclick="setSeg(this)">km/h</button>
+              <button class="seg-btn" data-val="ms" onclick="setSeg(this)">m/s</button>
+            </div>
+          </div>
+          <input type="radio" class="real-radio" name="wind_unit" id="wind_unit_kmh" value="kmh" checked>
+          <input type="radio" class="real-radio" name="wind_unit" id="wind_unit_ms" value="ms">
+        </div>
+
+        <!-- Hidden color inputs (kept for compatibility) -->
+        <div class="color-hidden">
+          <input type="text" id="color_left_back" value="0x000000">
+          <input type="text" id="color_right_back" value="0x000000">
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================
+       SECTION 5: ALERTS
+       ========================================================== -->
+  <div class="section" data-section>
+    <div class="section-header" onclick="toggleSection(this)">
+      <div class="icon">&#128276;</div>
+      <div class="label">Alerts</div>
+      <svg class="chevron" viewBox="0 0 20 20" fill="currentColor">
+        <path
+          d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" />
+      </svg>
+    </div>
+    <div class="section-body">
+      <div class="section-body-inner">
+        <div class="card">
+          <div class="row">
+            <div class="row-label">Bluetooth disconnect vibration</div>
+            <input type="checkbox" class="hidden-input" id="toggle_bt">
+            <label class="toggle-track" for="toggle_bt"></label>
+          </div>
+          <div class="row">
+            <div class="row-label">
+              Hourly vibrations
+              <div class="row-sublabel">10am - 10pm, Pebble Time only</div>
+            </div>
+            <input type="checkbox" class="hidden-input" id="toggle_vibration">
+            <label class="toggle-track" for="toggle_vibration"></label>
+          </div>
+          <div class="row">
+            <div class="row-label">
+              Timer / Alarm vibration
+              <div class="row-sublabel">Pattern when timer or alarm expires</div>
+            </div>
+            <select id="hub_vibe_pattern" style="padding:4px 8px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:0.8rem;">
+              <option value="0">Short</option>
+              <option value="1" selected>Long</option>
+              <option value="2">Urgent</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================
+       SECTION 6: STOCKS
+       ========================================================== -->
+  <div class="section" data-section>
+    <div class="section-header" onclick="toggleSection(this)">
+      <div class="icon">&#128200;</div>
+      <div class="label">Stocks</div>
+      <svg class="chevron" viewBox="0 0 20 20" fill="currentColor">
+        <path
+          d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" />
+      </svg>
+    </div>
+    <div class="section-body">
+      <div class="section-body-inner">
+        <div class="card">
+          <div class="card-header">Stock Panels</div>
+          <div class="card-footer" style="margin-bottom: 8px">Configure up to 5 panels. Press Select on the watch to
+            cycle between panels.</div>
+          <div id="stock_panel_list"></div>
+          <div class="row" style="justify-content: space-between; padding: 8px 12px;">
+            <button class="seg-btn" id="stock_add_btn" onclick="addStockPanel()"
+              style="flex: 0 0 auto; padding: 6px 14px;">+ Add Panel</button>
+            <select id="stock_suggest" onchange="addStockFromSuggestion(this)"
+              style="flex: 0 0 auto; padding: 6px 8px; background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 0.75rem;">
+              <option value="">Quick add...</option>
+              <option value="^DJI|DJIA">Dow Jones (DJIA)</option>
+              <option value="EURCHF=X|EUR/CHF">EUR/CHF</option>
+              <option value="BTC-USD|BTC">Bitcoin (BTC)</option>
+              <option value="^GSPC|S&P500">S&P 500</option>
+              <option value="^IXIC|NASDAQ">NASDAQ</option>
+              <option value="EURUSD=X|EUR/USD">EUR/USD</option>
+              <option value="GC=F|Gold">Gold</option>
+              <option value="ETH-USD|ETH">Ethereum (ETH)</option>
+            </select>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">Graph Period</div>
+          <div class="card-footer" style="margin-bottom: 8px">Time range for the stock price graph.</div>
+          <div style="padding: 8px 12px;">
+            <div class="segmented" data-seg="stock_period">
+              <button class="seg-btn active" data-val="5d" onclick="setSeg(this)">1W</button>
+              <button class="seg-btn" data-val="1mo" onclick="setSeg(this)">1M</button>
+              <button class="seg-btn" data-val="3mo" onclick="setSeg(this)">3M</button>
+            </div>
+            <input type="radio" class="real-radio" name="stock_period" id="stock_period_5d" value="5d" checked>
+            <input type="radio" class="real-radio" name="stock_period" id="stock_period_1mo" value="1mo">
+            <input type="radio" class="real-radio" name="stock_period" id="stock_period_3mo" value="3mo">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================
+       SECTION 7: INTEGRATIONS
+       ========================================================== -->
+  <div class="section" data-section>
+    <div class="section-header" onclick="toggleSection(this)">
+      <div class="icon">&#128279;</div>
+      <div class="label">Integrations</div>
+      <svg class="chevron" viewBox="0 0 20 20" fill="currentColor">
+        <path
+          d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" />
+      </svg>
+    </div>
+    <div class="section-body">
+      <div class="section-body-inner">
+        <div class="card">
+          <div class="card-header">iopool API Token</div>
+          <div class="row">
+            <input type="text" class="input-field" id="input_iopool_token" placeholder="Your iopool token">
+          </div>
+          <div class="card-footer">Optional. Connect your iopool for pool monitoring data.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="app-footer">
+    If you enjoy this app, consider a small tip on
+    <a href="https://paypal.me/ChrJeannette">PayPal</a>.<br>
+    Otherwise, just enjoy it &mdash; it's free!
+  </div>
+
+  <!-- SUBMIT -->
+  <div class="submit-bar">
+    <button class="submit-btn" id="submit_button">Save Configuration</button>
+    <button class="reset-btn" id="reset_button" onclick="resetConfig()">&#x21BA; Reset all settings</button>
+  </div>
+
+  <!-- ================================================================
+     JAVASCRIPT
+     ================================================================ -->
+  <script>
+    // ================================================================
+    // Reset all localStorage settings and reload
+    // ================================================================
+    function resetConfig() {
+      if (!confirm('Reset all settings to defaults? This cannot be undone.')) return;
+      localStorage.clear();
+      location.reload();
+    }
+
+    // ================================================================
+    // Section accordion
+    // ================================================================
+    function toggleSection(headerEl) {
+      var section = headerEl.parentElement;
+      section.classList.toggle('open');
+    }
+
+    // ================================================================
+    // Segmented control (visual) -> real radio (data)
+    // ================================================================
+    function setSeg(btn) {
+      var parent = btn.parentElement;
+      var segName = parent.getAttribute('data-seg');
+      var siblings = parent.querySelectorAll('.seg-btn');
+      for (var i = 0; i < siblings.length; i++) siblings[i].classList.remove('active');
+      btn.classList.add('active');
+
+      // Sync to real radio or handle special cases
+      syncSegToRadio(segName, btn.getAttribute('data-val'));
+    }
+
+    function syncSegToRadio(segName, val) {
+      if (segName === 'hub_btn_up') {
+        document.getElementById('hub_btn_up_widgets').checked = (val === '1');
+        document.getElementById('hub_btn_up_menu').checked = (val === '0');
+        updateEditorVisibility();
+      } else if (segName === 'hub_btn_down') {
+        document.getElementById('hub_btn_down_menu').checked = (val === '0');
+        document.getElementById('hub_btn_down_widgets').checked = (val === '1');
+        updateEditorVisibility();
+      } else if (segName === 'weather_api') {
+        document.getElementById('weather_api_openmeteo').checked = (val === 'openmeteo');
+        document.getElementById('weather_api_metno').checked = (val === 'metno');
+      } else if (segName === 'radio_refresh') {
+        document.getElementById('radio_refresh').checked = (val === 'a');
+      } else if (segName === 'radio_units') {
+        document.getElementById('radio_units').checked = (val === 'b');
+        updateWindUnitVisibility();
+      } else if (segName === 'wind_unit') {
+        document.getElementById('wind_unit_kmh').checked = (val === 'kmh');
+        document.getElementById('wind_unit_ms').checked = (val === 'ms');
+      } else if (segName === 'stock_period') {
+        document.getElementById('stock_period_5d').checked = (val === '5d');
+        document.getElementById('stock_period_1mo').checked = (val === '1mo');
+        document.getElementById('stock_period_3mo').checked = (val === '3mo');
+      }
+    }
+
+    // Restore segmented control visual state from a radio value
+    function restoreSeg(segName, val) {
+      var parent = document.querySelector('[data-seg="' + segName + '"]');
+      if (!parent) return;
+      var btns = parent.querySelectorAll('.seg-btn');
+      for (var i = 0; i < btns.length; i++) {
+        btns[i].classList.toggle('active', btns[i].getAttribute('data-val') === val);
+      }
+    }
+
+    // ================================================================
+    // Constants
+    // ================================================================
+    var MAX_MENU_ITEMS = 12;
+    var MAX_MENU_DEPTH = 3;
+    var heapMaxMenuItems = MAX_MENU_ITEMS; // may be reduced by nav budget
+
+    var PSEUDOAPPS = [
+      { id: 0, name: 'Stopwatch' },
+      { id: 1, name: 'Timer' },
+      { id: 2, name: 'Alarm' }
+    ];
+
+    var AVAILABLE_WIDGETS = [
+      { id: 0, name: 'Stocks', desc: 'Configurable panels with price graph' },
+      { id: 1, name: 'Hourly Weather', desc: '4 pages of 12h (48h forecast)' },
+      { id: 2, name: 'Daily Weather', desc: '7-day forecast, 2 days per page' },
+      { id: 3, name: 'Steps', desc: 'Step counter + 7-day history' }
+    ];
+
+    // ================================================================
+    // Data
+    // ================================================================
+    var menus = {
+      up: [],
+      down: [
+        { label: 'Stopwatch', type: 1, data: 0, children: [] },
+        { label: 'Timer', type: 1, data: 1, children: [] },
+        { label: 'Alarm', type: 1, data: 2, children: [] }
+      ]
+    };
+
+    var widgetLists = {
+      up: [0, 1, 2],
+      down: [0, 1]
+    };
+
+    var formState = {
+      active: false,
+      menuId: null,
+      parentPath: null,
+      editPath: null,
+      depth: 0
+    };
+
+    // ================================================================
+    // Utility
+    // ================================================================
+    function escapeHtml(str) {
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function countMenuItems(tree) {
+      var c = 0;
+      for (var i = 0; i < tree.length; i++) {
+        c++;
+        if (tree[i].children) c += countMenuItems(tree[i].children);
+      }
+      return c;
+    }
+
+    function nextWebhookIndex() {
+      var used = {};
+      function scan(tree) {
+        for (var i = 0; i < tree.length; i++) {
+          if (tree[i].type === 2) used[tree[i].data] = true;
+          if (tree[i].children) scan(tree[i].children);
+        }
+      }
+      scan(menus.up);
+      scan(menus.down);
+      used[10] = true; used[11] = true; used[12] = true;
+      for (var idx = 0; idx < 256; idx++) {
+        if (!used[idx]) return idx;
+      }
+      return 0;
+    }
+
+    function onLpChange(which) {
+      var sel = document.getElementById('hub_lp_' + which);
+      var urlDiv = document.getElementById('lp_url_' + which);
+      var isWebhook = parseInt(sel.value) >= 16;
+      urlDiv.style.display = isWebhook ? '' : 'none';
+      if (isWebhook) {
+        var idx = parseInt(sel.value) & 0xF;
+        var urlInput = document.getElementById('lp_webhook_url_' + which);
+        urlInput.value = localStorage['webhook_url_' + idx] || '';
+      }
+    }
+
+    function resolveMenuPath(menuId, path) {
+      var tree = menus[menuId];
+      var parts = path.split('.').map(Number);
+      var arr = tree;
+      for (var i = 0; i < parts.length - 1; i++) {
+        arr = arr[parts[i]].children;
+      }
+      return { array: arr, index: parts[parts.length - 1] };
+    }
+
+    function getParentArray(menuId, parentPath) {
+      var tree = menus[menuId];
+      if (parentPath === '') return tree;
+      var parts = parentPath.split('.').map(Number);
+      var arr = tree;
+      for (var i = 0; i < parts.length; i++) {
+        arr = arr[parts[i]].children;
+      }
+      return arr;
+    }
+
+    // ================================================================
+    // Serialization
+    // ================================================================
+    function flattenTree(tree) {
+      var flat = [];
+      function visit(items, parentIndex) {
+        for (var i = 0; i < items.length; i++) {
+          var idx = flat.length;
+          flat.push({
+            label: items[i].label,
+            type: items[i].type,
+            parentIndex: parentIndex,
+            data: items[i].data
+          });
+          if (items[i].children && items[i].children.length > 0) {
+            visit(items[i].children, idx);
+          }
+        }
+      }
+      visit(tree, -1);
+      return flat;
+    }
+
+    function serializeMenu(tree) {
+      var flat = flattenTree(tree);
+      if (flat.length === 0) return '';
+      return flat.map(function (item) {
+        var safeLabel = item.label.replace(/[;|]/g, ' ');
+        return safeLabel + ';' + item.type + ';' + item.parentIndex + ';' + item.data;
+      }).join('|');
+    }
+
+    function deserializeMenu(str) {
+      if (!str || str === '') return [];
+      var parts = str.split('|');
+      var flat = parts.map(function (s) {
+        var f = s.split(';');
+        return {
+          label: f[0] || '?',
+          type: parseInt(f[1]) || 0,
+          parentIndex: parseInt(f[2]),
+          data: parseInt(f[3]) || 0
+        };
+      });
+      var nodes = flat.map(function (item) {
+        return { label: item.label, type: item.type, data: item.data, children: [] };
+      });
+      var roots = [];
+      for (var i = 0; i < flat.length; i++) {
+        if (flat[i].parentIndex === -1 || flat[i].parentIndex >= nodes.length) {
+          roots.push(nodes[i]);
+        } else {
+          nodes[flat[i].parentIndex].children.push(nodes[i]);
+        }
+      }
+      return roots;
+    }
+
+    function serializeWidgets(list) {
+      return list.join(',');
+    }
+
+    function deserializeWidgets(str) {
+      if (!str || str === '') return [];
+      return str.split(',').map(function (s) { return parseInt(s); }).filter(function (n) { return !isNaN(n); });
+    }
+
+    // ================================================================
+    // Menu tree rendering
+    // ================================================================
+    function renderMenuTree(menuId) {
+      var container = document.getElementById('menu_tree_' + menuId);
+      container.innerHTML = '';
+      var tree = menus[menuId];
+      var total = countMenuItems(tree);
+
+      renderMenuItems(container, tree, '', 0, menuId);
+
+      if (total < heapMaxMenuItems) {
+        if (formState.active && formState.menuId === menuId && formState.parentPath === '' && !formState.editPath) {
+          container.innerHTML += createFormHTML(null);
+        } else if (!formState.active || formState.menuId !== menuId) {
+          var addRow = document.createElement('div');
+          addRow.className = 'menu-add-row';
+          addRow.innerHTML = '<button onclick="showAddForm(\'' + menuId + '\',\'\',0)">+ Add item</button>';
+          container.appendChild(addRow);
+        }
+      }
+
+      var countEl = document.createElement('div');
+      countEl.className = 'menu-count';
+      countEl.textContent = total + '/' + heapMaxMenuItems + ' items';
+      container.appendChild(countEl);
+
+      if (total === 0 && !formState.active) {
+        var msg = document.createElement('div');
+        msg.className = 'empty-msg';
+        msg.textContent = 'No items yet. Tap + to add.';
+        container.insertBefore(msg, container.firstChild);
+      }
+    }
+
+    function renderMenuItems(container, items, pathPrefix, depth, menuId) {
+      var total = countMenuItems(menus[menuId]);
+
+      for (var i = 0; i < items.length; i++) {
+        var item = items[i];
+        var path = pathPrefix !== '' ? pathPrefix + '.' + i : '' + i;
+
+        if (formState.active && formState.editPath === path && formState.menuId === menuId) {
+          container.innerHTML += createFormHTML(item);
+          if (item.type === 0 && item.children.length > 0) {
+            renderMenuItems(container, item.children, path, depth + 1, menuId);
+          }
+          continue;
+        }
+
+        var icon, typeLabel;
+        switch (item.type) {
+          case 0: icon = '\u{1F4C1}'; typeLabel = 'folder'; break;
+          case 1: icon = '\u{25B6}'; typeLabel = PSEUDOAPPS[item.data] ? PSEUDOAPPS[item.data].name : 'app'; break;
+          case 2: icon = '\u{26A1}'; typeLabel = 'action'; break;
+          default: icon = '?'; typeLabel = '?';
+        }
+
+        var row = document.createElement('div');
+        row.className = 'menu-item-row';
+        row.style.paddingLeft = (depth * 20 + 12) + 'px';
+        row.innerHTML =
+          '<span class="menu-item-icon">' + icon + '</span>' +
+          '<span class="menu-item-label">' + escapeHtml(item.label) + '</span>' +
+          '<span class="menu-item-type">' + typeLabel + '</span>' +
+          '<button class="menu-item-btn" onclick="showEditForm(\'' + menuId + '\',\'' + path + '\',' + depth + ')" title="Edit">\u270E</button>' +
+          '<button class="menu-item-btn danger" onclick="deleteMenuItem(\'' + menuId + '\',\'' + path + '\')" title="Delete">\u2715</button>' +
+          '<button class="menu-item-btn" onclick="moveMenuItem(\'' + menuId + '\',\'' + path + '\',-1)" title="Move up">\u25B2</button>' +
+          '<button class="menu-item-btn" onclick="moveMenuItem(\'' + menuId + '\',\'' + path + '\',1)" title="Move down">\u25BC</button>';
+        container.appendChild(row);
+
+        if (item.type === 0) {
+          renderMenuItems(container, item.children, path, depth + 1, menuId);
+          if (depth + 1 < MAX_MENU_DEPTH && total < heapMaxMenuItems) {
+            if (formState.active && formState.menuId === menuId && formState.parentPath === path && !formState.editPath) {
+              container.innerHTML += createFormHTML(null, depth + 1);
+            } else if (!formState.active || formState.menuId !== menuId) {
+              var addRow = document.createElement('div');
+              addRow.className = 'menu-add-row';
+              addRow.style.paddingLeft = ((depth + 1) * 20 + 12) + 'px';
+              addRow.innerHTML = '<button onclick="showAddForm(\'' + menuId + '\',\'' + path + '\',' + (depth + 1) + ')">+ Add to &quot;' + escapeHtml(item.label) + '&quot;</button>';
+              container.appendChild(addRow);
+            }
+          }
+        }
+      }
+    }
+
+    // ================================================================
+    // Menu form
+    // ================================================================
+    function createFormHTML(prefill, depth) {
+      depth = depth || formState.depth || 0;
+      var label = prefill ? escapeHtml(prefill.label) : '';
+      var type = prefill ? prefill.type : 1;
+      var data = prefill ? prefill.data : 0;
+      var canFolder = depth < MAX_MENU_DEPTH - 1;
+
+      var typeOptions = '';
+      if (canFolder) typeOptions += '<option value="0"' + (type === 0 ? ' selected' : '') + '>Folder</option>';
+      typeOptions += '<option value="1"' + (type === 1 ? ' selected' : '') + '>Pseudo-app</option>';
+      typeOptions += '<option value="2"' + (type === 2 ? ' selected' : '') + '>Action</option>';
+
+      var appOptions = PSEUDOAPPS.map(function (a) {
+        return '<option value="' + a.id + '"' + (type === 1 && data === a.id ? ' selected' : '') + '>' + a.name + '</option>';
+      }).join('');
+
+      var webhookUrl = '';
+      if (prefill && prefill.type === 2) {
+        webhookUrl = localStorage['webhook_url_' + prefill.data] || '';
+      }
+
+      var labelVisible = (type !== 1);
+      var labelDisplayStyle = labelVisible ? '' : 'display:none';
+      var html = '<div class="menu-form" style="margin-left:' + (depth * 20) + 'px">' +
+        '<div id="mf_label_section" style="' + labelDisplayStyle + '">' +
+        '<label>Label</label>' +
+        '<input type="text" id="mf_label" maxlength="15" value="' + label + '" placeholder="Item name">' +
+        '</div>' +
+        '<label>Type</label>' +
+        '<select id="mf_type" onchange="onFormTypeChange()">' + typeOptions + '</select>' +
+        '<div id="mf_app_div" style="' + (type === 1 ? '' : 'display:none') + '">' +
+        '<label>Application</label>' +
+        '<select id="mf_app">' + appOptions + '</select></div>' +
+        '<div id="mf_action_div" style="' + (type === 2 ? '' : 'display:none') + '">' +
+        '<label>Webhook URL</label>' +
+        '<input type="text" id="mf_action_url" placeholder="https://example.com/hook" value="' + escapeHtml(webhookUrl) + '">' +
+        '</div>' +
+        '<div class="menu-form-buttons">' +
+        '<button class="btn-save" onclick="saveForm()">Save</button>' +
+        '<button class="btn-cancel" onclick="cancelForm()">Cancel</button>' +
+        '</div></div>';
+      return html;
+    }
+
+    function onFormTypeChange() {
+      var type = parseInt(document.getElementById('mf_type').value);
+      document.getElementById('mf_app_div').style.display = (type === 1) ? '' : 'none';
+      document.getElementById('mf_action_div').style.display = (type === 2) ? '' : 'none';
+      var labelSection = document.getElementById('mf_label_section');
+      if (labelSection) labelSection.style.display = (type === 1) ? 'none' : '';
+    }
+
+    function showAddForm(menuId, parentPath, depth) {
+      formState = { active: true, menuId: menuId, parentPath: parentPath, editPath: null, depth: depth };
+      renderMenuTree(menuId);
+      setTimeout(function () {
+        var el = document.getElementById('mf_label');
+        if (el) el.focus();
+      }, 50);
+    }
+
+    function showEditForm(menuId, path, depth) {
+      formState = { active: true, menuId: menuId, parentPath: null, editPath: path, depth: depth };
+      renderMenuTree(menuId);
+      setTimeout(function () {
+        var el = document.getElementById('mf_label');
+        if (el) el.focus();
+      }, 50);
+    }
+
+    function cancelForm() {
+      formState.active = false;
+      renderMenuTree(formState.menuId);
+    }
+
+    function saveForm() {
+      var type = parseInt(document.getElementById('mf_type').value);
+      var label;
+      if (type === 1) {
+        var appId = parseInt(document.getElementById('mf_app').value);
+        label = '';
+        for (var pi = 0; pi < PSEUDOAPPS.length; pi++) {
+          if (PSEUDOAPPS[pi].id === appId) { label = PSEUDOAPPS[pi].name; break; }
+        }
+        if (!label) label = 'App';
+      } else {
+        var labelEl = document.getElementById('mf_label');
+        label = labelEl ? labelEl.value.trim() : '';
+        if (!label) { alert('Please enter a label'); return; }
+      }
+
+      var data = 0;
+      if (type === 1) data = parseInt(document.getElementById('mf_app').value);
+      if (type === 2) {
+        var menuId = formState.menuId;
+        if (formState.editPath) {
+          var editRef = resolveMenuPath(menuId, formState.editPath);
+          if (editRef.array[editRef.index].type === 2) {
+            data = editRef.array[editRef.index].data;
+          } else {
+            data = nextWebhookIndex();
+          }
+        } else {
+          data = nextWebhookIndex();
+        }
+        var actionUrl = document.getElementById('mf_action_url').value.trim();
+        localStorage['webhook_url_' + data] = actionUrl;
+      }
+
+      var menuId = formState.menuId;
+
+      if (formState.editPath) {
+        var ref = resolveMenuPath(menuId, formState.editPath);
+        var item = ref.array[ref.index];
+        item.label = label;
+        if (item.type === 0 && type !== 0 && item.children && item.children.length > 0) {
+          if (!confirm('Changing type from Folder will remove all sub-items. Continue?')) return;
+        }
+        item.type = type;
+        item.data = data;
+        if (type !== 0) item.children = [];
+        if (type === 0 && !item.children) item.children = [];
+      } else {
+        var newItem = { label: label, type: type, data: data, children: [] };
+        var parentArr = getParentArray(menuId, formState.parentPath);
+        parentArr.push(newItem);
+      }
+
+      formState.active = false;
+      renderMenuTree(menuId);
+      persistMenus();
+    }
+
+    function deleteMenuItem(menuId, path) {
+      var ref = resolveMenuPath(menuId, path);
+      var item = ref.array[ref.index];
+      var childCount = item.children ? countMenuItems(item.children) : 0;
+      var msg = 'Delete "' + item.label + '"?';
+      if (childCount > 0) msg += ' (' + childCount + ' sub-item' + (childCount > 1 ? 's' : '') + ' will also be removed)';
+      if (!confirm(msg)) return;
+
+      ref.array.splice(ref.index, 1);
+      formState.active = false;
+      renderMenuTree(menuId);
+      persistMenus();
+    }
+
+    function moveMenuItem(menuId, path, direction) {
+      var ref = resolveMenuPath(menuId, path);
+      var idx = ref.index;
+      var newIdx = idx + direction;
+      if (newIdx < 0 || newIdx >= ref.array.length) return;
+
+      var temp = ref.array[idx];
+      ref.array[idx] = ref.array[newIdx];
+      ref.array[newIdx] = temp;
+
+      renderMenuTree(menuId);
+      persistMenus();
+    }
+
+    // ================================================================
+    // Widget list rendering
+    // ================================================================
+    function renderWidgetEditor(editorId) {
+      var container = document.getElementById('widget_tree_' + editorId);
+      container.innerHTML = '';
+      var list = widgetLists[editorId];
+
+      var enabledIds = list.slice();
+      var disabledIds = [];
+      for (var i = 0; i < AVAILABLE_WIDGETS.length; i++) {
+        if (enabledIds.indexOf(AVAILABLE_WIDGETS[i].id) === -1) {
+          disabledIds.push(AVAILABLE_WIDGETS[i].id);
+        }
+      }
+
+      var allIds = enabledIds.concat(disabledIds);
+
+      for (var j = 0; j < allIds.length; j++) {
+        var wid = allIds[j];
+        var widget = null;
+        for (var k = 0; k < AVAILABLE_WIDGETS.length; k++) {
+          if (AVAILABLE_WIDGETS[k].id === wid) { widget = AVAILABLE_WIDGETS[k]; break; }
+        }
+        if (!widget) continue;
+
+        var isEnabled = enabledIds.indexOf(wid) >= 0;
+
+        var row = document.createElement('div');
+        row.className = 'widget-item-row' + (isEnabled ? '' : ' disabled');
+        row.innerHTML =
+          '<input type="checkbox" class="widget-item-check" ' + (isEnabled ? 'checked' : '') +
+          ' onchange="toggleWidget(\'' + editorId + '\',' + wid + ',this.checked)">' +
+          '<span class="widget-item-name">' + escapeHtml(widget.name) + '</span>' +
+          '<span class="widget-item-desc">' + escapeHtml(widget.desc) + '</span>' +
+          (isEnabled ? '<button class="menu-item-btn" onclick="moveWidget(\'' + editorId + '\',' + wid + ',-1)" title="Move up">\u25B2</button>' +
+            '<button class="menu-item-btn" onclick="moveWidget(\'' + editorId + '\',' + wid + ',1)" title="Move down">\u25BC</button>' : '');
+        container.appendChild(row);
+      }
+
+      if (allIds.length === 0) {
+        container.innerHTML = '<div class="empty-msg">No widgets available.</div>';
+      }
+    }
+
+    function toggleWidget(editorId, widgetId, enabled) {
+      var list = widgetLists[editorId];
+      if (enabled) {
+        if (list.indexOf(widgetId) === -1) list.push(widgetId);
+      } else {
+        var idx = list.indexOf(widgetId);
+        if (idx >= 0) list.splice(idx, 1);
+      }
+      renderWidgetEditor(editorId);
+      persistWidgets();
+    }
+
+    function moveWidget(editorId, widgetId, direction) {
+      var list = widgetLists[editorId];
+      var idx = list.indexOf(widgetId);
+      if (idx < 0) return;
+      var newIdx = idx + direction;
+      if (newIdx < 0 || newIdx >= list.length) return;
+      var temp = list[idx];
+      list[idx] = list[newIdx];
+      list[newIdx] = temp;
+      renderWidgetEditor(editorId);
+      persistWidgets();
+    }
+
+    // ================================================================
+    // Persistence
+    // ================================================================
+    function persistMenus() {
+      localStorage['hub_menu_up_json'] = JSON.stringify(menus.up);
+      localStorage['hub_menu_down_json'] = JSON.stringify(menus.down);
+    }
+
+    function persistWidgets() {
+      localStorage['hub_widgets_up'] = serializeWidgets(widgetLists.up);
+      localStorage['hub_widgets_down'] = serializeWidgets(widgetLists.down);
+    }
+
+    function loadMenus() {
+      try {
+        if (localStorage['hub_menu_up_json']) menus.up = JSON.parse(localStorage['hub_menu_up_json']);
+      } catch (e) { menus.up = []; }
+      try {
+        if (localStorage['hub_menu_down_json']) menus.down = JSON.parse(localStorage['hub_menu_down_json']);
+      } catch (e) {
+        menus.down = [
+          { label: 'Stopwatch', type: 1, data: 0, children: [] },
+          { label: 'Timer', type: 1, data: 1, children: [] },
+          { label: 'Alarm', type: 1, data: 2, children: [] }
+        ];
+      }
+    }
+
+    function loadWidgets() {
+      var wUp = localStorage['hub_widgets_up'];
+      var wDown = localStorage['hub_widgets_down'];
+
+      var validIds = AVAILABLE_WIDGETS.map(function (w) { return w.id; });
+      function filterKnown(list) {
+        return list.filter(function (id) { return validIds.indexOf(id) >= 0; });
+      }
+
+      // If no saved config, or was the old 2-widget default, upgrade to include
+      // Hourly (1) and Daily (2) widgets.
+      if (!wUp || wUp === '0' || wUp === '0,1' || wUp === '0,1,2,3') {
+        widgetLists.up = [0, 1, 2];
+        persistWidgets();
+      } else {
+        widgetLists.up = filterKnown(deserializeWidgets(wUp));
+      }
+
+      if (wDown) widgetLists.down = filterKnown(deserializeWidgets(wDown));
+    }
+
+    // ================================================================
+    // Editor visibility
+    // ================================================================
+    function updateEditorVisibility() {
+      var upIsWidgets = document.getElementById('hub_btn_up_widgets').checked;
+      document.getElementById('editor_up_widgets').className = 'editor-panel' + (upIsWidgets ? '' : ' hidden');
+      document.getElementById('editor_up_menu').className = 'editor-panel' + (upIsWidgets ? ' hidden' : '');
+
+      var downIsMenu = document.getElementById('hub_btn_down_menu').checked;
+      document.getElementById('editor_down_menu').className = 'editor-panel' + (downIsMenu ? '' : ' hidden');
+      document.getElementById('editor_down_widgets').className = 'editor-panel' + (downIsMenu ? ' hidden' : '');
+    }
+
+    function updateWindUnitVisibility() {
+      var isMetric = document.getElementById('radio_units').checked;
+      document.getElementById('wind_speed_container').style.display = isMetric ? '' : 'none';
+    }
+
+    // ================================================================
+    // Init
+    // ================================================================
+    document.addEventListener('DOMContentLoaded', function () {
+      loadMenus();
+      loadWidgets();
+      renderMenuTree('up');
+      renderMenuTree('down');
+      renderWidgetEditor('up');
+      renderWidgetEditor('down');
+      updateEditorVisibility();
+      updateWindUnitVisibility();
+    });
+
+    // ================================================================
+    document.addEventListener('DOMContentLoaded', function () {
+      loadMenus();
+      loadWidgets();
+      loadStockPanels();
+      renderMenuTree('up');
+      renderMenuTree('down');
+      renderWidgetEditor('up');
+      renderWidgetEditor('down');
+      updateEditorVisibility();
+      updateWindUnitVisibility();
+    });
+
+    // ================================================================
+    // Stock Panel Editor
+    // ================================================================
+    var stockPanels = []; // [{symbol: '^DJI', name: 'DJIA'}, ...]
+
+    function loadStockPanels() {
+      try {
+        var syms = JSON.parse(localStorage['stock_symbols'] || 'null');
+        var names = JSON.parse(localStorage['stock_names'] || 'null');
+        if (syms && syms.length) {
+          stockPanels = [];
+          for (var i = 0; i < syms.length; i++) {
+            stockPanels.push({ symbol: syms[i], name: (names && names[i]) || syms[i] });
+          }
+        } else {
+          stockPanels = [
+            { symbol: '^DJI', name: 'DJIA' },
+            { symbol: 'EURCHF=X', name: 'EUR/CHF' },
+            { symbol: 'BTC-USD', name: 'BTC' }
+          ];
+        }
+      } catch (e) {
+        stockPanels = [
+          { symbol: '^DJI', name: 'DJIA' },
+          { symbol: 'EURCHF=X', name: 'EUR/CHF' },
+          { symbol: 'BTC-USD', name: 'BTC' }
+        ];
+      }
+      renderStockPanels();
+    }
+
+    function renderStockPanels() {
+      var container = document.getElementById('stock_panel_list');
+      container.innerHTML = '';
+      for (var i = 0; i < stockPanels.length; i++) {
+        var row = document.createElement('div');
+        row.className = 'widget-item-row';
+        row.innerHTML =
+          '<input type="text" class="input-field" value="' + escapeHtml(stockPanels[i].name) + '" ' +
+          'style="flex:1; margin-right:6px; max-width:80px; font-size:0.8rem;" ' +
+          'maxlength="9" placeholder="Name" onchange="updateStockName(' + i + ',this.value)">' +
+          '<input type="text" class="input-field" value="' + escapeHtml(stockPanels[i].symbol) + '" ' +
+          'style="flex:2; margin-right:6px; font-size:0.75rem;" ' +
+          'maxlength="12" placeholder="Yahoo symbol" onchange="updateStockSymbol(' + i + ',this.value)">' +
+          '<button class="menu-item-btn" onclick="moveStockPanel(' + i + ',-1)" title="Move up">&#x25B2;</button>' +
+          '<button class="menu-item-btn" onclick="moveStockPanel(' + i + ',1)" title="Move down">&#x25BC;</button>' +
+          '<button class="menu-item-btn" onclick="removeStockPanel(' + i + ')" title="Delete" style="color:#e55;">&#x2716;</button>';
+        container.appendChild(row);
+      }
+      document.getElementById('stock_add_btn').disabled = (stockPanels.length >= 5);
+      persistStockPanels();
+    }
+
+    function addStockPanel() {
+      if (stockPanels.length >= 5) return;
+      stockPanels.push({ symbol: '', name: '' });
+      renderStockPanels();
+    }
+
+    function addStockFromSuggestion(select) {
+      if (!select.value || stockPanels.length >= 5) { select.selectedIndex = 0; return; }
+      var parts = select.value.split('|');
+      stockPanels.push({ symbol: parts[0], name: parts[1] || parts[0] });
+      select.selectedIndex = 0;
+      renderStockPanels();
+    }
+
+    function removeStockPanel(idx) {
+      stockPanels.splice(idx, 1);
+      renderStockPanels();
+    }
+
+    function moveStockPanel(idx, dir) {
+      var newIdx = idx + dir;
+      if (newIdx < 0 || newIdx >= stockPanels.length) return;
+      var tmp = stockPanels[idx];
+      stockPanels[idx] = stockPanels[newIdx];
+      stockPanels[newIdx] = tmp;
+      renderStockPanels();
+    }
+
+    function updateStockSymbol(idx, val) {
+      stockPanels[idx].symbol = val;
+      persistStockPanels();
+    }
+
+    function updateStockName(idx, val) {
+      stockPanels[idx].name = val;
+      persistStockPanels();
+    }
+
+    function setStockPeriod(btn) {
+      // handled by generic setSeg()
+    }
+
+    function persistStockPanels() {
+      var syms = [], names = [];
+      for (var i = 0; i < stockPanels.length; i++) {
+        if (stockPanels[i].symbol) {
+          syms.push(stockPanels[i].symbol);
+          names.push(stockPanels[i].name || stockPanels[i].symbol);
+        }
+      }
+      localStorage['stock_symbols'] = JSON.stringify(syms);
+      localStorage['stock_names'] = JSON.stringify(names);
+    }
+
+    // ================================================================
+    // Config data collection
+    // ================================================================
+    function getConfigData() {
+      var options = {
+        'input_iopool_token': document.getElementById('input_iopool_token').value,
+        'radio_units': document.getElementById('radio_units').checked,
+        'radio_refresh': document.getElementById('radio_refresh').checked,
+        'toggle_vibration': document.getElementById('toggle_vibration').checked,
+        'toggle_bt': document.getElementById('toggle_bt').checked,
+        'color_right_back': document.getElementById('color_right_back').value,
+        'color_left_back': document.getElementById('color_left_back').value,
+        'weather_api': document.getElementById('weather_api_openmeteo').checked ? 'openmeteo' : 'metno',
+        'wind_speed_unit': document.getElementById('wind_unit_kmh').checked ? 'kmh' : 'ms',
+        'hub_timeout': document.getElementById('hub_timeout').value,
+        'hub_anim': document.getElementById('hub_anim').checked ? '1' : '0',
+        'hub_vibe_pattern': document.getElementById('hub_vibe_pattern').value,
+        'hub_btn_up': document.getElementById('hub_btn_up_widgets').checked ? '1' : '0',
+        'hub_btn_down': document.getElementById('hub_btn_down_menu').checked ? '0' : '1',
+        'hub_lp_up': document.getElementById('hub_lp_up').value,
+        'hub_lp_down': document.getElementById('hub_lp_down').value,
+        'hub_lp_select': document.getElementById('hub_lp_select').value,
+        'hub_menu_up': serializeMenu(menus.up),
+        'hub_menu_down': serializeMenu(menus.down),
+        'hub_widgets_up': serializeWidgets(widgetLists.up),
+        'hub_widgets_down': serializeWidgets(widgetLists.down)
+      };
+
+      var allWebhookUrls = {};
+      function scanWebhooks(tree) {
+        for (var i = 0; i < tree.length; i++) {
+          if (tree[i].type === 2) {
+            allWebhookUrls[tree[i].data] = localStorage['webhook_url_' + tree[i].data] || '';
+          }
+          if (tree[i].children) scanWebhooks(tree[i].children);
+        }
+      }
+      scanWebhooks(menus.up);
+      scanWebhooks(menus.down);
+      ['up', 'down', 'select'].forEach(function (which) {
+        var val = parseInt(document.getElementById('hub_lp_' + which).value);
+        if (val >= 16) {
+          var idx = val & 0xF;
+          var urlInput = document.getElementById('lp_webhook_url_' + which);
+          if (urlInput && urlInput.value) {
+            allWebhookUrls[idx] = urlInput.value;
+            localStorage['webhook_url_' + idx] = urlInput.value;
+          }
+        }
+      });
+      options['webhook_urls'] = JSON.stringify(allWebhookUrls);
+
+      var views = ['0'];
+      if (document.getElementById('hub_view_1').checked) views.push('1');
+      if (document.getElementById('hub_view_2').checked) views.push('2');
+      if (document.getElementById('hub_view_3').checked) views.push('3');
+      options['hub_views'] = views.join(',');
+
+      options['countdown_date'] = document.getElementById('countdown_date').value || '';
+      options['countdown_label'] = document.getElementById('countdown_label').value || '';
+
+      // Stock panels
+      persistStockPanels();
+      options['stock_symbols'] = localStorage['stock_symbols'] || '[]';
+      options['stock_names'] = localStorage['stock_names'] || '[]';
+      // Stock period (read from segmented radio)
+      var periodEl = document.querySelector('input[name="stock_period"]:checked');
+      options['stock_period'] = periodEl ? periodEl.value : '5d';
+
+      for (var key in options) {
+        localStorage[key] = options[key];
+      }
+      persistMenus();
+
+      console.log('Config data: ' + JSON.stringify(options));
+      return options;
+    }
+
+    function getQueryParam(variable, defaultValue) {
+      var query = location.search.substring(1);
+      var vars = query.split('&');
+      for (var i = 0; i < vars.length; i++) {
+        var pair = vars[i].split('=');
+        if (pair[0] === variable) {
+          return decodeURIComponent(pair[1]);
+        }
+      }
+      return defaultValue || false;
+    }
+
+    document.getElementById('submit_button').addEventListener('click', function () {
+      var return_to = getQueryParam('return_to', 'pebblejs://close#');
+      document.location = return_to + encodeURIComponent(JSON.stringify(getConfigData()));
+    });
+
+    // ================================================================
+    // Restore saved settings
+    // ================================================================
+    (function () {
+      document.getElementById('input_iopool_token').value = localStorage['input_iopool_token'] || '';
+      document.getElementById('toggle_vibration').checked = JSON.parse(localStorage['toggle_vibration'] || 'false');
+      document.getElementById('toggle_bt').checked = JSON.parse(localStorage['toggle_bt'] || 'false');
+      document.getElementById('hub_vibe_pattern').value = localStorage['hub_vibe_pattern'] || '1';
+      document.getElementById('color_right_back').value = localStorage['color_right_back'] || '0x000000';
+      document.getElementById('color_left_back').value = localStorage['color_left_back'] || '0x000000';
+
+      // Units (radio_units: true=metric, false=imperial)
+      var savedUnits = JSON.parse(localStorage['radio_units'] === undefined || localStorage['radio_units'] === null ? 'true' : (localStorage['radio_units'] || 'true'));
+      document.getElementById('radio_units').checked = savedUnits; // true=metric checked
+      restoreSeg('radio_units', savedUnits ? 'b' : 'a'); // 'b'=metric, 'a'=imperial
+
+      // Refresh
+      var savedRefresh = JSON.parse(localStorage['radio_refresh'] || 'false');
+      document.getElementById('radio_refresh').checked = savedRefresh;
+      restoreSeg('radio_refresh', savedRefresh ? 'a' : 'b');
+
+      // Weather API
+      var savedApi = localStorage['weather_api'] || 'openmeteo';
+      document.getElementById('weather_api_openmeteo').checked = (savedApi === 'openmeteo');
+      document.getElementById('weather_api_metno').checked = (savedApi === 'metno');
+      restoreSeg('weather_api', savedApi);
+
+      // Wind unit
+      var savedWindUnit = localStorage['wind_speed_unit'] || 'kmh';
+      document.getElementById('wind_unit_kmh').checked = (savedWindUnit === 'kmh');
+      document.getElementById('wind_unit_ms').checked = (savedWindUnit === 'ms');
+      restoreSeg('wind_unit', savedWindUnit);
+
+      // Hub settings
+      document.getElementById('hub_timeout').value = localStorage['hub_timeout'] || '30';
+
+      var savedHubAnim = localStorage['hub_anim'];
+      document.getElementById('hub_anim').checked = (savedHubAnim === undefined || savedHubAnim === null || savedHubAnim === '1');
+
+      var savedBtnUp = localStorage['hub_btn_up'] || '1';
+      document.getElementById('hub_btn_up_widgets').checked = (savedBtnUp === '1');
+      document.getElementById('hub_btn_up_menu').checked = (savedBtnUp === '0');
+      restoreSeg('hub_btn_up', savedBtnUp);
+
+      var savedBtnDown = localStorage['hub_btn_down'] || '0';
+      document.getElementById('hub_btn_down_menu').checked = (savedBtnDown === '0');
+      document.getElementById('hub_btn_down_widgets').checked = (savedBtnDown === '1');
+      restoreSeg('hub_btn_down', savedBtnDown);
+
+      // LP selects with migration
+      function restoreLp(which, defaultVal) {
+        var stored = localStorage['hub_lp_' + which];
+        var newValMap = { up: '26', down: '27', select: '28' };
+        if (stored === '16') {
+          stored = newValMap[which];
+          if (localStorage['webhook_url'] && !localStorage['webhook_url_' + (parseInt(stored) & 0xF)]) {
+            localStorage['webhook_url_' + (parseInt(stored) & 0xF)] = localStorage['webhook_url'];
+          }
+        }
+        document.getElementById('hub_lp_' + which).value = stored || String(defaultVal);
+        onLpChange(which);
+      }
+      restoreLp('up', 26);
+      restoreLp('down', 0);
+      restoreLp('select', 1);
+
+      var savedViews = localStorage['hub_views'] || '0,1,2,3';
+      var viewIds = savedViews.split(',');
+      document.getElementById('hub_view_1').checked = viewIds.indexOf('1') >= 0;
+      document.getElementById('hub_view_2').checked = viewIds.indexOf('2') >= 0;
+      document.getElementById('hub_view_3').checked = viewIds.indexOf('3') >= 0;
+
+      document.getElementById('countdown_date').value = localStorage['countdown_date'] || '';
+      document.getElementById('countdown_label').value = localStorage['countdown_label'] || '';
+
+      // Stock period
+      var savedStockPeriod = localStorage['stock_period'] || '5d';
+      var periodRadio = document.getElementById('stock_period_' + savedStockPeriod);
+      if (periodRadio) periodRadio.checked = true;
+      restoreSeg('stock_period', savedStockPeriod);
+
+      // Update visibility after restore
+      updateEditorVisibility();
+      updateWindUnitVisibility();
+
+      // ================================================================
+      // Heap memory indicator (from URL params)
+      // ================================================================
+      (function () {
+        var params = new URLSearchParams(window.location.search);
+        var heapFree = parseInt(params.get('heap_free'), 10);
+        var platform = params.get('platform') || '';
+        if (!isNaN(heapFree) && heapFree > 0) {
+          // Scale: aplite has ~24KB total; indicate relative to a 4KB display max
+          var displayMax = 4096;
+          var pct = Math.min(100, Math.round(heapFree / displayMax * 100));
+          var color = heapFree > 2000 ? '#4ae68a'
+                    : heapFree > 900  ? '#ffb84d'
+                    :                   '#ff6c6c';
+          var bar = document.getElementById('heap_bar');
+          bar.style.width = pct + '%';
+          bar.style.background = color;
+          var label = heapFree >= 1024
+            ? (heapFree / 1024).toFixed(1) + ' KB'
+            : heapFree + ' B';
+          var note = heapFree < 900 ? ' ⚠️ Critical!' : (heapFree < 2000 ? ' Limited' : ' OK');
+          var platformStr = platform ? ' · ' + platform : '';
+          document.getElementById('heap_value').textContent =
+            label + ' free' + platformStr + note;
+          document.getElementById('heap_indicator').style.display = 'flex';
+
+          // Navigation budget: estimate max safe total menu items
+          // Empirical: ~1900B heap → 7-8 items; formula: (heapFree - 800) / 150
+          // 800B = fixed cost (MenuCtx + items[16] + Window + MenuLayer + margin)
+          // 150B = SDK render overhead per row (MenuLayer/ScrollLayer internals)
+          var MENU_OPEN_COST = 800;
+          var PER_ITEM_COST = 150;
+          var maxItems = heapFree > MENU_OPEN_COST
+            ? Math.floor((heapFree - MENU_OPEN_COST) / PER_ITEM_COST) + 2
+            : 1;
+          if (maxItems > MAX_MENU_ITEMS) maxItems = MAX_MENU_ITEMS;
+          if (maxItems < 1) maxItems = 1;
+          heapMaxMenuItems = maxItems;
+
+          var budgetEl = document.getElementById('heap_nav_budget');
+          var budgetColor = maxItems >= 10 ? '#4ae68a' : maxItems >= 5 ? '#ffb84d' : '#ff6c6c';
+          budgetEl.innerHTML = 'Nav budget: <b style="color:' + budgetColor + '">' + maxItems + ' item' + (maxItems > 1 ? 's' : '') + '</b> max';
+          budgetEl.style.display = '';
+        }
+      })();
+    })();
+  </script>
+</body>
+
+</html>
