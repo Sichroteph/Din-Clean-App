@@ -21,9 +21,15 @@ uint8_t g_hub_ring_active;
 
 static void play_vibe(void) {
   switch (g_hub_config.vibe_pattern) {
-    case 0: vibes_short_pulse(); break;
-    case 2: vibes_double_pulse(); break;
-    default: vibes_long_pulse(); break;
+  case 0:
+    vibes_short_pulse();
+    break;
+  case 2:
+    vibes_double_pulse();
+    break;
+  default:
+    vibes_long_pulse();
+    break;
   }
 }
 
@@ -31,7 +37,10 @@ void hub_ring_dismiss(void) {
   s_ring_count = 0;
   g_hub_ring_active = 0;
   vibes_cancel();
-  if (s_at) { app_timer_cancel(s_at); s_at = NULL; }
+  if (s_at) {
+    app_timer_cancel(s_at);
+    s_at = NULL;
+  }
 }
 static const char *s_names[] = {"Stopwatch", "Timer", "Alarm"};
 
@@ -100,7 +109,8 @@ static void pa_tick(void *d) {
     s_ring_count = 10;
     g_hub_ring_active = 1;
     play_vibe();
-    hub_return_to_watchface(); /* pop pseudoapp → toast visible on main window */
+    hub_return_to_watchface(); /* pop pseudoapp → toast visible on main window
+                                */
     light_enable_interaction();
   }
   if (s_ast == 2) {
@@ -122,9 +132,10 @@ static void pa_tick(void *d) {
   int sw_vis = s_sw_start && s_v && s_v->id == HUB_APP_STOPWATCH;
   if (s_ring_count || s_tend || s_ast == 2 || sw_vis) {
     uint32_t ms = s_ring_count ? 2000
-                 : (sw_vis || (s_tend && s_v && s_v->id == HUB_APP_TIMER)) ? 1000
-                 : s_tend ? (uint32_t)(s_tend - time(NULL)) * 1000
-                 : 30000;
+                  : (sw_vis || (s_tend && s_v && s_v->id == HUB_APP_TIMER))
+                      ? 1000
+                  : s_tend ? (uint32_t)(s_tend - time(NULL)) * 1000
+                           : 30000;
     s_at = app_timer_register(ms, pa_tick, NULL);
   }
 }
@@ -152,11 +163,19 @@ static void adj(int d) {
 }
 
 static void h_up(ClickRecognizerRef r, void *c) {
-  if (s_ring_count) { hub_ring_dismiss(); refresh(); return; }
+  if (s_ring_count) {
+    hub_ring_dismiss();
+    refresh();
+    return;
+  }
   adj(1);
 }
 static void h_dn(ClickRecognizerRef r, void *c) {
-  if (s_ring_count) { hub_ring_dismiss(); refresh(); return; }
+  if (s_ring_count) {
+    hub_ring_dismiss();
+    refresh();
+    return;
+  }
   adj(-1);
 }
 
@@ -164,7 +183,11 @@ static void h_sel(ClickRecognizerRef r, void *c) {
   hub_timeout_reset();
   if (!s_v)
     return;
-  if (s_ring_count) { hub_ring_dismiss(); refresh(); return; }
+  if (s_ring_count) {
+    hub_ring_dismiss();
+    refresh();
+    return;
+  }
   if (s_v->id == HUB_APP_STOPWATCH) {
     if (s_sw_start) {
       s_sw_elapsed += (uint32_t)(time(NULL) - s_sw_start);

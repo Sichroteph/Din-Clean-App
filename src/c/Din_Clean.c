@@ -284,18 +284,20 @@ static void app_focus_changed(bool focused) {
     layer_set_hidden(layer, false);
     layer_mark_dirty(layer);
 
-    if (!s_init_done || !s_appmsg_open) return;
+    if (!s_init_done || !s_appmsg_open)
+      return;
 
     // Check if weather data is stale and request refresh
     t = time(NULL);
     now = *(localtime(&t));
-    bool weather_stale = flags.is_connected &&
-        ((mktime(&now) - last_refresh) > duration);
+    bool weather_stale =
+        flags.is_connected && ((mktime(&now) - last_refresh) > duration);
 
     DictionaryIterator *iter;
     if (app_message_outbox_begin(&iter) == APP_MSG_OK) {
       dict_write_uint8(iter, 0, 0);
-      if (weather_stale) s_weather_request_pending = true;
+      if (weather_stale)
+        s_weather_request_pending = true;
       if (app_message_outbox_send() == APP_MSG_OK && weather_stale) {
         s_weather_request_pending = false;
       }
@@ -360,10 +362,10 @@ static void draw_alt_view(GContext *ctx, uint8_t vid, int icon_id, bool fresh) {
     }
     dtext(ctx, buf, fs, 152, 16);
   } else if (vid == HUB_VIEW_ANALOG) {
-    // Analog clock — thick lines with rounded ends + 12 hour markers
-    #define AC_CX 72
-    #define AC_CY 84
-    #define AC_R  60
+// Analog clock — thick lines with rounded ends + 12 hour markers
+#define AC_CX 72
+#define AC_CY 84
+#define AC_R 60
     graphics_context_set_stroke_color(ctx, GColorWhite);
     graphics_context_set_fill_color(ctx, GColorWhite);
     // 12 hour markers
@@ -376,23 +378,21 @@ static void draw_alt_view(GContext *ctx, uint8_t vid, int icon_id, bool fresh) {
     // Hour hand
     int h12 = now.tm_hour % 12;
     int32_t ha = TRIG_MAX_ANGLE * (h12 * 60 + now.tm_min) / 720;
-    GPoint hend = GPoint(
-      AC_CX + sin_lookup(ha) * 36 / TRIG_MAX_RATIO,
-      AC_CY - cos_lookup(ha) * 36 / TRIG_MAX_RATIO);
+    GPoint hend = GPoint(AC_CX + sin_lookup(ha) * 36 / TRIG_MAX_RATIO,
+                         AC_CY - cos_lookup(ha) * 36 / TRIG_MAX_RATIO);
     graphics_context_set_stroke_width(ctx, 7);
     graphics_draw_line(ctx, GPoint(AC_CX, AC_CY), hend);
     // Minute hand
     int32_t ma = TRIG_MAX_ANGLE * now.tm_min / 60;
-    GPoint mend = GPoint(
-      AC_CX + sin_lookup(ma) * 52 / TRIG_MAX_RATIO,
-      AC_CY - cos_lookup(ma) * 52 / TRIG_MAX_RATIO);
+    GPoint mend = GPoint(AC_CX + sin_lookup(ma) * 52 / TRIG_MAX_RATIO,
+                         AC_CY - cos_lookup(ma) * 52 / TRIG_MAX_RATIO);
     graphics_context_set_stroke_width(ctx, 5);
     graphics_draw_line(ctx, GPoint(AC_CX, AC_CY), mend);
     // Center dot
     graphics_fill_circle(ctx, GPoint(AC_CX, AC_CY), 3);
-    #undef AC_CX
-    #undef AC_CY
-    #undef AC_R
+#undef AC_CX
+#undef AC_CY
+#undef AC_R
   } else {
     BatteryChargeState bat = battery_state_service_peek();
     // --- "Battery" label ---
@@ -403,7 +403,8 @@ static void draw_alt_view(GContext *ctx, uint8_t vid, int icon_id, bool fresh) {
     graphics_fill_rect(ctx, GRect(38, 26, 62, 26), 0, GCornerNone);
     graphics_context_set_fill_color(ctx, GColorBlack);
     int c_px = bat.charge_percent * 60 / 100;
-    graphics_fill_rect(ctx, GRect(39 + c_px, 27, 60 - c_px, 24), 0, GCornerNone);
+    graphics_fill_rect(ctx, GRect(39 + c_px, 27, 60 - c_px, 24), 0,
+                       GCornerNone);
     // --- Borne positive (nub) à droite ---
     graphics_context_set_fill_color(ctx, GColorWhite);
     graphics_fill_rect(ctx, GRect(100, 31, 7, 16), 0, GCornerNone);
@@ -448,8 +449,7 @@ static void draw_toast(GContext *ctx, const char *text) {
   graphics_context_set_stroke_color(ctx, GColorWhite);
   graphics_draw_round_rect(ctx, GRect(10, 64, 124, 36), 4);
   graphics_context_set_text_color(ctx, GColorWhite);
-  graphics_draw_text(ctx, text,
-                     fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
+  graphics_draw_text(ctx, text, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
                      GRect(12, 68, 120, 28), GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentCenter, NULL);
 }
@@ -513,7 +513,8 @@ static void update_proc(Layer *layer, GContext *ctx) {
   // Alternative views: configurable via view_order
   if (current_view_index > 0 && current_view_index < g_hub_config.view_count) {
     uint8_t vid = g_hub_config.view_order[current_view_index];
-    if (vid == HUB_VIEW_WEATHER || vid == HUB_VIEW_DATE || vid == HUB_VIEW_ANALOG) {
+    if (vid == HUB_VIEW_WEATHER || vid == HUB_VIEW_DATE ||
+        vid == HUB_VIEW_ANALOG) {
       draw_alt_view(ctx, vid, icon_id, has_fresh_weather);
       draw_action_toast(ctx);
       if (g_hub_ring_active)
@@ -1138,7 +1139,11 @@ static void back_exit_hint_clear(void *context) {
 }
 
 static void back_click_handler(ClickRecognizerRef recognizer, void *context) {
-  if (g_hub_ring_active) { hub_ring_dismiss(); layer_mark_dirty(layer); return; }
+  if (g_hub_ring_active) {
+    hub_ring_dismiss();
+    layer_mark_dirty(layer);
+    return;
+  }
   // If not on default view, switch back first and reset counter
   if (current_view_index != 0) {
     current_view_index = 0;
@@ -1178,7 +1183,11 @@ static void back_click_handler(ClickRecognizerRef recognizer, void *context) {
 }
 
 static void up_click_handler(ClickRecognizerRef recognizer, void *context) {
-  if (g_hub_ring_active) { hub_ring_dismiss(); layer_mark_dirty(layer); return; }
+  if (g_hub_ring_active) {
+    hub_ring_dismiss();
+    layer_mark_dirty(layer);
+    return;
+  }
   hub_timeout_reset();
   if (g_hub_config.btn_up_type == HUB_OBJ_MENU) {
     hub_menu_push(true, HUB_DIR_UP);
@@ -1188,7 +1197,11 @@ static void up_click_handler(ClickRecognizerRef recognizer, void *context) {
 }
 
 static void down_click_handler(ClickRecognizerRef recognizer, void *context) {
-  if (g_hub_ring_active) { hub_ring_dismiss(); layer_mark_dirty(layer); return; }
+  if (g_hub_ring_active) {
+    hub_ring_dismiss();
+    layer_mark_dirty(layer);
+    return;
+  }
   hub_timeout_reset();
   if (g_hub_config.btn_down_type == HUB_OBJ_MENU) {
     hub_menu_push(false, HUB_DIR_DOWN);
@@ -1198,7 +1211,11 @@ static void down_click_handler(ClickRecognizerRef recognizer, void *context) {
 }
 
 static void select_click_handler(ClickRecognizerRef recognizer, void *context) {
-  if (g_hub_ring_active) { hub_ring_dismiss(); layer_mark_dirty(layer); return; }
+  if (g_hub_ring_active) {
+    hub_ring_dismiss();
+    layer_mark_dirty(layer);
+    return;
+  }
   if (g_hub_config.view_count > 1) {
     current_view_index = (current_view_index + 1) % g_hub_config.view_count;
     hub_timeout_reset();
