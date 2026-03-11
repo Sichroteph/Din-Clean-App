@@ -17,7 +17,7 @@ This does not replace the firmware or other Pebble apps. It covers a good part o
 
 The app is designed to be easy to leave and come back to. Three quick presses on the back button exit the app immediately.
 
-A good setup is to use TikTok as the default watchface, because it launches almost instantly after exiting an app. From TikTok (or any watchface that supports it), configure a long-press shortcut to relaunch Din Clean App. This way, the round trip is fast: back-back-back to exit, pick another app if needed, then long-press to return. In practice, this covers most daily use without friction.
+A good setup is to use TicToc as the default watchface, because it launches almost instantly after exiting an app. From TicToc (or any watchface that supports it), configure a long-press shortcut to relaunch Din Clean App. This way, the round trip is fast: back-back-back to exit, pick another app if needed, then long-press to return. In practice, this covers most daily use without friction.
 
 ## Main screen
 
@@ -211,4 +211,4 @@ pebble install --phone <phone_ip>
 
 ## License
 
-This project is not currently under a specific open-source license. Contact the author for usage terms.
+MIT
