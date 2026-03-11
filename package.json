@@ -2,13 +2,13 @@
   "author": "CJ",
   "dependencies": {},
   "keywords": [],
-  "name": "din_clean_app",
+  "name": "keystone",
   "pebble": {
     "capabilities": [
       "location",
       "configurable"
     ],
-    "displayName": "Din Clean App",
+    "displayName": "Keystone",
     "enableMultiJS": false,
     "messageKeys": {
       "KEY_TEMPERATURE": 0,
@@ -110,6 +110,13 @@
     "projectType": "native",
     "resources": {
       "media": [
+        {
+          "file": "images/APP_LAUNCHER_ICON",
+          "name": "APP_LAUNCHER_ICON",
+          "targetPlatforms": null,
+          "type": "bitmap",
+          "memoryFormat": "1BitPalette"
+        },
         {
           "file": "images/0",
           "name": "0",
