@@ -1196,6 +1196,9 @@ static void init() {
   hub_set_main_window(s_main_window);
   hub_timeout_init(hub_timeout_fired);
 
+  // Launch step counter background worker (fire-and-forget, errors ignored)
+  app_worker_launch();
+
   // Mark init complete — callbacks (focus, tick) may now safely send
   // AppMessages.
   s_init_done = true;

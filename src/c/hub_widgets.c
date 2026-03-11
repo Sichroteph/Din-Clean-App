@@ -31,9 +31,11 @@ static bool stock_load_panel(uint8_t idx, StockPanel *dst) {
 static void widget_stocks_draw(GContext *ctx, GRect bounds, uint8_t page);
 static void widget_hourly_draw(GContext *ctx, GRect bounds, uint8_t page);
 static void widget_daily_draw(GContext *ctx, GRect bounds, uint8_t page);
+static void widget_steps_draw(GContext *ctx, GRect bounds, uint8_t page);
 static uint8_t widget_stocks_page_count(void);
 static uint8_t widget_hourly_page_count(void);
 static uint8_t widget_daily_page_count(void);
+static uint8_t widget_steps_page_count(void);
 
 typedef struct {
   void (*draw)(GContext *ctx, GRect bounds, uint8_t page);
@@ -45,6 +47,7 @@ static const WidgetDef s_widget_defs[] = {
     [HUB_WIDGET_WEATHER_HOURLY] = {widget_hourly_draw,
                                    widget_hourly_page_count},
     [HUB_WIDGET_WEATHER_DAILY] = {widget_daily_draw, widget_daily_page_count},
+    [HUB_WIDGET_STEPS] = {widget_steps_draw, widget_steps_page_count},
 };
 
 typedef struct {
@@ -592,4 +595,78 @@ static void widget_daily_draw(GContext *ctx, GRect bounds, uint8_t page) {
   graphics_draw_text(ctx, pbuf, font14, GRect(2, bounds.size.h - 16, 80, 14),
                      GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft,
                      NULL);
+}
+
+// ========== Steps Widget ==========
+
+static uint8_t widget_steps_page_count(void) { return 1; }
+
+static void widget_steps_draw(GContext *ctx, GRect bounds, uint8_t page) {
+  graphics_context_set_text_color(ctx, GColorWhite);
+  graphics_context_set_fill_color(ctx, GColorWhite);
+
+  // Read today's step count from persist (written by background worker)
+  uint32_t today = 0;
+  if (persist_exists(HUB_PERSIST_STEPS_TODAY)) {
+    today = (uint32_t)persist_read_int(HUB_PERSIST_STEPS_TODAY);
+  }
+
+  // Display today's count (large, centered)
+  char buf[8];
+  snprintf(buf, sizeof(buf), "%lu", (unsigned long)today);
+  GFont font28b = fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD);
+  graphics_draw_text(ctx, buf, font28b, GRect(0, 10, bounds.size.w, 34),
+                     GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter,
+                     NULL);
+
+  // Label
+  GFont font14 = fonts_get_system_font(FONT_KEY_GOTHIC_14);
+  graphics_draw_text(ctx, "steps today", font14,
+                     GRect(0, 44, bounds.size.w, 16),
+                     GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter,
+                     NULL);
+
+  // --- 7-day history histogram ---
+  // Read last 7 days from persist
+  uint16_t hist[7];
+  uint16_t hist_max = 1; // avoid division by zero
+  for (int i = 0; i < 7; i++) {
+    hist[i] = 0;
+    int key = HUB_PERSIST_STEPS_DAY0 + i;
+    if (persist_exists(key)) {
+      int32_t v = persist_read_int(key);
+      hist[i] = (v > 0 && v < 65535) ? (uint16_t)v : 0;
+    }
+    if (hist[i] > hist_max)
+      hist_max = hist[i];
+  }
+
+  // Bar chart: 7 bars, bottom-aligned
+  int bar_area_top = 72;
+  int bar_area_bot = 148;
+  int bar_h_max = bar_area_bot - bar_area_top;
+  int bar_w = 14;
+  int gap = (bounds.size.w - 7 * bar_w) / 8; // even spacing
+
+  for (int i = 0; i < 7; i++) {
+    int bh = (int)hist[i] * bar_h_max / hist_max;
+    if (hist[i] > 0 && bh < 2)
+      bh = 2; // minimum visible bar
+    int bx = gap + i * (bar_w + gap);
+    int by = bar_area_bot - bh;
+    if (bh > 0) {
+      graphics_fill_rect(ctx, GRect(bx, by, bar_w, bh), 0, GCornerNone);
+    }
+  }
+
+  // Day labels below bars: -7 -6 -5 -4 -3 -2 -1
+  for (int i = 0; i < 7; i++) {
+    char lbl[4];
+    snprintf(lbl, sizeof(lbl), "-%d", 7 - i);
+    int bx = gap + i * (bar_w + gap);
+    graphics_draw_text(ctx, lbl, font14,
+                       GRect(bx - 2, bar_area_bot, bar_w + 4, 14),
+                       GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter,
+                       NULL);
+  }
 }

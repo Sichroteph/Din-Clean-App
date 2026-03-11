@@ -51,10 +51,13 @@ def build(ctx):
         target=app_elf)
 
         if build_worker:
-            worker_elf='{}/pebble-worker.elf'.format(p)
+            worker_elf='{}/pebble-worker.elf'.format(ctx.env.BUILD_DIR)
             binaries.append({'platform': p, 'app_elf': app_elf, 'worker_elf': worker_elf})
-            ctx.pbl_worker(source=ctx.path.ant_glob('worker_src/c/**/*.c'),
-            target=worker_elf)
+            # Use pbl_build instead of pbl_worker to work around SDK bug in
+            # report_memory_usage.py (to_nodes vs find_or_declare for worker elf)
+            ctx.pbl_build(source=ctx.path.ant_glob('worker_src/c/**/*.c'),
+            target=ctx.path.get_bld().make_node(worker_elf),
+            bin_type='worker')
         else:
             binaries.append({'platform': p, 'app_elf': app_elf})
 

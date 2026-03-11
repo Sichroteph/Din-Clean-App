@@ -45,6 +45,11 @@ typedef struct {
 #define HUB_PERSIST_STOCK3 313
 #define HUB_PERSIST_STOCK4 314
 
+// Step counter persist keys (written by background worker, read by widget)
+#define HUB_PERSIST_STEPS_TODAY 230
+#define HUB_PERSIST_STEPS_DAY0  231  // yesterday
+#define HUB_PERSIST_STEPS_DATE  238  // julian day of "today"
+
 // Stock widget limits
 #define STOCK_MAX_PANELS 5
 #define STOCK_HISTORY_POINTS 8
@@ -86,6 +91,7 @@ typedef enum {
   HUB_WIDGET_STOCKS = 0,
   HUB_WIDGET_WEATHER_HOURLY,
   HUB_WIDGET_WEATHER_DAILY,
+  HUB_WIDGET_STEPS,
   HUB_WIDGET_COUNT
 } HubWidgetId;
 typedef enum {
