@@ -579,6 +579,8 @@ static void update_proc(Layer *layer, GContext *ctx) {
   // Exit hint toast (double-back to exit)
   if (s_show_exit_hint)
     draw_toast(ctx, "Press < to exit");
+
+  APP_LOG(APP_LOG_LEVEL_INFO, "H%zu", heap_bytes_free());
 }
 
 // Forward declaration (used in handle_tick, inbox handler, and retry callback)
