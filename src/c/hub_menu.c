@@ -251,7 +251,6 @@ static void menu_select(MenuLayer *ml, MenuIndex *idx, void *data) {
                           ctx->depth + 1, ctx->direction);
     break;
   case HUB_MI_PSEUDOAPP:
-    vibes_double_pulse();
     hub_pseudoapp_push(item->data);
     break;
   case HUB_MI_ACTION:

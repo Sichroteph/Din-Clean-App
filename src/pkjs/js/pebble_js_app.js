@@ -1361,6 +1361,8 @@ Pebble.addEventListener('ready',
 
 Pebble.addEventListener('appmessage',
   function (e) {
+    console.log('[MSG] payload keys: ' + JSON.stringify(Object.keys(e.payload || {})));
+
     // Check for webhook trigger from C side
     if (e.payload && e.payload['KEY_HUB_WEBHOOK'] !== undefined) {
       var webhookIndex = e.payload['KEY_HUB_WEBHOOK'];
@@ -1369,8 +1371,10 @@ Pebble.addEventListener('appmessage',
     }
 
     // Capture heap diagnostics sent by the watch alongside weather requests
-    if (e.payload && e.payload[372] !== undefined) {
-      var heapFree = e.payload[372] * 128;
+    var heapRaw = e.payload['KEY_HEAP_FREE'];
+    if (heapRaw === undefined) heapRaw = e.payload[372];
+    if (heapRaw !== undefined) {
+      var heapFree = heapRaw * 128;
       localStorage.setItem('heap_free', heapFree);
       console.log('[DIAG] heap_free~' + heapFree + 'B');
     }
