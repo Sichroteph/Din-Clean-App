@@ -1369,8 +1369,8 @@ Pebble.addEventListener('appmessage',
     }
 
     // Capture heap diagnostics sent by the watch alongside weather requests
-    if (e.payload && e.payload['KEY_HEAP_FREE'] !== undefined) {
-      var heapFree = e.payload['KEY_HEAP_FREE'] * 128;
+    if (e.payload && e.payload[372] !== undefined) {
+      var heapFree = e.payload[372] * 128;
       localStorage.setItem('heap_free', heapFree);
       console.log('[DIAG] heap_free~' + heapFree + 'B');
     }
