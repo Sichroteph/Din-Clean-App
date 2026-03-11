@@ -223,12 +223,12 @@ static void menu_draw_row(GContext *gctx, const Layer *cell, MenuIndex *idx,
   }
 
   // Label text, offset to the right of the icon, vertically centred
-  int text_x = ICON_X + ICON_W + 4;
+  int text_x = ICON_X + ICON_W + 6;
   GRect text_rect =
-      GRect(text_x, (bounds.size.h - 22) / 2, bounds.size.w - text_x, 26);
+      GRect(text_x, (bounds.size.h - 28) / 2 - 2, bounds.size.w - text_x, 32);
   graphics_context_set_text_color(gctx, fg);
   graphics_draw_text(
-      gctx, item->label, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
+      gctx, item->label, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD),
       text_rect, GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
 }
 
