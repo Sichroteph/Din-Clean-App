@@ -6,7 +6,7 @@ typedef struct {
   Window *window;
   MenuLayer *menu;
   const HubMenuItem *all_items;
-  HubMenuItem items[HUB_MAX_MENU_ITEMS]; // owned copy for root menus
+  HubMenuItem *owned_items; // non-NULL for root menus only (separate malloc)
   uint8_t all_count;
   uint8_t visible_indices[HUB_MAX_MENU_ITEMS];
   uint8_t visible_count;
@@ -35,12 +35,19 @@ void hub_menu_push(bool is_up_menu, HubDirection direction) {
   if (!ctx)
     return;
 
-  ctx->all_count = hub_config_load_menu(is_up_menu, ctx->items);
-  if (ctx->all_count == 0) {
+  HubMenuItem *items = malloc(HUB_MAX_MENU_ITEMS * sizeof(HubMenuItem));
+  if (!items) {
     free(ctx);
     return;
   }
-  ctx->all_items = ctx->items;
+  ctx->owned_items = items;
+  ctx->all_count = hub_config_load_menu(is_up_menu, items);
+  if (ctx->all_count == 0) {
+    free(items);
+    free(ctx);
+    return;
+  }
+  ctx->all_items = items;
 
   ctx->parent_index = -1;
   ctx->depth = 0;
@@ -80,6 +87,7 @@ void hub_menu_push_submenu(const HubMenuItem *items, uint8_t count,
   if (!ctx)
     return;
 
+  ctx->owned_items = NULL;
   ctx->all_items = items;
   ctx->all_count = count;
   ctx->parent_index = parent_index;
@@ -160,7 +168,8 @@ static void menu_window_load(Window *window) {
 
 static void menu_window_unload(Window *window) {
   MenuCtx *ctx = window_get_user_data(window);
-  menu_layer_destroy(ctx->menu);
+  if (ctx->menu) menu_layer_destroy(ctx->menu);
+  if (ctx->owned_items) free(ctx->owned_items);
   window_destroy(ctx->window);
   free(ctx);
 }

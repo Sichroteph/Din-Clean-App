@@ -263,7 +263,7 @@ function processOpenMeteoResponse(responseText) {
   }
 
   // --- 3-day forecast data extraction using DAILY data ---
-  var day_temps = ["", "", "", "", ""];
+  var day_temps = ["-128°","-128°","-128°","-128°","-128°"]; // sentinel = no data
   var day_icons = ["", "", "", "", ""];
   var day_rains = ["", "", "", "", ""];
   var day_winds = ["", "", "", "", ""];

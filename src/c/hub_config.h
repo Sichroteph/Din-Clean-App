@@ -67,7 +67,7 @@ typedef struct {
 
 
 // Limits
-#define HUB_MAX_MENU_ITEMS 5 // Reduced from 8 to save 90 bytes BSS on APLITE
+#define HUB_MAX_MENU_ITEMS 16 // Heap-allocated: supports up to 16-item menu trees
 #define HUB_MAX_WIDGETS 6
 #define HUB_MAX_VIEWS 4
 #define HUB_MAX_LABEL 12 // Reduced from 16 to save 64 bytes BSS on APLITE

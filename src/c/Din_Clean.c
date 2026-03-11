@@ -278,9 +278,8 @@ static void app_focus_changed(bool focused) {
 
     // Check if weather data is stale and request refresh
     t = time(NULL);
-    now = *(localtime(&t));
     bool weather_stale =
-        flags.is_connected && ((mktime(&now) - last_refresh) > duration);
+        flags.is_connected && ((t - last_refresh) > duration);
 
     DictionaryIterator *iter;
     if (app_message_outbox_begin(&iter) == APP_MSG_OK) {
@@ -484,8 +483,7 @@ static void update_proc(Layer *layer, GContext *ctx) {
   snprintf(mday, sizeof(mday), "%i", now.tm_mday);
   graphics_context_set_text_color(ctx, GColorWhite);
 
-  bool has_fresh_weather =
-      ((mktime(&now) - last_refresh) < duration + offline_delay);
+  bool has_fresh_weather = ((t - last_refresh) < duration + offline_delay);
 
   snprintf(weather_temp_char, sizeof(weather_temp_char), "%i\xc2\xb0", weather_temp);
   snprintf(minTemp, sizeof(minTemp), "%i\xc2\xb0", tmin_val);
@@ -544,7 +542,7 @@ static void do_send_weather_request(void);
 
 static void handle_tick(struct tm *cur, TimeUnits units_changed) {
   t = time(NULL);
-  now = *(localtime(&t));
+  now = *cur;  // use OS-provided local time (correct DST)
   if (flags.is_vibration) {
     if (now.tm_min == 0 && now.tm_hour >= QUIET_TIME_END &&
         now.tm_hour <= QUIET_TIME_START) {
@@ -556,7 +554,7 @@ static void handle_tick(struct tm *cur, TimeUnits units_changed) {
   if (s_init_done && s_appmsg_open && flags.is_connected) {
     if ((((flags.is_30mn) && (now.tm_min % 30 == 0)) ||
          (now.tm_min % 60 == 0) ||
-         ((mktime(&now) - last_refresh) > duration))) {
+         ((t - last_refresh) > duration))) {
       s_weather_request_pending = true;
       do_send_weather_request();
     }
@@ -646,7 +644,7 @@ static void inbox_received_callback(DictionaryIterator *iterator,
       if ((t = dict_find(iterator, KEY_FORECAST_WIND1 + i)))
         graph_wind_val[1 + i] = atoi(t->value->cstring);
 
-    last_refresh = mktime(&now);
+    last_refresh = time(NULL);
 
     // Persist core weather
     persist_write_string(KEY_ICON, icon);
