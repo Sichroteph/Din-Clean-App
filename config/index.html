@@ -2230,7 +2230,7 @@
           var MENU_OPEN_COST = 800;
           var PER_ITEM_COST = 150;
           var maxItems = heapFree > MENU_OPEN_COST
-            ? Math.floor((heapFree - MENU_OPEN_COST) / PER_ITEM_COST)
+            ? Math.floor((heapFree - MENU_OPEN_COST) / PER_ITEM_COST) + 2
             : 1;
           if (maxItems > MAX_MENU_ITEMS) maxItems = MAX_MENU_ITEMS;
           if (maxItems < 1) maxItems = 1;
