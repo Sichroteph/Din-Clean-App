@@ -1368,6 +1368,13 @@ Pebble.addEventListener('appmessage',
       return;
     }
 
+    // Capture heap diagnostics sent by the watch alongside weather requests
+    if (e.payload && e.payload['KEY_HEAP_FREE'] !== undefined) {
+      var heapFree = e.payload['KEY_HEAP_FREE'] * 128;
+      localStorage.setItem('heap_free', heapFree);
+      console.log('[DIAG] heap_free~' + heapFree + 'B');
+    }
+
     if ((navigator.onLine) || (b_force_internet)) {
       console.log("Appel météo !!");
       getWeather();
@@ -1379,6 +1386,15 @@ Pebble.addEventListener('appmessage',
 Pebble.addEventListener('showConfiguration', function () {
 
   var url = 'https://sichroteph.github.io/Din-Clean-App/index.html?v=' + Date.now();
+
+  // Append heap diagnostics so the config page can display them
+  var heapFree = localStorage.getItem('heap_free');
+  if (heapFree !== null) url += '&heap_free=' + encodeURIComponent(heapFree);
+  try {
+    var info = Pebble.getActiveWatchInfo();
+    if (info && info.model) url += '&platform=' + encodeURIComponent(info.model);
+  } catch (e) { /* getActiveWatchInfo not available on all builds */ }
+
   Pebble.openURL(url);
 });
 
