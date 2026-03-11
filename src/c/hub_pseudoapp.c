@@ -31,6 +31,7 @@ void hub_ring_dismiss(void) {
   s_ring_count = 0;
   g_hub_ring_active = 0;
   vibes_cancel();
+  if (s_at) { app_timer_cancel(s_at); s_at = NULL; }
 }
 static const char *s_names[] = {"Stopwatch", "Timer", "Alarm"};
 
@@ -96,6 +97,7 @@ static void pa_tick(void *d) {
     s_ring_count = 10;
     g_hub_ring_active = 1;
     play_vibe();
+    hub_return_to_watchface(); /* pop pseudoapp → toast visible on main window */
     light_enable_interaction();
   }
   if (s_ast == 2) {
@@ -106,6 +108,7 @@ static void pa_tick(void *d) {
       s_ring_count = 10;
       g_hub_ring_active = 2;
       play_vibe();
+      hub_return_to_watchface();
       light_enable_interaction();
     }
   }

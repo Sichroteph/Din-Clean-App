@@ -1389,12 +1389,14 @@ Pebble.addEventListener('showConfiguration', function () {
 
   // Append heap diagnostics so the config page can display them
   var heapFree = localStorage.getItem('heap_free');
+  console.log('[CFG] heap_free in localStorage: ' + heapFree);
   if (heapFree !== null) url += '&heap_free=' + encodeURIComponent(heapFree);
   try {
     var info = Pebble.getActiveWatchInfo();
     if (info && info.model) url += '&platform=' + encodeURIComponent(info.model);
   } catch (e) { /* getActiveWatchInfo not available on all builds */ }
 
+  console.log('[CFG] opening URL: ' + url);
   Pebble.openURL(url);
 });
 

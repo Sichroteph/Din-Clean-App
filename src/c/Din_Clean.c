@@ -283,21 +283,21 @@ static void app_focus_changed(bool focused) {
     layer_set_hidden(layer, false);
     layer_mark_dirty(layer);
 
+    if (!s_init_done || !s_appmsg_open) return;
+
     // Check if weather data is stale and request refresh
     t = time(NULL);
     now = *(localtime(&t));
-    if (s_init_done && s_appmsg_open && (flags.is_connected) &&
-        ((mktime(&now) - last_refresh) > duration)) {
-      s_weather_request_pending = true;
+    bool weather_stale = flags.is_connected &&
+        ((mktime(&now) - last_refresh) > duration);
 
-      DictionaryIterator *iter;
-      AppMessageResult result = app_message_outbox_begin(&iter);
-      if (result == APP_MSG_OK) {
-        dict_write_uint8(iter, 0, 0);
-        result = app_message_outbox_send();
-        if (result == APP_MSG_OK) {
-          s_weather_request_pending = false;
-        }
+    DictionaryIterator *iter;
+    if (app_message_outbox_begin(&iter) == APP_MSG_OK) {
+      dict_write_uint8(iter, 0, 0);
+      dict_write_uint8(iter, KEY_HEAP_FREE, (uint8_t)(heap_bytes_free() >> 7));
+      if (weather_stale) s_weather_request_pending = true;
+      if (app_message_outbox_send() == APP_MSG_OK && weather_stale) {
+        s_weather_request_pending = false;
       }
     }
   }
