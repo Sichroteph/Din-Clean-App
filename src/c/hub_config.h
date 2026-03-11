@@ -62,7 +62,7 @@ typedef struct {
 // Limits
 #define HUB_MAX_MENU_ITEMS 5 // Reduced from 8 to save 90 bytes BSS on APLITE
 #define HUB_MAX_WIDGETS 6
-#define HUB_MAX_VIEWS 3
+#define HUB_MAX_VIEWS 4
 #define HUB_MAX_LABEL 12 // Reduced from 16 to save 64 bytes BSS on APLITE
 #define HUB_MAX_MENU_DEPTH 3
 
@@ -90,6 +90,7 @@ typedef enum {
   HUB_VIEW_MAIN = 0,
   HUB_VIEW_WEATHER,
   HUB_VIEW_DATE,
+  HUB_VIEW_ANALOG,
   HUB_VIEW_COUNT
 } HubViewId;
 typedef enum { HUB_DIR_UP = 0, HUB_DIR_DOWN } HubDirection;

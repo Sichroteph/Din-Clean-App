@@ -807,7 +807,9 @@
   <div class="heap-indicator" id="heap_indicator">
     <div class="heap-indicator-top">
       <span class="heap-label">Ressources disponibles</span>
-      <div class="heap-bar-wrap"><div class="heap-bar" id="heap_bar"></div></div>
+      <div class="heap-bar-wrap">
+        <div class="heap-bar" id="heap_bar"></div>
+      </div>
     </div>
     <div class="heap-value" id="heap_value"></div>
   </div>
@@ -985,6 +987,11 @@
             <input type="checkbox" class="hidden-input" id="hub_view_2" checked>
             <label class="toggle-track" for="hub_view_2"></label>
           </div>
+          <div class="row">
+            <div class="row-label">Analog clock</div>
+            <input type="checkbox" class="hidden-input" id="hub_view_3">
+            <label class="toggle-track" for="hub_view_3"></label>
+          </div>
         </div>
 
         <div class="card">
@@ -1133,7 +1140,8 @@
               Timer / Alarm vibration
               <div class="row-sublabel">Pattern when timer or alarm expires</div>
             </div>
-            <select id="hub_vibe_pattern" style="padding:4px 8px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:0.8rem;">
+            <select id="hub_vibe_pattern"
+              style="padding:4px 8px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:0.8rem;">
               <option value="0">Short</option>
               <option value="1" selected>Long</option>
               <option value="2">Urgent</option>
@@ -2059,6 +2067,7 @@
       var views = ['0'];
       if (document.getElementById('hub_view_1').checked) views.push('1');
       if (document.getElementById('hub_view_2').checked) views.push('2');
+      if (document.getElementById('hub_view_3').checked) views.push('3');
       options['hub_views'] = views.join(',');
 
       options['countdown_date'] = document.getElementById('countdown_date').value || '';
@@ -2168,6 +2177,7 @@
       var viewIds = savedViews.split(',');
       document.getElementById('hub_view_1').checked = viewIds.indexOf('1') >= 0;
       document.getElementById('hub_view_2').checked = viewIds.indexOf('2') >= 0;
+      document.getElementById('hub_view_3').checked = viewIds.indexOf('3') >= 0;
 
       document.getElementById('countdown_date').value = localStorage['countdown_date'] || '';
       document.getElementById('countdown_label').value = localStorage['countdown_label'] || '';
