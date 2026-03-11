@@ -551,6 +551,9 @@ static void update_proc(Layer *layer, GContext *ctx) {
   APP_LOG(APP_LOG_LEVEL_INFO, "HEAP post-render: %zu", heap_bytes_free());
 }
 
+// Forward declaration (used in handle_tick, inbox handler, and retry callback)
+static void do_send_weather_request(void);
+
 static void handle_tick(struct tm *cur, TimeUnits units_changed) {
   t = time(NULL);
   now = *(localtime(&t));
@@ -566,19 +569,8 @@ static void handle_tick(struct tm *cur, TimeUnits units_changed) {
     if ((((flags.is_30mn) && (now.tm_min % 30 == 0)) ||
          (now.tm_min % 60 == 0) ||
          ((mktime(&now) - last_refresh) > duration))) {
-      DictionaryIterator *iter;
-      AppMessageResult result = app_message_outbox_begin(&iter);
-      if (result == APP_MSG_OK) {
-        dict_write_uint8(iter, 0, 0);
-        result = app_message_outbox_send();
-        if (result == APP_MSG_OK) {
-          s_weather_request_pending = false;
-        } else {
-          s_weather_request_pending = true;
-        }
-      } else {
-        s_weather_request_pending = true;
-      }
+      s_weather_request_pending = true;
+      do_send_weather_request();
     }
   }
 
@@ -777,12 +769,8 @@ static void inbox_received_callback(DictionaryIterator *iterator,
 
     // Request immediate weather update to apply new units
     if (s_appmsg_open) {
-      DictionaryIterator *iter;
-      AppMessageResult outbox_result = app_message_outbox_begin(&iter);
-      if (outbox_result == APP_MSG_OK) {
-        dict_write_uint8(iter, 0, 0);
-        app_message_outbox_send();
-      }
+      s_weather_request_pending = true;
+      do_send_weather_request();
     }
   }
 
@@ -943,9 +931,6 @@ static void inbox_received_callback(DictionaryIterator *iterator,
     }
   }
 }
-
-// Forward declaration for weather retry
-static void do_send_weather_request(void);
 
 static void weather_retry_timer_callback(void *context) {
   s_weather_retry_timer = NULL;
