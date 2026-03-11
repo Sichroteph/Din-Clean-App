@@ -1320,7 +1320,7 @@
     // ================================================================
     var MAX_MENU_ITEMS = 12;
     var MAX_MENU_DEPTH = 3;
-    var heapMaxMenuDepth = MAX_MENU_DEPTH; // may be reduced by nav budget
+    var heapMaxMenuItems = MAX_MENU_ITEMS; // may be reduced by nav budget
 
     var PSEUDOAPPS = [
       { id: 0, name: 'Stopwatch' },
@@ -1505,7 +1505,7 @@
 
       renderMenuItems(container, tree, '', 0, menuId);
 
-      if (total < MAX_MENU_ITEMS) {
+      if (total < heapMaxMenuItems) {
         if (formState.active && formState.menuId === menuId && formState.parentPath === '' && !formState.editPath) {
           container.innerHTML += createFormHTML(null);
         } else if (!formState.active || formState.menuId !== menuId) {
@@ -1518,7 +1518,7 @@
 
       var countEl = document.createElement('div');
       countEl.className = 'menu-count';
-      countEl.textContent = total + '/' + MAX_MENU_ITEMS + ' items';
+      countEl.textContent = total + '/' + heapMaxMenuItems + ' items';
       container.appendChild(countEl);
 
       if (total === 0 && !formState.active) {
@@ -1567,7 +1567,7 @@
 
         if (item.type === 0) {
           renderMenuItems(container, item.children, path, depth + 1, menuId);
-          if (depth + 1 < heapMaxMenuDepth && total < MAX_MENU_ITEMS) {
+          if (depth + 1 < MAX_MENU_DEPTH && total < heapMaxMenuItems) {
             if (formState.active && formState.menuId === menuId && formState.parentPath === path && !formState.editPath) {
               container.innerHTML += createFormHTML(null, depth + 1);
             } else if (!formState.active || formState.menuId !== menuId) {
@@ -1590,7 +1590,7 @@
       var label = prefill ? escapeHtml(prefill.label) : '';
       var type = prefill ? prefill.type : 1;
       var data = prefill ? prefill.data : 0;
-      var canFolder = depth < heapMaxMenuDepth - 1;
+      var canFolder = depth < MAX_MENU_DEPTH - 1;
 
       var typeOptions = '';
       if (canFolder) typeOptions += '<option value="0"' + (type === 0 ? ' selected' : '') + '>Folder</option>';
@@ -2223,19 +2223,22 @@
             label + ' free' + platformStr + note;
           document.getElementById('heap_indicator').style.display = 'flex';
 
-          // Navigation budget: estimate max safe menu depth
-          var ROOT_COST = 680;   // MenuCtx + items[16] + Window + MenuLayer
-          var LEVEL_COST = 400;  // MenuCtx + Window + MenuLayer (submenu)
-          var MARGIN = 200;      // SDK internals safety
-          var budget = heapFree - ROOT_COST - MARGIN;
-          var maxLevels = budget > 0 ? Math.floor(budget / LEVEL_COST) + 1 : 0;
-          if (maxLevels > MAX_MENU_DEPTH) maxLevels = MAX_MENU_DEPTH;
-          if (maxLevels < 1) maxLevels = 1;
-          heapMaxMenuDepth = maxLevels;
+          // Navigation budget: estimate max safe total menu items
+          // Empirical: ~1900B heap → 7-8 items; formula: (heapFree - 800) / 150
+          // 800B = fixed cost (MenuCtx + items[16] + Window + MenuLayer + margin)
+          // 150B = SDK render overhead per row (MenuLayer/ScrollLayer internals)
+          var MENU_OPEN_COST = 800;
+          var PER_ITEM_COST = 150;
+          var maxItems = heapFree > MENU_OPEN_COST
+            ? Math.floor((heapFree - MENU_OPEN_COST) / PER_ITEM_COST)
+            : 1;
+          if (maxItems > MAX_MENU_ITEMS) maxItems = MAX_MENU_ITEMS;
+          if (maxItems < 1) maxItems = 1;
+          heapMaxMenuItems = maxItems;
 
           var budgetEl = document.getElementById('heap_nav_budget');
-          var budgetColor = maxLevels >= 3 ? '#4ae68a' : maxLevels >= 2 ? '#ffb84d' : '#ff6c6c';
-          budgetEl.innerHTML = 'Nav budget: <b style="color:' + budgetColor + '">' + maxLevels + ' level' + (maxLevels > 1 ? 's' : '') + '</b> max';
+          var budgetColor = maxItems >= 10 ? '#4ae68a' : maxItems >= 5 ? '#ffb84d' : '#ff6c6c';
+          budgetEl.innerHTML = 'Nav budget: <b style="color:' + budgetColor + '">' + maxItems + ' item' + (maxItems > 1 ? 's' : '') + '</b> max';
           budgetEl.style.display = '';
         }
       })();
