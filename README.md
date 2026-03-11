@@ -1,15 +1,23 @@
 # Din Clean App
 
-A Pebble application that works as a full replacement for the default firmware interactions on Aplite, Basalt, and Diorite watches. It displays a watchface, but runs as an app, which gives it access to all four hardware buttons and allows it to redefine their behavior entirely.
+A Pebble application that complements the default firmware by adding customizable menus, widgets, and shortcuts to a watchface-like interface. It runs as an app rather than a watchface, which gives it access to all four hardware buttons. The firmware continues to run normally behind it, and the user can exit at any time to access other applications.
 
 ![Main screen](docs/images/main_screen.png)
 <!-- TODO: screenshot of the main time screen with icon bar -->
 
 ## Why an app instead of a watchface
 
-On Pebble, watchfaces can only react to time ticks and wrist shakes. They have no access to button presses (except back, which is reserved by the system). By running as an app, Din Clean takes over all buttons and builds a complete interaction layer on top of what was originally just a clock face.
+On Pebble, watchfaces can only react to time ticks and wrist shakes. They have no access to button presses (except back, which is reserved by the system). By running as an app, Din Clean can use all four buttons to offer menus, widgets, and shortcuts alongside the usual time display.
 
-The result: the watch displays time and weather exactly like a watchface, but short-presses, long-presses, and the select button all do something. On Aplite in particular, the select button has never been usable from a watchface context, so this is a first.
+The watch shows time and weather exactly like a watchface would, but short-presses, long-presses, and the select button all become available. On Aplite in particular, the select button has never been usable from a watchface context, so this is new.
+
+This does not replace the firmware or other Pebble apps. It covers a good part of everyday needs (time, weather, quick tools, shortcuts), but users will still want to leave the app regularly to use other applications.
+
+## Recommended usage
+
+The app is designed to be easy to leave and come back to. Three quick presses on the back button exit the app immediately.
+
+A good setup is to use TikTok as the default watchface, because it launches almost instantly after exiting an app. From TikTok (or any watchface that supports it), configure a long-press shortcut to relaunch Din Clean App. This way, the round trip is fast: back-back-back to exit, pick another app if needed, then long-press to return. In practice, this covers most daily use without friction.
 
 ## Main screen
 
