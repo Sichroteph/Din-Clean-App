@@ -56,6 +56,8 @@ typedef struct {
   char change[8];  // "+0.8%", "-1.2%"
   uint8_t history[STOCK_HISTORY_POINTS]; // 0-90 normalized (binary: char+33)
   bool positive;      // true if change >= 0 (for trend indicator)
+  char price_min[8];  // Graph range min label
+  char price_max[8];  // Graph range max label
 } StockPanel;
 
 

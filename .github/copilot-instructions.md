@@ -32,21 +32,35 @@ timeout 30 pebble logs --phone 192.168.1.133
 - Confirm the app launched correctly (no crash, JS ready, weather/stock fetched).
 
 ### 4. Publish config page to GitHub Pages
-After **every** change — whether or not `config/index.html` was modified — keep gh-pages in sync:
+
+The source lives in `config/` on `main`. The deploy flattens it to the **root** of `gh-pages` so the URL is `/index.html`.
+
 ```bash
-git checkout gh-pages
-git checkout main -- config/
-git commit -m "gh-pages: <short description>"
-git push origin gh-pages
+git stash
+git checkout --orphan gh-pages-tmp
+git rm -rf . --quiet
+git clean -fdx
+git checkout main -- config/index.html config/css config/js
+mv config/* .
+rm -rf config/
+touch .nojekyll
+git add -A
+git commit -m "gh-pages: update config page"
+git push origin HEAD:gh-pages --force
 git checkout main
+git branch -D gh-pages-tmp
+git stash pop 2>/dev/null
 ```
-(If `config/` is unchanged compared to gh-pages HEAD, the commit will be empty — that's fine, skip it.)
+
+**Verify:** `git ls-tree --name-only gh-pages` → `.nojekyll`, `css`, `index.html`, `js` (nothing else).
+
+**Config URL**: `https://sichroteph.github.io/Din-Clean-App/index.html` — must match `src/pkjs/js/pebble_js_app.js` (`showConfiguration`).
 
 ## Project Structure
 
 - **`src/c/`** — C source code (watchface + hub system)
 - **`src/pkjs/js/pebble_js_app.js`** — PebbleKit JS (weather API, config, webhooks)
-- **`config/index.html`** — Configuration page (hosted on GitHub Pages at `sichroteph.github.io/Din-Clean-App/config/index.html`)
+- **`config/index.html`** — Configuration page (deployed to root of gh-pages → `sichroteph.github.io/Din-Clean-App/index.html`)
 - **`package.json`** — Pebble app manifest (message keys, resources, app metadata)
 - **`resources/`** — Fonts and images
 

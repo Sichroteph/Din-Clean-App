@@ -369,8 +369,7 @@ static void draw_alt_view(GContext *ctx, uint8_t vid, int icon_id, bool fresh) {
     graphics_fill_rect(ctx, GRect(38, 26, 62, 26), 0, GCornerNone);
     graphics_context_set_fill_color(ctx, GColorBlack);
     int c_px = bat.charge_percent * 60 / 100;
-    graphics_fill_rect(ctx, GRect(39 + c_px, 27, 60 - c_px, 24), 0,
-                       GCornerNone);
+    graphics_fill_rect(ctx, GRect(39 + c_px, 27, 60 - c_px, 24), 0, GCornerNone);
     // --- Borne positive (nub) à droite ---
     graphics_context_set_fill_color(ctx, GColorWhite);
     graphics_fill_rect(ctx, GRect(100, 31, 7, 16), 0, GCornerNone);
@@ -389,40 +388,6 @@ static void draw_alt_view(GContext *ctx, uint8_t vid, int icon_id, bool fresh) {
         dtext(ctx, buf, fb, has_label ? 118 : 96, 34);
       }
     }
-  } else if (vid == HUB_VIEW_ANALOG) {
-    // Analog clock — thick lines with rounded ends + 12 hour markers
-    #define AC_CX 72
-    #define AC_CY 84
-    #define AC_R  60
-    graphics_context_set_stroke_color(ctx, GColorWhite);
-    graphics_context_set_fill_color(ctx, GColorWhite);
-    // 12 hour markers
-    for (int i = 0; i < 12; i++) {
-      int32_t a = TRIG_MAX_ANGLE * i / 12;
-      int mx = AC_CX + sin_lookup(a) * (AC_R - 4) / TRIG_MAX_RATIO;
-      int my = AC_CY - cos_lookup(a) * (AC_R - 4) / TRIG_MAX_RATIO;
-      graphics_fill_circle(ctx, GPoint(mx, my), (i % 3 == 0) ? 3 : 1);
-    }
-    // Hour hand
-    int h12 = now.tm_hour % 12;
-    int32_t ha = TRIG_MAX_ANGLE * (h12 * 60 + now.tm_min) / 720;
-    GPoint hend = GPoint(
-      AC_CX + sin_lookup(ha) * 36 / TRIG_MAX_RATIO,
-      AC_CY - cos_lookup(ha) * 36 / TRIG_MAX_RATIO);
-    graphics_context_set_stroke_width(ctx, 7);
-    graphics_draw_line(ctx, GPoint(AC_CX, AC_CY), hend);
-    // Minute hand
-    int32_t ma = TRIG_MAX_ANGLE * now.tm_min / 60;
-    GPoint mend = GPoint(
-      AC_CX + sin_lookup(ma) * 52 / TRIG_MAX_RATIO,
-      AC_CY - cos_lookup(ma) * 52 / TRIG_MAX_RATIO);
-    graphics_context_set_stroke_width(ctx, 5);
-    graphics_draw_line(ctx, GPoint(AC_CX, AC_CY), mend);
-    // Center dot
-    graphics_fill_circle(ctx, GPoint(AC_CX, AC_CY), 3);
-    #undef AC_CX
-    #undef AC_CY
-    #undef AC_R
   }
 }
 
@@ -445,25 +410,23 @@ static void action_toast_clear_cb(void *context) {
 // Draws the "Action sent!" overlay over whatever is currently on screen.
 // Registers a 1.5-second timer the first time it is called so the overlay
 // disappears automatically. Safe to call from update_proc.
-static void draw_toast(GContext *ctx, const char *text) {
-  graphics_context_set_fill_color(ctx, GColorBlack);
-  graphics_fill_rect(ctx, GRect(10, 64, 124, 36), 4, GCornersAll);
-  graphics_context_set_stroke_color(ctx, GColorWhite);
-  graphics_draw_round_rect(ctx, GRect(10, 64, 124, 36), 4);
-  graphics_context_set_text_color(ctx, GColorWhite);
-  graphics_draw_text(ctx, text,
-                     fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
-                     GRect(12, 68, 120, 28), GTextOverflowModeTrailingEllipsis,
-                     GTextAlignmentCenter, NULL);
-}
-
 static void draw_action_toast(GContext *ctx) {
   if (!g_hub_action_toast)
     return;
   if (!s_action_toast_timer)
     s_action_toast_timer =
         app_timer_register(1500, action_toast_clear_cb, NULL);
-  draw_toast(ctx, "Action sent!");
+  // Rounded rectangle backdrop
+  graphics_context_set_fill_color(ctx, GColorBlack);
+  graphics_fill_rect(ctx, GRect(10, 64, 124, 36), 4, GCornersAll);
+  graphics_context_set_stroke_color(ctx, GColorWhite);
+  graphics_draw_round_rect(ctx, GRect(10, 64, 124, 36), 4);
+  // Label
+  graphics_context_set_text_color(ctx, GColorWhite);
+  graphics_draw_text(ctx, "Action sent!",
+                     fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
+                     GRect(12, 68, 120, 28), GTextOverflowModeTrailingEllipsis,
+                     GTextAlignmentCenter, NULL);
 }
 
 static void update_proc(Layer *layer, GContext *ctx) {
@@ -515,11 +478,9 @@ static void update_proc(Layer *layer, GContext *ctx) {
   // Alternative views: configurable via view_order
   if (current_view_index > 0 && current_view_index < g_hub_config.view_count) {
     uint8_t vid = g_hub_config.view_order[current_view_index];
-    if (vid >= HUB_VIEW_WEATHER && vid < HUB_VIEW_COUNT) {
+    if (vid == HUB_VIEW_WEATHER || vid == HUB_VIEW_DATE) {
       draw_alt_view(ctx, vid, icon_id, has_fresh_weather);
       draw_action_toast(ctx);
-      if (g_hub_ring_active)
-        draw_toast(ctx, g_hub_ring_active == 1 ? "Timer!" : "Alarm!");
       return;
     }
   }
@@ -573,13 +534,19 @@ static void update_proc(Layer *layer, GContext *ctx) {
 
   draw_action_toast(ctx);
 
-  // Ring alert toast (timer/alarm expiry — stays until dismissed)
-  if (g_hub_ring_active)
-    draw_toast(ctx, g_hub_ring_active == 1 ? "Timer!" : "Alarm!");
-
   // Exit hint toast (double-back to exit)
-  if (s_show_exit_hint)
-    draw_toast(ctx, "Press < to exit");
+  if (s_show_exit_hint) {
+    graphics_context_set_fill_color(ctx, GColorBlack);
+    graphics_fill_rect(ctx, GRect(10, 64, 124, 36), 4, GCornersAll);
+    graphics_context_set_stroke_color(ctx, GColorWhite);
+    graphics_draw_round_rect(ctx, GRect(10, 64, 124, 36), 4);
+    graphics_context_set_text_color(ctx, GColorWhite);
+    graphics_draw_text(ctx, "Press < to exit",
+                       fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
+                       GRect(12, 68, 120, 28),
+                       GTextOverflowModeTrailingEllipsis,
+                       GTextAlignmentCenter, NULL);
+  }
 
   APP_LOG(APP_LOG_LEVEL_INFO, "HEAP post-render: %zu", heap_bytes_free());
 }
@@ -868,8 +835,6 @@ static void inbox_received_callback(DictionaryIterator *iterator,
       hub_config_parse_widgets(t->value->cstring, false);
     if ((t = dict_find(iterator, KEY_HUB_ANIM)))
       g_hub_config.anim_enabled = (t->value->int32 == 1) ? 1 : 0;
-    if ((t = dict_find(iterator, KEY_HUB_VIBE_PATTERN)))
-      g_hub_config.vibe_pattern = (uint8_t)t->value->int32;
 
     if ((t = dict_find(iterator, KEY_HUB_COUNTDOWN))) {
       int32_t ts = t->value->int32;
@@ -943,16 +908,33 @@ static void inbox_received_callback(DictionaryIterator *iterator,
       p.positive = (p.change[0] != '-');
       if (*s == '|')
         s++;
-      // Parse history points (binary: each char = value + 33, range 0-90)
-      for (int h = 0; h < STOCK_HISTORY_POINTS && *s && *s != '|'; h++) {
-        int val = (int)(*s) - 33;
-        if (val < 0)
-          val = 0;
-        if (val > 90)
-          val = 90;
+      // Parse history points (comma-separated uint8)
+      for (int h = 0; h < STOCK_HISTORY_POINTS && *s; h++) {
+        int val = 0;
+        while (*s >= '0' && *s <= '9') {
+          val = val * 10 + (*s - '0');
+          s++;
+        }
+        if (val > 100)
+          val = 100;
         p.history[h] = (uint8_t)val;
-        s++;
+        if (*s == ',')
+          s++;
       }
+      // Parse price_min
+      if (*s == '|')
+        s++;
+      i = 0;
+      while (*s && *s != '|' && i < (int)sizeof(p.price_min) - 1)
+        p.price_min[i++] = *s++;
+      p.price_min[i] = '\0';
+      // Parse price_max
+      if (*s == '|')
+        s++;
+      i = 0;
+      while (*s && *s != '|' && i < (int)sizeof(p.price_max) - 1)
+        p.price_max[i++] = *s++;
+      p.price_max[i] = '\0';
       // Persist this panel individually
       persist_write_data(HUB_PERSIST_STOCK0 + idx, &p, sizeof(StockPanel));
       if (idx == stock_panel_count - 1) {
@@ -979,7 +961,6 @@ static void do_send_weather_request(void) {
   AppMessageResult result = app_message_outbox_begin(&iter);
   if (result == APP_MSG_OK) {
     dict_write_uint8(iter, 0, 0);
-    dict_write_uint8(iter, KEY_HEAP_FREE, (uint8_t)(heap_bytes_free() >> 7));
     result = app_message_outbox_send();
     if (result == APP_MSG_OK) {
       s_weather_request_pending = false;
@@ -1142,12 +1123,6 @@ static void back_exit_hint_clear(void *context) {
 }
 
 static void back_click_handler(ClickRecognizerRef recognizer, void *context) {
-  // Dismiss ring alert if active
-  if (g_hub_ring_active) {
-    hub_ring_dismiss();
-    layer_mark_dirty(layer);
-    return;
-  }
   // If not on default view, switch back first and reset counter
   if (current_view_index != 0) {
     current_view_index = 0;
@@ -1187,7 +1162,6 @@ static void back_click_handler(ClickRecognizerRef recognizer, void *context) {
 }
 
 static void up_click_handler(ClickRecognizerRef recognizer, void *context) {
-  if (g_hub_ring_active) { hub_ring_dismiss(); layer_mark_dirty(layer); return; }
   hub_timeout_reset();
   if (g_hub_config.btn_up_type == HUB_OBJ_MENU) {
     hub_menu_push(true, HUB_DIR_UP);
@@ -1197,7 +1171,6 @@ static void up_click_handler(ClickRecognizerRef recognizer, void *context) {
 }
 
 static void down_click_handler(ClickRecognizerRef recognizer, void *context) {
-  if (g_hub_ring_active) { hub_ring_dismiss(); layer_mark_dirty(layer); return; }
   hub_timeout_reset();
   if (g_hub_config.btn_down_type == HUB_OBJ_MENU) {
     hub_menu_push(false, HUB_DIR_DOWN);
@@ -1207,7 +1180,6 @@ static void down_click_handler(ClickRecognizerRef recognizer, void *context) {
 }
 
 static void select_click_handler(ClickRecognizerRef recognizer, void *context) {
-  if (g_hub_ring_active) { hub_ring_dismiss(); layer_mark_dirty(layer); return; }
   if (g_hub_config.view_count > 1) {
     current_view_index = (current_view_index + 1) % g_hub_config.view_count;
     hub_timeout_reset();

@@ -87,10 +87,10 @@ var xhrRequest = function (url, type, callback, errorCallback) {
 // WMO Weather Code → 2-char icon code
 function wmoToIcon(wmoCode, isNight) {
   switch (wmoCode) {
-    case 0: return isNight ? 'cn' : 'sd';
-    case 1: return isNight ? 'fn' : 'fd';
-    case 2: return isNight ? 'pn' : 'pd';
-    case 3: return 'cl';
+    case 0:  return isNight ? 'cn' : 'sd';
+    case 1:  return isNight ? 'fn' : 'fd';
+    case 2:  return isNight ? 'pn' : 'pd';
+    case 3:  return 'cl';
     case 45: case 48: return 'fg';
     case 51: case 53: case 55: case 63: case 65:
       return 'ra';
@@ -1100,7 +1100,7 @@ function sampleArray(arr, n) {
   return result;
 }
 
-// Normalize values to 0-90 range (fits in ASCII 33-123, avoids '|' at 124)
+// Normalize values to 0-100 range
 function normalizeHistory(values) {
   var min = values[0], max = values[0];
   for (var i = 1; i < values.length; i++) {
@@ -1108,12 +1108,12 @@ function normalizeHistory(values) {
     if (values[i] > max) max = values[i];
   }
   var range = max - min;
-  if (range < 0.0001) range = 1; // flat line → all 45
+  if (range < 0.0001) range = 1; // flat line → all 50
   var result = [];
   for (var j = 0; j < values.length; j++) {
-    var v = Math.round((values[j] - min) / range * 90);
+    var v = Math.round((values[j] - min) / range * 100);
     if (v < 0) v = 0;
-    if (v > 90) v = 90;
+    if (v > 100) v = 100;
     result.push(v);
   }
   return result;
@@ -1124,15 +1124,15 @@ function buildFakeStockData() {
   return [
     {
       symbol: 'DJIA', price: '42,531', change: '+0.8%', positive: true,
-      history: [30, 35, 42, 50, 55, 62, 70, 85]
+      history: [30, 35, 42, 50, 48, 55, 62, 70, 78, 85], price_min: 41800, price_max: 43200
     },
     {
       symbol: 'EUR/CHF', price: '0.9385', change: '-0.3%', positive: false,
-      history: [80, 75, 70, 65, 55, 50, 45, 40]
+      history: [80, 75, 70, 65, 60, 55, 50, 48, 45, 40], price_min: 0.930, price_max: 0.960
     },
     {
       symbol: 'BTC', price: '97,500', change: '+2.1%', positive: true,
-      history: [10, 20, 30, 45, 40, 60, 80, 95]
+      history: [10, 20, 15, 30, 45, 40, 60, 55, 80, 95], price_min: 88000, price_max: 102000
     }
   ];
 }
@@ -1158,9 +1158,12 @@ function sendStockPanel(panels, idx) {
     return;
   }
   var p = panels[idx];
-  var histStr = normalizeHistory(p.history).map(function(v){ return String.fromCharCode(v + 33); }).join('');
+  var histStr = normalizeHistory(p.history).join(',');
+  var priceMin = (p.price_min !== undefined) ? formatStockPrice(p.price_min) : '?';
+  var priceMax = (p.price_max !== undefined) ? formatStockPrice(p.price_max) : '?';
   var dataStr = idx + '|' + p.symbol + '|' + p.price + '|' +
-    (p.positive ? '+' : '') + p.change + '|' + histStr;
+    (p.positive ? '+' : '') + p.change + '|' + histStr +
+    '|' + priceMin + '|' + priceMax;
 
   Pebble.sendAppMessage({ 'KEY_STOCK_DATA': dataStr }, function () {
     console.log('Stock panel ' + idx + ' sent: ' + p.symbol);
@@ -1193,15 +1196,10 @@ function fetchStockData() {
     (function (idx) {
       var symbol = config.symbols[idx];
       var displayName = config.names[idx] || symbol;
-      // Read period from config (default 5d = 1 week)
-      var period = localStorage.getItem('stock_period') || '5d';
-      var rangeMap = { '5d': '5d', '1mo': '1mo', '3mo': '3mo' };
-      var intervalMap = { '5d': '1h', '1mo': '1d', '3mo': '1d' };
-      var range = rangeMap[period] || '5d';
-      var interval = intervalMap[period] || '1h';
+      // Always fetch 5 days of hourly data; variation is computed over the last 24h
       var url = 'https://query1.finance.yahoo.com/v8/finance/chart/' +
         encodeURIComponent(symbol) +
-        '?range=' + range + '&interval=' + interval;
+        '?range=5d&interval=1h';
 
       console.log('Fetching stock: ' + symbol + ' → ' + url);
 
@@ -1229,44 +1227,53 @@ function fetchStockData() {
             return;
           }
 
-          var sampled = sampleArray(validCloses, 8);
+          var sampled = sampleArray(validCloses, 10);
           var lastPrice = validCloses[validCloses.length - 1];
           var lastTs = validTs[validTs.length - 1];
 
-          // For short ranges (5d), use previous day close as base;
-          // for longer ranges, use the first data point
+          // Find the last point recorded on the previous trading day
+          // (i.e. last point whose local calendar date is strictly before today's)
           var lastDate = new Date(lastTs * 1000);
           var lastDay = lastDate.toDateString();
           var baseIdx = 0;
-          if (range === '5d') {
-            var foundPrevDay = false;
-            for (var ti = validTs.length - 2; ti >= 0; ti--) {
-              var d = new Date(validTs[ti] * 1000).toDateString();
-              if (d !== lastDay) {
-                var prevDay = d;
-                var prevDayLastIdx = ti;
-                for (var tj = ti + 1; tj < validTs.length - 1; tj++) {
-                  if (new Date(validTs[tj] * 1000).toDateString() === prevDay) prevDayLastIdx = tj;
-                  else break;
-                }
-                baseIdx = prevDayLastIdx;
-                foundPrevDay = true;
-                break;
+          var foundPrevDay = false;
+          for (var ti = validTs.length - 2; ti >= 0; ti--) {
+            var d = new Date(validTs[ti] * 1000).toDateString();
+            if (d !== lastDay) {
+              // Walk forward to the last point of that previous day
+              var prevDay = d;
+              var prevDayLastIdx = ti;
+              for (var tj = ti + 1; tj < validTs.length - 1; tj++) {
+                if (new Date(validTs[tj] * 1000).toDateString() === prevDay) prevDayLastIdx = tj;
+                else break;
               }
+              baseIdx = prevDayLastIdx;
+              foundPrevDay = true;
+              break;
             }
-            if (!foundPrevDay) baseIdx = 0;
           }
+          // Fallback: use oldest available point
+          if (!foundPrevDay) baseIdx = 0;
           var basePrice = validCloses[baseIdx];
 
           var changePct = ((lastPrice - basePrice) / basePrice * 100);
           var changeStr = (changePct >= 0 ? '+' : '') + changePct.toFixed(1) + '%';
+
+          // Compute raw min/max of the valid history window
+          var rawMin = validCloses[0], rawMax = validCloses[0];
+          for (var vi = 1; vi < validCloses.length; vi++) {
+            if (validCloses[vi] < rawMin) rawMin = validCloses[vi];
+            if (validCloses[vi] > rawMax) rawMax = validCloses[vi];
+          }
 
           panels[idx] = {
             symbol: displayName.substring(0, 9),
             price: formatStockPrice(lastPrice),
             change: changeStr,
             positive: changePct >= 0,
-            history: sampled
+            history: sampled,
+            price_min: rawMin,
+            price_max: rawMax
           };
         } catch (e) {
           console.error('Error parsing stock data for ' + symbol + ': ' + e);
@@ -1361,13 +1368,6 @@ Pebble.addEventListener('appmessage',
       return;
     }
 
-    // Capture heap diagnostics sent by the watch alongside weather requests
-    if (e.payload && e.payload['KEY_HEAP_FREE'] !== undefined) {
-      var heapFree = e.payload['KEY_HEAP_FREE'] * 128;
-      localStorage.setItem('heap_free', heapFree);
-      console.log('[DIAG] heap_free~' + heapFree + 'B');
-    }
-
     if ((navigator.onLine) || (b_force_internet)) {
       console.log("Appel météo !!");
       getWeather();
@@ -1379,15 +1379,6 @@ Pebble.addEventListener('appmessage',
 Pebble.addEventListener('showConfiguration', function () {
 
   var url = 'https://sichroteph.github.io/Din-Clean-App/index.html?v=' + Date.now();
-
-  // Append heap diagnostics so the config page can display them
-  var heapFree = localStorage.getItem('heap_free');
-  if (heapFree !== null) url += '&heap_free=' + encodeURIComponent(heapFree);
-  try {
-    var info = Pebble.getActiveWatchInfo();
-    if (info && info.model) url += '&platform=' + encodeURIComponent(info.model);
-  } catch (e) { /* getActiveWatchInfo not available on all builds */ }
-
   Pebble.openURL(url);
 });
 
@@ -1449,8 +1440,6 @@ Pebble.addEventListener('webviewclosed', function (e) {
     // --- Hub configuration ---
     var hub_timeout = parseInt(configData['hub_timeout']) || 30;
     var hub_anim = (configData['hub_anim'] !== undefined) ? parseInt(configData['hub_anim']) : 1;
-    var hub_vibe_pattern = parseInt(configData['hub_vibe_pattern']) || 1;
-    localStorage.setItem('hub_vibe_pattern', hub_vibe_pattern);
     var hub_btn_up = (configData['hub_btn_up'] !== undefined) ? parseInt(configData['hub_btn_up']) : 1;  // 0=menu, 1=widgets
     var hub_btn_down = (configData['hub_btn_down'] !== undefined) ? parseInt(configData['hub_btn_down']) : 0; // 0=menu, 1=widgets
 
@@ -1465,7 +1454,6 @@ Pebble.addEventListener('webviewclosed', function (e) {
 
     dict['KEY_HUB_TIMEOUT'] = hub_timeout;
     dict['KEY_HUB_ANIM'] = (hub_anim === 1) ? 1 : 2;          // 1=on, 2=off
-    dict['KEY_HUB_VIBE_PATTERN'] = hub_vibe_pattern;            // 0=short, 1=long, 2=urgent
     dict['KEY_HUB_BTN_UP'] = (hub_btn_up === 1) ? 1 : 2;      // 1=widgets, 2=menu
     dict['KEY_HUB_BTN_DOWN'] = (hub_btn_down === 1) ? 1 : 2;  // 1=widgets, 2=menu
 

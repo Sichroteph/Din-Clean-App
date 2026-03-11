@@ -20,7 +20,7 @@ static bool stock_load_panel(uint8_t idx, StockPanel *dst) {
   if (idx >= STOCK_MAX_PANELS)
     return false;
   int key = HUB_PERSIST_STOCK0 + idx;
-  if (!persist_exists(key) || persist_get_size(key) != (int)sizeof(StockPanel))
+  if (!persist_exists(key))
     return false;
   memset(dst, 0, sizeof(StockPanel));
   persist_read_data(key, dst, sizeof(StockPanel));
@@ -228,7 +228,6 @@ static uint8_t widget_daily_page_count(void) {
   return n > 0 ? (n + 1) / 2 : 1;
 }
 
-
 static void widget_stocks_draw(GContext *ctx, GRect bounds, uint8_t page) {
   graphics_context_set_text_color(ctx, GColorWhite);
   graphics_context_set_stroke_color(ctx, GColorWhite);
@@ -291,18 +290,34 @@ static void widget_stocks_draw(GContext *ctx, GRect bounds, uint8_t page) {
     }
   }
 
-  // X positions for history points, evenly spaced
+  // Price range labels: max at top, min at bottom (right-aligned, small font)
+  if (p->price_max[0] != '\0') {
+    GRect max_rect = GRect(STOCK_GRAPH_LEFT, STOCK_GRAPH_TOP - 1,
+                           STOCK_GRAPH_RIGHT - STOCK_GRAPH_LEFT, 14);
+    graphics_draw_text(ctx, p->price_max, font14, max_rect,
+                       GTextOverflowModeTrailingEllipsis, GTextAlignmentRight,
+                       NULL);
+  }
+  if (p->price_min[0] != '\0') {
+    GRect min_rect = GRect(STOCK_GRAPH_LEFT, STOCK_GRAPH_BOT - 14,
+                           STOCK_GRAPH_RIGHT - STOCK_GRAPH_LEFT, 14);
+    graphics_draw_text(ctx, p->price_min, font14, min_rect,
+                       GTextOverflowModeTrailingEllipsis, GTextAlignmentRight,
+                       NULL);
+  }
+
+  // X positions for 10 history points, evenly spaced
   int px[STOCK_HISTORY_POINTS];
   for (int i = 0; i < STOCK_HISTORY_POINTS; i++) {
     px[i] = STOCK_GRAPH_LEFT + i * (STOCK_GRAPH_RIGHT - STOCK_GRAPH_LEFT) /
                                    (STOCK_HISTORY_POINTS - 1);
   }
 
-  // Map history (0-90) to y coordinates
+  // Map history (0-100) to y coordinates
   int py[STOCK_HISTORY_POINTS];
   for (int i = 0; i < STOCK_HISTORY_POINTS; i++) {
-    // 90 → top, 0 → bottom
-    py[i] = STOCK_GRAPH_BOT - (int)p->history[i] * graph_h / 90;
+    // 100 → top, 0 → bottom
+    py[i] = STOCK_GRAPH_BOT - (int)p->history[i] * graph_h / 100;
   }
 
   // Filled area under curve (dithered)

@@ -111,6 +111,8 @@ static void pa_tick(void *d) {
   }
   if (s_v)
     refresh();
+  else if (g_hub_ring_active)
+    layer_mark_dirty(window_get_root_layer(window_stack_get_top_window()));
   int sw_vis = s_sw_start && s_v && s_v->id == HUB_APP_STOPWATCH;
   if (s_ring_count || s_tend || s_ast == 2 || sw_vis) {
     uint32_t ms = s_ring_count ? 2000
