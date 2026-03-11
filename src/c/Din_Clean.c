@@ -1196,8 +1196,11 @@ static void init() {
   hub_set_main_window(s_main_window);
   hub_timeout_init(hub_timeout_fired);
 
-  // Launch step counter background worker (fire-and-forget, errors ignored)
+  // Launch step counter background worker — aplite only (no HealthService)
+  // On basalt/diorite the widget reads directly from HealthService
+#ifdef PBL_PLATFORM_APLITE
   app_worker_launch();
+#endif
 
   // Mark init complete — callbacks (focus, tick) may now safely send
   // AppMessages.

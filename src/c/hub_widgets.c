@@ -57,7 +57,8 @@ typedef struct {
   uint8_t widget_count;
   uint8_t current_index;
   uint8_t current_page;
-  bool nav_up_is_next; // true if UP = next widget
+  bool nav_up_is_next;      // true if UP = next widget
+  AppTimer *refresh_timer;  // 5s live refresh when Steps widget is visible
 } WidgetCtx;
 
 // Forward declarations
@@ -68,6 +69,34 @@ static void widget_down_handler(ClickRecognizerRef rec, void *context);
 static void widget_select_handler(ClickRecognizerRef rec, void *context);
 static void widget_window_load(Window *window);
 static void widget_window_unload(Window *window);
+static void widget_steps_timer_start(WidgetCtx *ctx);
+static void widget_steps_timer_stop(WidgetCtx *ctx);
+
+static bool current_is_steps(const WidgetCtx *ctx) {
+  return ctx->widget_ids[ctx->current_index] == HUB_WIDGET_STEPS;
+}
+
+static void widget_steps_refresh(void *data) {
+  WidgetCtx *ctx = data;
+  ctx->refresh_timer = NULL;
+  if (current_is_steps(ctx)) {
+    layer_mark_dirty(ctx->canvas);
+    ctx->refresh_timer = app_timer_register(5000, widget_steps_refresh, ctx);
+  }
+}
+
+static void widget_steps_timer_start(WidgetCtx *ctx) {
+  if (current_is_steps(ctx) && !ctx->refresh_timer) {
+    ctx->refresh_timer = app_timer_register(5000, widget_steps_refresh, ctx);
+  }
+}
+
+static void widget_steps_timer_stop(WidgetCtx *ctx) {
+  if (ctx->refresh_timer) {
+    app_timer_cancel(ctx->refresh_timer);
+    ctx->refresh_timer = NULL;
+  }
+}
 
 void hub_widgets_push(bool is_up, HubDirection direction) {
   uint8_t count;
@@ -117,11 +146,14 @@ static void widget_window_load(Window *window) {
   window_set_click_config_provider_with_context(window, widget_click_config,
                                                 ctx);
 
+  ctx->refresh_timer = NULL;
+  widget_steps_timer_start(ctx);
   hub_timeout_reset();
 }
 
 static void widget_window_unload(Window *window) {
   WidgetCtx *ctx = window_get_user_data(window);
+  widget_steps_timer_stop(ctx);
   layer_destroy(ctx->canvas);
   window_destroy(ctx->window);
   free(ctx);
@@ -167,16 +199,20 @@ static void widget_navigate(WidgetCtx *ctx, bool forward) {
 
   if (forward) {
     if (ctx->current_index < ctx->widget_count - 1) {
+      widget_steps_timer_stop(ctx);
       ctx->current_index++;
       ctx->current_page = 0;
+      widget_steps_timer_start(ctx);
       layer_mark_dirty(ctx->canvas);
     } else {
       hub_return_to_watchface();
     }
   } else {
     if (ctx->current_index > 0) {
+      widget_steps_timer_stop(ctx);
       ctx->current_index--;
       ctx->current_page = 0;
+      widget_steps_timer_start(ctx);
       layer_mark_dirty(ctx->canvas);
     } else {
       hub_return_to_watchface();
@@ -605,11 +641,17 @@ static void widget_steps_draw(GContext *ctx, GRect bounds, uint8_t page) {
   graphics_context_set_text_color(ctx, GColorWhite);
   graphics_context_set_fill_color(ctx, GColorWhite);
 
-  // Read today's step count from persist (written by background worker)
+  // --- Today's step count ---
+#ifdef PBL_HEALTH
+  // basalt/diorite: HealthService gives a real-time value, no worker needed
+  uint32_t today = (uint32_t)health_service_sum_today(HealthMetricStepCount);
+#else
+  // aplite: read from persist (written by background worker every 5s)
   uint32_t today = 0;
   if (persist_exists(HUB_PERSIST_STEPS_TODAY)) {
     today = (uint32_t)persist_read_int(HUB_PERSIST_STEPS_TODAY);
   }
+#endif
 
   // Display today's count (large, centered)
   char buf[8];
@@ -627,16 +669,30 @@ static void widget_steps_draw(GContext *ctx, GRect bounds, uint8_t page) {
                      NULL);
 
   // --- 7-day history histogram ---
-  // Read last 7 days from persist
+#ifdef PBL_HEALTH
+  // Pre-compute today's midnight for day-boundary queries
+  time_t now_hs = time(NULL);
+  struct tm tm_mid = *localtime(&now_hs);
+  tm_mid.tm_hour = 0; tm_mid.tm_min = 0; tm_mid.tm_sec = 0;
+  time_t today_start = mktime(&tm_mid);
+#endif
+
   uint16_t hist[7];
   uint16_t hist_max = 1; // avoid division by zero
   for (int i = 0; i < 7; i++) {
     hist[i] = 0;
+#ifdef PBL_HEALTH
+    time_t day_end   = today_start - (time_t)i * 86400;
+    time_t day_start = day_end - 86400;
+    HealthValue hv = health_service_sum(HealthMetricStepCount, day_start, day_end);
+    hist[i] = (hv > 0 && hv < 65535) ? (uint16_t)hv : 0;
+#else
     int key = HUB_PERSIST_STEPS_DAY0 + i;
     if (persist_exists(key)) {
       int32_t v = persist_read_int(key);
       hist[i] = (v > 0 && v < 65535) ? (uint16_t)v : 0;
     }
+#endif
     if (hist[i] > hist_max)
       hist_max = hist[i];
   }

@@ -7,7 +7,7 @@
 
 // --- Algorithm parameters ---
 #define POLL_INTERVAL_MS  500   // accelerometer poll rate (2 Hz)
-#define PERSIST_INTERVAL  120   // persist every N polls (120 × 500ms = 60s)
+#define PERSIST_INTERVAL  10    // persist every N polls (10 × 500ms = 5s)
 #define MAG_THRESHOLD     340   // magnitude delta threshold for step detection
 #define MIN_STEP_INTERVAL 1     // minimum polls between steps (500ms debounce)
 
