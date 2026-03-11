@@ -192,6 +192,7 @@
 static Window *s_main_window;
 static Layer *s_canvas_layer;
 static Layer *layer;
+Layer *g_main_layer;
 
 static char week_day[4] = " ";
 static char mday[4] = " ";
@@ -294,7 +295,6 @@ static void app_focus_changed(bool focused) {
     DictionaryIterator *iter;
     if (app_message_outbox_begin(&iter) == APP_MSG_OK) {
       dict_write_uint8(iter, 0, 0);
-      dict_write_uint8(iter, KEY_HEAP_FREE, (uint8_t)(heap_bytes_free() >> 7));
       if (weather_stale) s_weather_request_pending = true;
       if (app_message_outbox_send() == APP_MSG_OK && weather_stale) {
         s_weather_request_pending = false;
@@ -441,6 +441,19 @@ static void action_toast_clear_cb(void *context) {
   layer_mark_dirty(layer);
 }
 
+// Shared toast overlay: black rounded rect + white text (zero heap).
+static void draw_toast(GContext *ctx, const char *text) {
+  graphics_context_set_fill_color(ctx, GColorBlack);
+  graphics_fill_rect(ctx, GRect(10, 64, 124, 36), 4, GCornersAll);
+  graphics_context_set_stroke_color(ctx, GColorWhite);
+  graphics_draw_round_rect(ctx, GRect(10, 64, 124, 36), 4);
+  graphics_context_set_text_color(ctx, GColorWhite);
+  graphics_draw_text(ctx, text,
+                     fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
+                     GRect(12, 68, 120, 28), GTextOverflowModeTrailingEllipsis,
+                     GTextAlignmentCenter, NULL);
+}
+
 // Draws the "Action sent!" overlay over whatever is currently on screen.
 // Registers a 1.5-second timer the first time it is called so the overlay
 // disappears automatically. Safe to call from update_proc.
@@ -450,17 +463,7 @@ static void draw_action_toast(GContext *ctx) {
   if (!s_action_toast_timer)
     s_action_toast_timer =
         app_timer_register(1500, action_toast_clear_cb, NULL);
-  // Rounded rectangle backdrop
-  graphics_context_set_fill_color(ctx, GColorBlack);
-  graphics_fill_rect(ctx, GRect(10, 64, 124, 36), 4, GCornersAll);
-  graphics_context_set_stroke_color(ctx, GColorWhite);
-  graphics_draw_round_rect(ctx, GRect(10, 64, 124, 36), 4);
-  // Label
-  graphics_context_set_text_color(ctx, GColorWhite);
-  graphics_draw_text(ctx, "Action sent!",
-                     fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
-                     GRect(12, 68, 120, 28), GTextOverflowModeTrailingEllipsis,
-                     GTextAlignmentCenter, NULL);
+  draw_toast(ctx, "Action sent!");
 }
 
 static void update_proc(Layer *layer, GContext *ctx) {
@@ -480,8 +483,6 @@ static void update_proc(Layer *layer, GContext *ctx) {
   if (window_stack_get_top_window() != s_main_window) {
     return;
   }
-
-  APP_LOG(APP_LOG_LEVEL_INFO, "HEAP pre-render: %zu", heap_bytes_free());
 
   int icon_id;
   icon_id = build_icon_with_pool_check(icon);
@@ -515,6 +516,8 @@ static void update_proc(Layer *layer, GContext *ctx) {
     if (vid == HUB_VIEW_WEATHER || vid == HUB_VIEW_DATE || vid == HUB_VIEW_ANALOG) {
       draw_alt_view(ctx, vid, icon_id, has_fresh_weather);
       draw_action_toast(ctx);
+      if (g_hub_ring_active)
+        draw_toast(ctx, g_hub_ring_active == 1 ? "Timer!" : "Alarm!");
       return;
     }
   }
@@ -568,21 +571,13 @@ static void update_proc(Layer *layer, GContext *ctx) {
 
   draw_action_toast(ctx);
 
-  // Exit hint toast (double-back to exit)
-  if (s_show_exit_hint) {
-    graphics_context_set_fill_color(ctx, GColorBlack);
-    graphics_fill_rect(ctx, GRect(10, 64, 124, 36), 4, GCornersAll);
-    graphics_context_set_stroke_color(ctx, GColorWhite);
-    graphics_draw_round_rect(ctx, GRect(10, 64, 124, 36), 4);
-    graphics_context_set_text_color(ctx, GColorWhite);
-    graphics_draw_text(ctx, "Press < to exit",
-                       fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
-                       GRect(12, 68, 120, 28),
-                       GTextOverflowModeTrailingEllipsis,
-                       GTextAlignmentCenter, NULL);
-  }
+  // Ring toast (timer/alarm expiry)
+  if (g_hub_ring_active)
+    draw_toast(ctx, g_hub_ring_active == 1 ? "Timer!" : "Alarm!");
 
-  APP_LOG(APP_LOG_LEVEL_INFO, "HEAP post-render: %zu", heap_bytes_free());
+  // Exit hint toast (double-back to exit)
+  if (s_show_exit_hint)
+    draw_toast(ctx, "Press < to exit");
 }
 
 // Forward declaration (used in handle_tick, inbox handler, and retry callback)
@@ -1143,6 +1138,7 @@ static void back_exit_hint_clear(void *context) {
 }
 
 static void back_click_handler(ClickRecognizerRef recognizer, void *context) {
+  if (g_hub_ring_active) { hub_ring_dismiss(); layer_mark_dirty(layer); return; }
   // If not on default view, switch back first and reset counter
   if (current_view_index != 0) {
     current_view_index = 0;
@@ -1182,6 +1178,7 @@ static void back_click_handler(ClickRecognizerRef recognizer, void *context) {
 }
 
 static void up_click_handler(ClickRecognizerRef recognizer, void *context) {
+  if (g_hub_ring_active) { hub_ring_dismiss(); layer_mark_dirty(layer); return; }
   hub_timeout_reset();
   if (g_hub_config.btn_up_type == HUB_OBJ_MENU) {
     hub_menu_push(true, HUB_DIR_UP);
@@ -1191,6 +1188,7 @@ static void up_click_handler(ClickRecognizerRef recognizer, void *context) {
 }
 
 static void down_click_handler(ClickRecognizerRef recognizer, void *context) {
+  if (g_hub_ring_active) { hub_ring_dismiss(); layer_mark_dirty(layer); return; }
   hub_timeout_reset();
   if (g_hub_config.btn_down_type == HUB_OBJ_MENU) {
     hub_menu_push(false, HUB_DIR_DOWN);
@@ -1200,6 +1198,7 @@ static void down_click_handler(ClickRecognizerRef recognizer, void *context) {
 }
 
 static void select_click_handler(ClickRecognizerRef recognizer, void *context) {
+  if (g_hub_ring_active) { hub_ring_dismiss(); layer_mark_dirty(layer); return; }
   if (g_hub_config.view_count > 1) {
     current_view_index = (current_view_index + 1) % g_hub_config.view_count;
     hub_timeout_reset();
@@ -1253,18 +1252,16 @@ static void init() {
   app_message_register_outbox_sent(outbox_sent_callback);
   AppMessageResult msg_result = app_message_open(512, 32);
   s_appmsg_open = (msg_result == APP_MSG_OK);
-  APP_LOG(APP_LOG_LEVEL_INFO, "app_message_open: %d heap=%zu", (int)msg_result,
-          heap_bytes_free());
 
   init_var();
   hub_config_init();
-  APP_LOG(APP_LOG_LEVEL_INFO, "post-cfg heap=%zu", heap_bytes_free());
   s_main_window = window_create();
   window_stack_push(s_main_window, true);
   window_set_click_config_provider(s_main_window, click_config_provider);
 
   s_canvas_layer = window_get_root_layer(s_main_window);
   layer = layer_create(layer_get_bounds(s_canvas_layer));
+  g_main_layer = layer;
   layer_set_update_proc(layer, update_proc);
   layer_add_child(s_canvas_layer, layer);
 
@@ -1279,7 +1276,6 @@ static void init() {
   // Mark init complete — callbacks (focus, tick) may now safely send
   // AppMessages.
   s_init_done = true;
-  APP_LOG(APP_LOG_LEVEL_INFO, "HEAP post-init: %zu", heap_bytes_free());
   // Trigger a redraw now that init is done (the initial window_stack_push draw
   // was skipped because s_init_done was false at that point).
   layer_mark_dirty(layer);
@@ -1304,6 +1300,7 @@ static void deinit() {
 
   app_message_deregister_callbacks();
 
+  g_main_layer = NULL;
   layer_destroy(layer);
   window_destroy(s_main_window);
 }

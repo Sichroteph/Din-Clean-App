@@ -59,7 +59,7 @@ static void refresh(void) {
     b = (int)(e % 60);
     title = s_sw_start ? "STOP" : "Stopwatch";
   } else if (s_v->id == HUB_APP_TIMER) {
-    title = s_tend ? "STOP" : "Timer";
+    title = s_ring_count ? "Timer!" : (s_tend ? "STOP" : "Timer");
     if (s_tend) {
       int r = (int)(s_tend - time(NULL));
       if (r < 0)
@@ -70,7 +70,7 @@ static void refresh(void) {
       a = s_tmin;
     }
   } else if (s_v->id == HUB_APP_ALARM) {
-    title = s_ast == 2 ? "ARMED" : "Alarm";
+    title = s_ring_count ? "Alarm!" : (s_ast == 2 ? "ARMED" : "Alarm");
     a = s_ah;
     b = s_am;
   }
@@ -89,7 +89,10 @@ static void pa_tick(void *d) {
       s_at = app_timer_register(2000, pa_tick, NULL);
     else
       g_hub_ring_active = 0;
-    if (s_v) refresh();
+    if (s_v)
+      refresh();
+    else if (g_main_layer)
+      layer_mark_dirty(g_main_layer);
     return;
   }
   if (s_tend && time(NULL) >= s_tend) {
@@ -114,8 +117,8 @@ static void pa_tick(void *d) {
   }
   if (s_v)
     refresh();
-  else if (g_hub_ring_active)
-    layer_mark_dirty(window_get_root_layer(window_stack_get_top_window()));
+  else if (g_hub_ring_active && g_main_layer)
+    layer_mark_dirty(g_main_layer);
   int sw_vis = s_sw_start && s_v && s_v->id == HUB_APP_STOPWATCH;
   if (s_ring_count || s_tend || s_ast == 2 || sw_vis) {
     uint32_t ms = s_ring_count ? 2000
@@ -252,11 +255,13 @@ static void pa_load(Window *w) {
 static void pa_unload(Window *w) {
   PA *p = window_get_user_data(w);
   s_v = NULL;
-  if (s_at) {
+  if (g_hub_ring_active && g_main_layer)
+    layer_mark_dirty(g_main_layer);
+  if (!s_ring_count && s_at) {
     app_timer_cancel(s_at);
     s_at = NULL;
   }
-  if (s_tend || s_ast == 2) {
+  if (!s_ring_count && (s_tend || s_ast == 2)) {
     uint32_t ms = s_tend ? (uint32_t)(s_tend - time(NULL)) * 1000 : 30000;
     if (ms > 0 && ms < 360000000)
       s_at = app_timer_register(ms, pa_tick, NULL);

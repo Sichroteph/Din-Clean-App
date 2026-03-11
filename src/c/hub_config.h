@@ -154,6 +154,7 @@ void hub_config_parse_widgets(const char *str, bool is_up);
 
 // Ring alert (timer/alarm expiry vibration loop)
 extern uint8_t g_hub_ring_active; // 0=off, 1=timer, 2=alarm
+extern Layer *g_main_layer;       // child layer in Din_Clean.c carrying update_proc
 void hub_ring_dismiss(void);
 
 // Menu helper: get children of a parent (-1 for root)
