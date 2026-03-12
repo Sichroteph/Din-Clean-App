@@ -3,3 +3,7 @@ build/
 *.pyc
 __pycache__/
 .DS_Store
+
+# AI / Copilot files
+.github/copilot-instructions.md
+STEP_COUNTER_IMPLEMENTATION.md
