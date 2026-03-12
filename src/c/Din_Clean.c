@@ -278,8 +278,7 @@ static void app_focus_changed(bool focused) {
 
     // Check if weather data is stale and request refresh
     t = time(NULL);
-    bool weather_stale =
-        flags.is_connected && ((t - last_refresh) > duration);
+    bool weather_stale = flags.is_connected && ((t - last_refresh) > duration);
 
     DictionaryIterator *iter;
     if (app_message_outbox_begin(&iter) == APP_MSG_OK) {
@@ -357,20 +356,22 @@ static void draw_alt_view(GContext *ctx, uint8_t vid, int icon_id, bool fresh) {
     graphics_context_set_fill_color(ctx, GColorWhite);
     for (int i = 0; i < 12; i++) {
       int32_t a = TRIG_MAX_ANGLE * i / 12;
-      graphics_fill_circle(ctx, GPoint(AC_CX + sin_lookup(a) * 69 / TRIG_MAX_RATIO,
-          AC_CY - cos_lookup(a) * 80 / TRIG_MAX_RATIO), (i % 3 == 0) ? 3 : 1);
+      graphics_fill_circle(ctx,
+                           GPoint(AC_CX + sin_lookup(a) * 69 / TRIG_MAX_RATIO,
+                                  AC_CY - cos_lookup(a) * 80 / TRIG_MAX_RATIO),
+                           (i % 3 == 0) ? 3 : 1);
     }
     int h12 = now.tm_hour % 12;
     int32_t ha = TRIG_MAX_ANGLE * (h12 * 60 + now.tm_min) / 720;
     graphics_context_set_stroke_width(ctx, 7);
-    graphics_draw_line(ctx, GPoint(AC_CX, AC_CY), GPoint(
-        AC_CX + sin_lookup(ha) * 38 / TRIG_MAX_RATIO,
-        AC_CY - cos_lookup(ha) * 38 / TRIG_MAX_RATIO));
+    graphics_draw_line(ctx, GPoint(AC_CX, AC_CY),
+                       GPoint(AC_CX + sin_lookup(ha) * 38 / TRIG_MAX_RATIO,
+                              AC_CY - cos_lookup(ha) * 38 / TRIG_MAX_RATIO));
     int32_t ma = TRIG_MAX_ANGLE * now.tm_min / 60;
     graphics_context_set_stroke_width(ctx, 5);
-    graphics_draw_line(ctx, GPoint(AC_CX, AC_CY), GPoint(
-        AC_CX + sin_lookup(ma) * 56 / TRIG_MAX_RATIO,
-        AC_CY - cos_lookup(ma) * 56 / TRIG_MAX_RATIO));
+    graphics_draw_line(ctx, GPoint(AC_CX, AC_CY),
+                       GPoint(AC_CX + sin_lookup(ma) * 56 / TRIG_MAX_RATIO,
+                              AC_CY - cos_lookup(ma) * 56 / TRIG_MAX_RATIO));
     graphics_context_set_fill_color(ctx, GColorBlack);
     graphics_fill_circle(ctx, GPoint(AC_CX, AC_CY), 6);
     graphics_context_set_fill_color(ctx, GColorWhite);
@@ -484,7 +485,8 @@ static void update_proc(Layer *layer, GContext *ctx) {
 
   bool has_fresh_weather = ((t - last_refresh) < duration + offline_delay);
 
-  snprintf(weather_temp_char, sizeof(weather_temp_char), "%i\xc2\xb0", weather_temp);
+  snprintf(weather_temp_char, sizeof(weather_temp_char), "%i\xc2\xb0",
+           weather_temp);
   snprintf(minTemp, sizeof(minTemp), "%i\xc2\xb0", tmin_val);
   snprintf(maxTemp, sizeof(maxTemp), "%i\xc2\xb0", tmax_val);
 
@@ -541,7 +543,7 @@ static void do_send_weather_request(void);
 
 static void handle_tick(struct tm *cur, TimeUnits units_changed) {
   t = time(NULL);
-  now = *cur;  // use OS-provided local time (correct DST)
+  now = *cur; // use OS-provided local time (correct DST)
   if (flags.is_vibration) {
     if (now.tm_min == 0 && now.tm_hour >= QUIET_TIME_END &&
         now.tm_hour <= QUIET_TIME_START) {
@@ -552,8 +554,7 @@ static void handle_tick(struct tm *cur, TimeUnits units_changed) {
   // Get weather update every 30 minutes (even during quiet time)
   if (s_init_done && s_appmsg_open && flags.is_connected) {
     if ((((flags.is_30mn) && (now.tm_min % 30 == 0)) ||
-         (now.tm_min % 60 == 0) ||
-         ((t - last_refresh) > duration))) {
+         (now.tm_min % 60 == 0) || ((t - last_refresh) > duration))) {
       s_weather_request_pending = true;
       do_send_weather_request();
     }
@@ -575,9 +576,11 @@ static void hub_timeout_fired(void);
 // Helper: copy chars from s until '|' or end, into dst (max n-1 chars + NUL).
 static const char *cpf(const char *s, char *dst, int n) {
   int i = 0;
-  while (*s && *s != '|' && i < n - 1) dst[i++] = *s++;
+  while (*s && *s != '|' && i < n - 1)
+    dst[i++] = *s++;
   dst[i] = '\0';
-  if (*s == '|') s++;
+  if (*s == '|')
+    s++;
   return s;
 }
 
@@ -683,9 +686,11 @@ static void inbox_received_callback(DictionaryIterator *iterator,
         days_wind_v[d] = (uint8_t)atoi(t->value->cstring);
         if (d == 0) {
           const char *p = t->value->cstring;
-          while (*p >= '0' && *p <= '9') p++;
+          while (*p >= '0' && *p <= '9')
+            p++;
           const char *u = "km/h";
-          if (*p == 'm') u = (p[1] == '/') ? "m/s" : "mph";
+          if (*p == 'm')
+            u = (p[1] == '/') ? "m/s" : "mph";
           memcpy(wind_unit_str, u, 5);
         }
       }
@@ -857,7 +862,8 @@ static void inbox_received_callback(DictionaryIterator *iterator,
           s++;
       }
       // Parse price_min/max
-      if (*s == '|') s++;
+      if (*s == '|')
+        s++;
       s = cpf(s, p.price_min, sizeof(p.price_min));
       s = cpf(s, p.price_max, sizeof(p.price_max));
       // Persist this panel individually
