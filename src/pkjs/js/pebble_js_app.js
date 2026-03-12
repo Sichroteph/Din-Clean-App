@@ -138,7 +138,7 @@ function processOpenMeteoResponse(responseText) {
   // Current conditions (first hour)
   var currentTemp = hourly.temperature_2m[0];
   var currentHumidity = Math.round(hourly.relative_humidity_2m[0]);
-  var currentWindSpeed = hourly.wind_gusts_10m[0]; // Wind gusts in km/h from API
+  var currentWindSpeed = hourly.wind_speed_10m[0]; // Average wind speed in km/h from API
   var currentWmoCode = hourly.weather_code[0];
 
   // Get current hour to determine day/night for icon
@@ -234,7 +234,7 @@ function processOpenMeteoResponse(responseText) {
       }
       hourlyTemperatures['hour' + j] = Math.round(tempI);
 
-      var windSpeedKmh = hourly.wind_gusts_10m[apiIndex]; // Use wind gusts
+      var windSpeedKmh = hourly.wind_speed_10m[apiIndex]; // Average wind speed
       var windValue;
       if (units_setting == 1) {
         windValue = Math.round(windSpeedKmh * 0.621371);
@@ -281,7 +281,7 @@ function processOpenMeteoResponse(responseText) {
       var dayTemp = (tempMax + tempMin) / 2;
       var wmoCode = daily.weather_code[dayIdx];
       var rainSum = daily.precipitation_sum[dayIdx] || 0;
-      var dayWindKmh = daily.wind_gusts_10m_max[dayIdx] || 0;
+      var dayWindKmh = daily.wind_speed_10m_max[dayIdx] || 0;
 
       // Convert temperature
       var dayTempConverted;
@@ -909,8 +909,8 @@ function getForecast() {
     // Open-Meteo API with Météo-France AROME model (1.5km resolution, excellent for France)
     var urlOpenMeteo = 'https://api.open-meteo.com/v1/meteofrance?' +
       'latitude=' + current_Latitude + '&longitude=' + current_Longitude +
-      '&hourly=temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_gusts_10m' +
-      '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,wind_gusts_10m_max' +
+      '&hourly=temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m' +
+      '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max' +
       '&forecast_days=6&timezone=auto';
 
     console.log(urlOpenMeteo);
