@@ -7,3 +7,6 @@ __pycache__/
 # AI / Copilot files
 .github/copilot-instructions.md
 STEP_COUNTER_IMPLEMENTATION.md
+
+# Pebble screenshots
+pebble_screenshot_*.png
