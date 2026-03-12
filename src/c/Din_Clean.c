@@ -350,37 +350,33 @@ static void draw_alt_view(GContext *ctx, uint8_t vid, int icon_id, bool fresh) {
     }
     dtext(ctx, buf, fs, 152, 16);
   } else if (vid == HUB_VIEW_ANALOG) {
-// Analog clock — thick lines with rounded ends + 12 hour markers
+// Analog clock — edge markers + center hub
 #define AC_CX 72
 #define AC_CY 84
-#define AC_R 60
     graphics_context_set_stroke_color(ctx, GColorWhite);
     graphics_context_set_fill_color(ctx, GColorWhite);
-    // 12 hour markers
     for (int i = 0; i < 12; i++) {
       int32_t a = TRIG_MAX_ANGLE * i / 12;
-      int mx = AC_CX + sin_lookup(a) * (AC_R - 4) / TRIG_MAX_RATIO;
-      int my = AC_CY - cos_lookup(a) * (AC_R - 4) / TRIG_MAX_RATIO;
-      graphics_fill_circle(ctx, GPoint(mx, my), (i % 3 == 0) ? 3 : 1);
+      graphics_fill_circle(ctx, GPoint(AC_CX + sin_lookup(a) * 69 / TRIG_MAX_RATIO,
+          AC_CY - cos_lookup(a) * 80 / TRIG_MAX_RATIO), (i % 3 == 0) ? 3 : 1);
     }
-    // Hour hand
     int h12 = now.tm_hour % 12;
     int32_t ha = TRIG_MAX_ANGLE * (h12 * 60 + now.tm_min) / 720;
-    GPoint hend = GPoint(AC_CX + sin_lookup(ha) * 36 / TRIG_MAX_RATIO,
-                         AC_CY - cos_lookup(ha) * 36 / TRIG_MAX_RATIO);
     graphics_context_set_stroke_width(ctx, 7);
-    graphics_draw_line(ctx, GPoint(AC_CX, AC_CY), hend);
-    // Minute hand
+    graphics_draw_line(ctx, GPoint(AC_CX, AC_CY), GPoint(
+        AC_CX + sin_lookup(ha) * 38 / TRIG_MAX_RATIO,
+        AC_CY - cos_lookup(ha) * 38 / TRIG_MAX_RATIO));
     int32_t ma = TRIG_MAX_ANGLE * now.tm_min / 60;
-    GPoint mend = GPoint(AC_CX + sin_lookup(ma) * 52 / TRIG_MAX_RATIO,
-                         AC_CY - cos_lookup(ma) * 52 / TRIG_MAX_RATIO);
     graphics_context_set_stroke_width(ctx, 5);
-    graphics_draw_line(ctx, GPoint(AC_CX, AC_CY), mend);
-    // Center dot
+    graphics_draw_line(ctx, GPoint(AC_CX, AC_CY), GPoint(
+        AC_CX + sin_lookup(ma) * 56 / TRIG_MAX_RATIO,
+        AC_CY - cos_lookup(ma) * 56 / TRIG_MAX_RATIO));
+    graphics_context_set_fill_color(ctx, GColorBlack);
+    graphics_fill_circle(ctx, GPoint(AC_CX, AC_CY), 6);
+    graphics_context_set_fill_color(ctx, GColorWhite);
     graphics_fill_circle(ctx, GPoint(AC_CX, AC_CY), 3);
 #undef AC_CX
 #undef AC_CY
-#undef AC_R
   } else {
     BatteryChargeState bat = battery_state_service_peek();
     // --- "Battery" label ---

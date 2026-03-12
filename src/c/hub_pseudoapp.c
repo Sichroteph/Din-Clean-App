@@ -259,6 +259,9 @@ static void pa_load(Window *w) {
   p->t1 = mktl(GRect(0, 20, b.size.w, 30), FONT_KEY_GOTHIC_24_BOLD, root);
   p->t2 = mktl(GRect(0, 55, b.size.w, 50), FONT_KEY_BITHAM_42_BOLD, root);
   s_v = p;
+  /* Reset alarm edit state to hours when opening, unless already armed */
+  if (p->id == HUB_APP_ALARM && s_ast < 2)
+    s_ast = 0;
   refresh();
   window_set_click_config_provider(w, ccfg);
   if (s_tend || s_ast == 2 || s_sw_start) {
