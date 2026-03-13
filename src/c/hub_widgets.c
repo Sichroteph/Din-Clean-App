@@ -554,49 +554,44 @@ static void draw_daily_row(GContext *ctx, int y, int day_index, int bounds_w) {
   const char *locale = i18n_get_system_locale();
   const char *dayn = weather_utils_get_weekday_abbrev(locale, wday);
 
-  GFont font18b = fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
   GFont font24b = fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD);
-  GFont font14 = fonts_get_system_font(FONT_KEY_GOTHIC_14);
+  GFont font28b = fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD);
+  GFont font18b = fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
 
-  // Day name (top-left)
-  graphics_draw_text(ctx, dayn, font18b, GRect(2, y, 42, 22),
+  // Day name (left, Y-aligned with temperature)
+  graphics_draw_text(ctx, dayn, font24b, GRect(2, y + 4, 42, 28),
                      GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft,
                      NULL);
 
-  // Weather icon (center-left)
+  // Weather icon (centered slightly left of screen center: center at x=63)
   int icon_id = weather_utils_build_icon(days_icon[day_index]);
   GBitmap *bmp = gbitmap_create_with_resource(icon_id);
   if (bmp) {
-    graphics_draw_bitmap_in_rect(ctx, bmp, GRect(46, y + 2, 35, 35));
+    graphics_draw_bitmap_in_rect(ctx, bmp, GRect(55, y + 2, 35, 35));
     gbitmap_destroy(bmp);
   }
 
-  // Temperature (right of icon)
+  // Temperature (right, Y-aligned with day name)
   char tbuf[7];
   snprintf(tbuf, sizeof(tbuf), "%d\xc2\xb0", days_temp_v[day_index]);
-  graphics_draw_text(ctx, tbuf, font24b, GRect(84, y - 2, 58, 28),
+  graphics_draw_text(ctx, tbuf, font28b, GRect(87, y + 4, 55, 32),
                      GTextOverflowModeTrailingEllipsis, GTextAlignmentRight,
                      NULL);
 
-  // Rain (below temp, right side)
-  char rbuf[6];
-  snprintf(rbuf, sizeof(rbuf), "%dmm", days_rain_v[day_index]);
-  graphics_draw_text(ctx, rbuf, font14, GRect(84, y + 24, 58, 16),
-                     GTextOverflowModeTrailingEllipsis, GTextAlignmentRight,
-                     NULL);
-
-  // Wind (below rain, right side)
-  char wbuf[6];
+  // Rain + Wind on same line below icon (larger font, centered)
+  char rwbuf[16];
   const char *wu = wind_unit_str;
-  // Abbreviate unit for compact display
+  const char *unit;
   if (wu[0] == 'k')
-    snprintf(wbuf, sizeof(wbuf), "%dkm", days_wind_v[day_index]);
+    unit = "km";
   else if (wu[0] == 'm' && wu[1] == '/')
-    snprintf(wbuf, sizeof(wbuf), "%dms", days_wind_v[day_index]);
+    unit = "ms";
   else
-    snprintf(wbuf, sizeof(wbuf), "%dmp", days_wind_v[day_index]);
-  graphics_draw_text(ctx, wbuf, font14, GRect(84, y + 38, 58, 16),
-                     GTextOverflowModeTrailingEllipsis, GTextAlignmentRight,
+    unit = "mp";
+  snprintf(rwbuf, sizeof(rwbuf), "%dmm  %d%s", days_rain_v[day_index],
+           days_wind_v[day_index], unit);
+  graphics_draw_text(ctx, rwbuf, font18b, GRect(2, y + 39, bounds_w - 4, 22),
+                     GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter,
                      NULL);
 }
 
