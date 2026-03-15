@@ -78,6 +78,7 @@
 #define KEY_FORECAST_RAIN32 131
 #define KEY_FORECAST_RAIN41 132
 #define KEY_FORECAST_RAIN42 133
+#define KEY_FORECAST_RAIN_P1_0 134
 
 // Extended hourly forecast: temps for h+15, h+18, h+21, h+24
 #define KEY_FORECAST_TEMP6 212
@@ -224,7 +225,7 @@ static char icon[3] = " ";
 // Hourly forecast data (9 temps for 0-24h, 12 rain bars, 8 winds for 0-24h, 4
 // hours for 0-12h)
 int8_t graph_temps[9] = {10, 10, 10, 10, 10, 10, 10, 10, 10};
-uint8_t graph_rains[12] = {0};
+uint8_t graph_rains[24] = {0};
 uint8_t graph_wind_val[8] = {0};
 uint8_t graph_hours[4] = {0, 3, 6, 9};
 
@@ -639,6 +640,9 @@ static void inbox_received_callback(DictionaryIterator *iterator,
       if ((t = dict_find(iterator, KEY_FORECAST_RAIN11 + b * 2 + 1)))
         graph_rains[b * 3 + 2] = (int)t->value->int32;
     }
+    for (int i = 0; i < 12; i++)
+      if ((t = dict_find(iterator, KEY_FORECAST_RAIN_P1_0 + i)))
+        graph_rains[12 + i] = (int)t->value->int32;
 
     if ((t = dict_find(iterator, KEY_FORECAST_WIND0)))
       graph_wind_val[0] = atoi(t->value->cstring);
@@ -1176,7 +1180,7 @@ static void init() {
   app_message_register_inbox_received(inbox_received_callback);
   app_message_register_outbox_failed(outbox_failed_callback);
   app_message_register_outbox_sent(outbox_sent_callback);
-  AppMessageResult msg_result = app_message_open(480, 32);
+  AppMessageResult msg_result = app_message_open(512, 32);
   s_appmsg_open = (msg_result == APP_MSG_OK);
 
   init_var();

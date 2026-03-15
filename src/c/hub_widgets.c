@@ -465,23 +465,21 @@ static void widget_hourly_draw(GContext *ctx, GRect bounds, uint8_t page) {
 
   // --- Rain bars (dithered, drawn after grid so they appear on top) ---
   // Drawn just before the temperature curve so the curve remains topmost.
-  if (page == 0) {
-    for (int i = 0; i < 12; i++) {
-      uint8_t rain = graph_rains[i];
-      if (rain == 0)
-        continue;
-      int bar_h = (int)rain * 30 / HOURLY_MAXRAIN;
-      if (bar_h > 30)
-        bar_h = 30;
-      if (bar_h < 1)
-        bar_h = 1;
-      int bar_x = i * 12;
-      int bar_y = HOURLY_GRAPH_BOT - bar_h;
-      for (int y = bar_y; y < HOURLY_GRAPH_BOT; y++) {
-        for (int x = bar_x; x < bar_x + 10 && x < bounds.size.w; x++) {
-          if ((x + y) % 2 == 0)
-            graphics_draw_pixel(ctx, GPoint(x, y));
-        }
+  for (int i = 0; i < 12; i++) {
+    uint8_t rain = graph_rains[i + page * 12];
+    if (rain == 0)
+      continue;
+    int bar_h = (int)rain * 30 / HOURLY_MAXRAIN;
+    if (bar_h > 30)
+      bar_h = 30;
+    if (bar_h < 1)
+      bar_h = 1;
+    int bar_x = i * 12;
+    int bar_y = HOURLY_GRAPH_BOT - bar_h;
+    for (int y = bar_y; y < HOURLY_GRAPH_BOT; y++) {
+      for (int x = bar_x; x < bar_x + 10 && x < bounds.size.w; x++) {
+        if ((x + y) % 2 == 0)
+          graphics_draw_pixel(ctx, GPoint(x, y));
       }
     }
   }
@@ -711,6 +709,16 @@ static void widget_steps_draw(GContext *ctx, GRect bounds, uint8_t page) {
   int bar_h_max = bar_area_bot - bar_area_top;
   int bar_w = 14;
   int gap = (bounds.size.w - 7 * bar_w) / 8; // even spacing
+
+  // Dotted reference lines every 5000 steps (drawn behind bars)
+  graphics_context_set_stroke_color(ctx, GColorWhite);
+  for (int thr = 5000; thr <= (int)hist_max; thr += 5000) {
+    int y_ref = bar_area_bot - thr * bar_h_max / (int)hist_max;
+    for (int px = 2; px < bounds.size.w; px += 4) {
+      graphics_draw_pixel(ctx, GPoint(px, y_ref));
+      graphics_draw_pixel(ctx, GPoint(px + 1, y_ref));
+    }
+  }
 
   for (int i = 0; i < 7; i++) {
     int bh = (int)hist[i] * bar_h_max / hist_max;

@@ -135,15 +135,16 @@ function processOpenMeteoResponse(responseText) {
   var hourly = json.hourly;
   var units = localStorage.getItem(152);
 
-  // Current conditions (first hour)
-  var currentTemp = hourly.temperature_2m[0];
-  var currentHumidity = Math.round(hourly.relative_humidity_2m[0]);
-  var currentWindSpeed = hourly.wind_speed_10m[0]; // Average wind speed in km/h from API
-  var currentWmoCode = hourly.weather_code[0];
-
-  // Get current hour to determine day/night for icon
+  // Get current hour — API returns hourly data starting from midnight
   var now = new Date();
   var currentHour = now.getHours();
+
+  // Current conditions at current hour (not index 0 which is midnight)
+  var currentTemp = hourly.temperature_2m[currentHour];
+  var currentHumidity = Math.round(hourly.relative_humidity_2m[currentHour]);
+  var currentWindSpeed = hourly.wind_speed_10m[currentHour]; // Average wind speed in km/h from API
+  var currentWmoCode = hourly.weather_code[currentHour];
+
   var isNight = isNightTime(currentHour);
   var icon = wmoToIcon(currentWmoCode, isNight);
 
@@ -188,8 +189,6 @@ function processOpenMeteoResponse(responseText) {
 
   // Hourly data extraction
   // Calculate offset to start from current hour (API returns data from midnight)
-  var now = new Date();
-  var currentHour = now.getHours();
   var hourOffset = currentHour; // Start from current hour in API data
 
   var hourlyTemperatures = {
@@ -368,6 +367,18 @@ function processOpenMeteoResponse(responseText) {
     "KEY_FORECAST_RAIN4": hourlyRain.hour9,
     "KEY_FORECAST_RAIN41": hourlyRain.hour10,
     "KEY_FORECAST_RAIN42": hourlyRain.hour11,
+    "KEY_FORECAST_RAIN_P1_0": hourlyRain.hour12,
+    "KEY_FORECAST_RAIN_P1_1": hourlyRain.hour13,
+    "KEY_FORECAST_RAIN_P1_2": hourlyRain.hour14,
+    "KEY_FORECAST_RAIN_P1_3": hourlyRain.hour15,
+    "KEY_FORECAST_RAIN_P1_4": hourlyRain.hour16,
+    "KEY_FORECAST_RAIN_P1_5": hourlyRain.hour17,
+    "KEY_FORECAST_RAIN_P1_6": hourlyRain.hour18,
+    "KEY_FORECAST_RAIN_P1_7": hourlyRain.hour19,
+    "KEY_FORECAST_RAIN_P1_8": hourlyRain.hour20,
+    "KEY_FORECAST_RAIN_P1_9": hourlyRain.hour21,
+    "KEY_FORECAST_RAIN_P1_10": hourlyRain.hour22,
+    "KEY_FORECAST_RAIN_P1_11": hourlyRain.hour23,
     "KEY_LOCATION": "",
     "POOLTEMP": poolTemp * 10,
     "POOLPH": poolPH * 100,
@@ -412,11 +423,14 @@ function processOpenMeteoResponse(responseText) {
     console.log("Open-Meteo msg1 sent");
     Pebble.sendAppMessage(dict2, function () {
       console.log("Open-Meteo weather info sent to Pebble successfully!");
+      fetchStockData();
     }, function () {
       console.log("Error sending Open-Meteo weather info msg2!");
+      fetchStockData();
     });
   }, function () {
     console.log("Error sending Open-Meteo weather info to Pebble!");
+    fetchStockData();
   });
 }
 
@@ -744,6 +758,18 @@ function processWeatherResponse(responseText) {
     "KEY_FORECAST_RAIN4": hourlyRain.hour9,
     "KEY_FORECAST_RAIN41": hourlyRain.hour10,
     "KEY_FORECAST_RAIN42": hourlyRain.hour11,
+    "KEY_FORECAST_RAIN_P1_0": hourlyRain.hour12,
+    "KEY_FORECAST_RAIN_P1_1": hourlyRain.hour13,
+    "KEY_FORECAST_RAIN_P1_2": hourlyRain.hour14,
+    "KEY_FORECAST_RAIN_P1_3": hourlyRain.hour15,
+    "KEY_FORECAST_RAIN_P1_4": hourlyRain.hour16,
+    "KEY_FORECAST_RAIN_P1_5": hourlyRain.hour17,
+    "KEY_FORECAST_RAIN_P1_6": hourlyRain.hour18,
+    "KEY_FORECAST_RAIN_P1_7": hourlyRain.hour19,
+    "KEY_FORECAST_RAIN_P1_8": hourlyRain.hour20,
+    "KEY_FORECAST_RAIN_P1_9": hourlyRain.hour21,
+    "KEY_FORECAST_RAIN_P1_10": hourlyRain.hour22,
+    "KEY_FORECAST_RAIN_P1_11": hourlyRain.hour23,
     "KEY_LOCATION": "",
     "POOLTEMP": poolTemp * 10,
     "POOLPH": poolPH * 100,
@@ -788,11 +814,14 @@ function processWeatherResponse(responseText) {
     console.log("MET Norway msg1 sent");
     Pebble.sendAppMessage(wdict2, function () {
       console.log("Weather info sent to Pebble successfully!");
+      fetchStockData();
     }, function () {
       console.log("Error sending weather info msg2!");
+      fetchStockData();
     });
   }, function () {
     console.log("Error sending weather info to Pebble!");
+    fetchStockData();
   });
 }
 
@@ -869,6 +898,9 @@ function onWeatherFetchError(reason) {
   weatherXhrPending = false;
   weatherRetryCount++;
   console.log("Weather fetch failed (" + reason + "), retry " + weatherRetryCount + "/" + weatherMaxRetries);
+
+  // No weather messages in-flight, safe to send stocks now
+  fetchStockData();
 
   if (weatherRetryCount < weatherMaxRetries) {
     console.log("Scheduling retry in " + weatherRetryDelayMs + "ms");
@@ -1358,7 +1390,7 @@ Pebble.addEventListener('appmessage',
     if ((navigator.onLine) || (b_force_internet)) {
       console.log("Appel météo !!");
       getWeather();
-      fetchStockData();
+      // fetchStockData() is now triggered after weather messages complete to avoid AppMessage collision
     }
   }
 );
