@@ -132,8 +132,8 @@ void ui_draw_icon_bar(GContext *ctx, const IconBarData *d) {
 
   // Connection / quiet time status
   if (!d->is_quiet_time) {
-    graphics_draw_text(ctx, week_day, fsmall, dayw_r,
-                       GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
+    graphics_draw_text(ctx, week_day, fsmall, dayw_r, GTextOverflowModeWordWrap,
+                       GTextAlignmentCenter, NULL);
     if (d->is_connected) {
       graphics_draw_text(ctx, mday, fmed, day_r, GTextOverflowModeWordWrap,
                          GTextAlignmentCenter, NULL);
@@ -145,8 +145,8 @@ void ui_draw_icon_bar(GContext *ctx, const IconBarData *d) {
       }
     }
   } else {
-    graphics_draw_text(ctx, week_day, fsmall, dayw_r,
-                       GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
+    graphics_draw_text(ctx, week_day, fsmall, dayw_r, GTextOverflowModeWordWrap,
+                       GTextAlignmentCenter, NULL);
     GBitmap *silent = gbitmap_create_with_resource(RESOURCE_ID_SILENT);
     if (silent) {
       graphics_draw_bitmap_in_rect(ctx, silent, bt_r);
@@ -172,10 +172,8 @@ void ui_draw_icon_bar(GContext *ctx, const IconBarData *d) {
   graphics_draw_text(ctx, weather_temp_char, fmed,
                      GRect(IB_TEMP_X, IB_TEMP_Y, 60, 60),
                      GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
-  graphics_draw_text(ctx, minTemp, fbold,
-                     GRect(IB_TMIN_X, IB_TMIN_Y, 45, 35),
+  graphics_draw_text(ctx, minTemp, fbold, GRect(IB_TMIN_X, IB_TMIN_Y, 45, 35),
                      GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
-  graphics_draw_text(ctx, maxTemp, fbold,
-                     GRect(IB_TMAX_X, IB_TMAX_Y, 45, 35),
+  graphics_draw_text(ctx, maxTemp, fbold, GRect(IB_TMAX_X, IB_TMAX_Y, 45, 35),
                      GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
 }
