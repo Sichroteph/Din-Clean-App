@@ -42,7 +42,7 @@ void hub_ring_dismiss(void) {
     s_at = NULL;
   }
 }
-static const char *s_names[] = {"Stopwatch", "Timer", "Alarm"};
+static const char s_names[] = "Stopwatch\0Timer\0\0\0\0\0Alarm\0\0\0\0\0";
 
 static void fmt(int a, int b) {
   s_buf[0] = '0' + a / 10;
@@ -57,7 +57,7 @@ static void refresh(void) {
   if (!s_v)
     return;
   int a = 0, b = 0;
-  const char *title = s_names[s_v->id];
+  const char *title = s_names + s_v->id * 10;
   if (s_v->id == HUB_APP_STOPWATCH) {
     uint32_t e = s_sw_elapsed;
     if (s_sw_start)

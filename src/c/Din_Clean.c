@@ -195,30 +195,27 @@ static Layer *s_canvas_layer;
 static Layer *layer;
 Layer *g_main_layer;
 
-static char week_day[4] = " ";
-static char mday[3] = " ";
-static char weather_temp_char[7] = " ";
-static char minTemp[6] = " ";
-static char maxTemp[6] = " ";
+char week_day[4] = " ";
+char mday[3] = " ";
+char weather_temp_char[7] = " ";
+char minTemp[6] = " ";
+char maxTemp[6] = " ";
 
 // POOL DATA (numeric only — string formatting removed to save heap)
-int npoolTemp;
-int npoolPH;
-int npoolORP;
+int16_t npoolTemp;
+int16_t npoolPH;
+int16_t npoolORP;
 
 // WEATHER
 static int8_t weather_temp = 0;
-
-static time_t t;
-static struct tm now;
 
 int8_t tmin_val = 0;
 int8_t tmax_val = 0;
 uint8_t wind_speed_val = 0;
 uint8_t humidity = 0;
 time_t last_refresh = 0;
-int duration = 3600;
-int offline_delay = 3600;
+#define GET_DURATION() (flags.is_30mn ? 1800 : 3600)
+#define OFFLINE_DELAY 3600
 
 static char icon[3] = " ";
 
@@ -278,8 +275,8 @@ static void app_focus_changed(bool focused) {
       return;
 
     // Check if weather data is stale and request refresh
-    t = time(NULL);
-    bool weather_stale = flags.is_connected && ((t - last_refresh) > duration);
+    time_t t = time(NULL);
+    bool weather_stale = flags.is_connected && ((t - last_refresh) > GET_DURATION());
 
     DictionaryIterator *iter;
     if (app_message_outbox_begin(&iter) == APP_MSG_OK) {
@@ -317,7 +314,7 @@ static void dtext(GContext *c, const char *s, GFont f, int y, int h) {
 }
 
 // Alternative view renderer (0 heap alloc — draws on existing GContext)
-static void draw_alt_view(GContext *ctx, uint8_t vid, int icon_id, bool fresh) {
+static void draw_alt_view(GContext *ctx, uint8_t vid, int icon_id, bool fresh, uint8_t hour, uint8_t min_v) {
   graphics_context_set_fill_color(ctx, GColorBlack);
   graphics_fill_rect(ctx, GRect(0, 0, 144, 168), 0, GCornerNone);
   graphics_context_set_text_color(ctx, GColorWhite);
@@ -362,13 +359,13 @@ static void draw_alt_view(GContext *ctx, uint8_t vid, int icon_id, bool fresh) {
                                   AC_CY - cos_lookup(a) * 80 / TRIG_MAX_RATIO),
                            (i % 3 == 0) ? 3 : 1);
     }
-    int h12 = now.tm_hour % 12;
-    int32_t ha = TRIG_MAX_ANGLE * (h12 * 60 + now.tm_min) / 720;
+    int h12 = hour % 12;
+    int32_t ha = TRIG_MAX_ANGLE * (h12 * 60 + min_v) / 720;
     graphics_context_set_stroke_width(ctx, 7);
     graphics_draw_line(ctx, GPoint(AC_CX, AC_CY),
                        GPoint(AC_CX + sin_lookup(ha) * 38 / TRIG_MAX_RATIO,
                               AC_CY - cos_lookup(ha) * 38 / TRIG_MAX_RATIO));
-    int32_t ma = TRIG_MAX_ANGLE * now.tm_min / 60;
+    int32_t ma = TRIG_MAX_ANGLE * min_v / 60;
     graphics_context_set_stroke_width(ctx, 5);
     graphics_draw_line(ctx, GPoint(AC_CX, AC_CY),
                        GPoint(AC_CX + sin_lookup(ma) * 56 / TRIG_MAX_RATIO,
@@ -456,9 +453,6 @@ static void draw_action_toast(GContext *ctx) {
 }
 
 static void update_proc(Layer *layer, GContext *ctx) {
-  // Static local for IconBarData to avoid stack overflow on real hardware
-  static IconBarData icon_data;
-
   if (!s_init_done) {
     return;
   }
@@ -474,17 +468,17 @@ static void update_proc(Layer *layer, GContext *ctx) {
   graphics_context_set_fill_color(ctx, GColorBlack);
   graphics_fill_rect(ctx, GRect(0, 0, 160, 180), 0, GCornerNone);
 
-  t = time(NULL);
-  now = *(localtime(&t));
+  time_t t = time(NULL);
+  struct tm *lt = localtime(&t);
 
   const char *locale = i18n_get_system_locale();
   snprintf(week_day, sizeof(week_day), "%s",
-           weather_utils_get_weekday_abbrev(locale, now.tm_wday));
+           weather_utils_get_weekday_abbrev(locale, lt->tm_wday));
 
-  snprintf(mday, sizeof(mday), "%i", now.tm_mday);
+  snprintf(mday, sizeof(mday), "%i", lt->tm_mday);
   graphics_context_set_text_color(ctx, GColorWhite);
 
-  bool has_fresh_weather = ((t - last_refresh) < duration + offline_delay);
+  bool has_fresh_weather = ((t - last_refresh) < GET_DURATION() + OFFLINE_DELAY);
 
   snprintf(weather_temp_char, sizeof(weather_temp_char), "%i\xc2\xb0",
            weather_temp);
@@ -496,7 +490,7 @@ static void update_proc(Layer *layer, GContext *ctx) {
     uint8_t vid = g_hub_config.view_order[current_view_index];
     if (vid == HUB_VIEW_WEATHER || vid == HUB_VIEW_DATE ||
         vid == HUB_VIEW_ANALOG) {
-      draw_alt_view(ctx, vid, icon_id, has_fresh_weather);
+      draw_alt_view(ctx, vid, icon_id, has_fresh_weather, lt->tm_hour, lt->tm_min);
       draw_action_toast(ctx);
       if (g_hub_ring_active)
         draw_toast(ctx, g_hub_ring_active == 1 ? "Timer!" : "Alarm!");
@@ -507,18 +501,14 @@ static void update_proc(Layer *layer, GContext *ctx) {
   // Draw hours FIRST for instant display (only 4 small bitmaps)
   char heure[5];
   if (clock_is_24h_style()) {
-    strftime(heure, sizeof(heure), "%H%M", &now);
+    strftime(heure, sizeof(heure), "%H%M", lt);
   } else {
-    strftime(heure, sizeof(heure), "%I%M", &now);
+    strftime(heure, sizeof(heure), "%I%M", lt);
   }
   ui_draw_time(ctx, heure);
 
   // Draw icon bar AFTER time (loads many bitmaps, slower)
-  icon_data.week_day = week_day;
-  icon_data.mday = mday;
-  icon_data.min_temp_text = minTemp;
-  icon_data.max_temp_text = maxTemp;
-  icon_data.weather_temp_text = weather_temp_char;
+  IconBarData icon_data;
   icon_data.has_fresh_weather = has_fresh_weather;
   icon_data.is_connected = flags.is_connected;
   icon_data.is_quiet_time = quiet_time_is_active();
@@ -543,19 +533,18 @@ static void update_proc(Layer *layer, GContext *ctx) {
 static void do_send_weather_request(void);
 
 static void handle_tick(struct tm *cur, TimeUnits units_changed) {
-  t = time(NULL);
-  now = *cur; // use OS-provided local time (correct DST)
   if (flags.is_vibration) {
-    if (now.tm_min == 0 && now.tm_hour >= QUIET_TIME_END &&
-        now.tm_hour <= QUIET_TIME_START) {
+    if (cur->tm_min == 0 && cur->tm_hour >= QUIET_TIME_END &&
+        cur->tm_hour <= QUIET_TIME_START) {
       vibes_double_pulse();
     }
   }
 
   // Get weather update every 30 minutes (even during quiet time)
   if (s_init_done && s_appmsg_open && flags.is_connected) {
-    if ((((flags.is_30mn) && (now.tm_min % 30 == 0)) ||
-         (now.tm_min % 60 == 0) || ((t - last_refresh) > duration))) {
+    time_t t = time(NULL);
+    if ((((flags.is_30mn) && (cur->tm_min % 30 == 0)) ||
+         (cur->tm_min % 60 == 0) || ((t - last_refresh) > GET_DURATION()))) {
       s_weather_request_pending = true;
       do_send_weather_request();
     }
@@ -607,11 +596,11 @@ static void inbox_received_callback(DictionaryIterator *iterator,
 
     // Pool data
     if (poolTemp_tuple)
-      npoolTemp = (int)poolTemp_tuple->value->int32;
+      npoolTemp = (int16_t)poolTemp_tuple->value->int32;
     if (poolPH_tuple)
-      npoolPH = (int)poolPH_tuple->value->int32;
+      npoolPH = (int16_t)poolPH_tuple->value->int32;
     if (poolORP_tuple)
-      npoolORP = (int)poolORP_tuple->value->int32;
+      npoolORP = (int16_t)poolORP_tuple->value->int32;
 
     snprintf(icon, sizeof(icon), "%s", icon_tuple->value->cstring);
     weather_temp = (int)temp_tuple->value->int32;
@@ -873,7 +862,7 @@ static void inbox_received_callback(DictionaryIterator *iterator,
       // Persist this panel individually
       persist_write_data(HUB_PERSIST_STOCK0 + idx, &p, sizeof(StockPanel));
       if (idx == stock_panel_count - 1) {
-        layer_mark_dirty(layer);
+        hub_widget_mark_dirty();
       }
     }
   }
@@ -927,9 +916,6 @@ static void outbox_sent_callback(DictionaryIterator *iterator, void *context) {
 }
 
 static void init_var() {
-  t = time(NULL);
-  now = *(localtime(&t));
-
   if (persist_exists(KEY_RADIO_UNITS) && persist_exists(KEY_RADIO_REFRESH) &&
       persist_exists(KEY_TOGGLE_VIBRATION) && persist_exists(KEY_TOGGLE_BT)) {
 
@@ -1027,11 +1013,6 @@ static void init_var() {
   BatteryChargeState charge_state = battery_state_service_peek();
   flags.is_charging = charge_state.is_charging;
   flags.is_connected = connection_service_peek_pebble_app_connection();
-
-  if (flags.is_30mn)
-    duration = 1800;
-  else
-    duration = 3600;
 }
 
 // --- Hub timeout callback: return to watchface ---

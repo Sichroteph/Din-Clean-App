@@ -2,6 +2,13 @@
 
 #include "ui_icon_bar.h"
 
+// String globals from Din_Clean.c (accessed directly to save 20B RAM)
+extern char week_day[];
+extern char mday[];
+extern char minTemp[];
+extern char maxTemp[];
+extern char weather_temp_char[];
+
 // Layout constants (previously computed in Din_Clean.c update_proc)
 #define IB_DAYW_X 0
 #define IB_DAYW_Y 0
@@ -125,10 +132,10 @@ void ui_draw_icon_bar(GContext *ctx, const IconBarData *d) {
 
   // Connection / quiet time status
   if (!d->is_quiet_time) {
-    graphics_draw_text(ctx, d->week_day, fsmall, dayw_r,
+    graphics_draw_text(ctx, week_day, fsmall, dayw_r,
                        GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
     if (d->is_connected) {
-      graphics_draw_text(ctx, d->mday, fmed, day_r, GTextOverflowModeWordWrap,
+      graphics_draw_text(ctx, mday, fmed, day_r, GTextOverflowModeWordWrap,
                          GTextAlignmentCenter, NULL);
     } else {
       GBitmap *bt = gbitmap_create_with_resource(RESOURCE_ID_BT_DISCONECT);
@@ -138,7 +145,7 @@ void ui_draw_icon_bar(GContext *ctx, const IconBarData *d) {
       }
     }
   } else {
-    graphics_draw_text(ctx, d->week_day, fsmall, dayw_r,
+    graphics_draw_text(ctx, week_day, fsmall, dayw_r,
                        GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
     GBitmap *silent = gbitmap_create_with_resource(RESOURCE_ID_SILENT);
     if (silent) {
@@ -162,13 +169,13 @@ void ui_draw_icon_bar(GContext *ctx, const IconBarData *d) {
 
   draw_wind_overlays(ctx, d->wind_speed_val, d->met_unit);
 
-  graphics_draw_text(ctx, d->weather_temp_text, fmed,
+  graphics_draw_text(ctx, weather_temp_char, fmed,
                      GRect(IB_TEMP_X, IB_TEMP_Y, 60, 60),
                      GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
-  graphics_draw_text(ctx, d->min_temp_text, fbold,
+  graphics_draw_text(ctx, minTemp, fbold,
                      GRect(IB_TMIN_X, IB_TMIN_Y, 45, 35),
                      GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
-  graphics_draw_text(ctx, d->max_temp_text, fbold,
+  graphics_draw_text(ctx, maxTemp, fbold,
                      GRect(IB_TMAX_X, IB_TMAX_Y, 45, 35),
                      GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
 }

@@ -27,6 +27,14 @@ static bool stock_load_panel(uint8_t idx, StockPanel *dst) {
   return true;
 }
 
+// Active widget canvas pointer — set while the widget window is on screen
+static Layer *s_active_canvas = NULL;
+
+void hub_widget_mark_dirty(void) {
+  if (s_active_canvas)
+    layer_mark_dirty(s_active_canvas);
+}
+
 // --- Widget draw/page functions ---
 static void widget_stocks_draw(GContext *ctx, GRect bounds, uint8_t page);
 static void widget_hourly_draw(GContext *ctx, GRect bounds, uint8_t page);
@@ -142,6 +150,7 @@ static void widget_window_load(Window *window) {
   ctx->canvas = layer_create(bounds);
   layer_set_update_proc(ctx->canvas, widget_update_proc);
   layer_add_child(root, ctx->canvas);
+  s_active_canvas = ctx->canvas;
 
   window_set_click_config_provider_with_context(window, widget_click_config,
                                                 ctx);
@@ -153,6 +162,7 @@ static void widget_window_load(Window *window) {
 
 static void widget_window_unload(Window *window) {
   WidgetCtx *ctx = window_get_user_data(window);
+  s_active_canvas = NULL;
   widget_steps_timer_stop(ctx);
   layer_destroy(ctx->canvas);
   window_destroy(ctx->window);
@@ -175,17 +185,6 @@ static void widget_update_proc(Layer *layer, GContext *ctx) {
     s_widget_defs[widget_id].draw(ctx, bounds, wctx->current_page);
   }
 
-  // Draw widget position indicator (e.g., "1/3")
-  if (wctx->widget_count > 1) {
-    char indicator[8];
-    snprintf(indicator, sizeof(indicator), "%d/%d", wctx->current_index + 1,
-             wctx->widget_count);
-    graphics_context_set_text_color(ctx, GColorWhite);
-    GRect ind_rect = GRect(bounds.size.w - 40, bounds.size.h - 18, 36, 16);
-    graphics_draw_text(
-        ctx, indicator, fonts_get_system_font(FONT_KEY_GOTHIC_14), ind_rect,
-        GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
-  }
 }
 
 static void widget_click_config(void *context) {
