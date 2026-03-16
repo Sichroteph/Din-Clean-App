@@ -1,6 +1,9 @@
 #include "hub_widgets.h"
 #include "weather_utils.h"
 
+// Uncomment to display fake step data (useful on emulator or aplite without worker)
+#define DEMO_STEPS
+
 // Weather data from Din_Clean.c
 extern int8_t graph_temps[];
 extern uint8_t graph_rains[];
@@ -11,6 +14,7 @@ extern int8_t days_temp_v[];
 extern char days_icon[][3];
 extern uint8_t days_rain_v[];
 extern uint8_t days_wind_v[];
+
 
 // Stock data — count in RAM, panels loaded on demand from persist
 extern uint8_t stock_panel_count;
@@ -184,7 +188,6 @@ static void widget_update_proc(Layer *layer, GContext *ctx) {
   if (widget_id < HUB_WIDGET_COUNT) {
     s_widget_defs[widget_id].draw(ctx, bounds, wctx->current_page);
   }
-
 }
 
 static void widget_click_config(void *context) {

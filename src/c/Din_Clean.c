@@ -276,7 +276,8 @@ static void app_focus_changed(bool focused) {
 
     // Check if weather data is stale and request refresh
     time_t t = time(NULL);
-    bool weather_stale = flags.is_connected && ((t - last_refresh) > GET_DURATION());
+    bool weather_stale =
+        flags.is_connected && ((t - last_refresh) > GET_DURATION());
 
     DictionaryIterator *iter;
     if (app_message_outbox_begin(&iter) == APP_MSG_OK) {
@@ -314,7 +315,8 @@ static void dtext(GContext *c, const char *s, GFont f, int y, int h) {
 }
 
 // Alternative view renderer (0 heap alloc — draws on existing GContext)
-static void draw_alt_view(GContext *ctx, uint8_t vid, int icon_id, bool fresh, uint8_t hour, uint8_t min_v) {
+static void draw_alt_view(GContext *ctx, uint8_t vid, int icon_id, bool fresh,
+                          uint8_t hour, uint8_t min_v) {
   graphics_context_set_fill_color(ctx, GColorBlack);
   graphics_fill_rect(ctx, GRect(0, 0, 144, 168), 0, GCornerNone);
   graphics_context_set_text_color(ctx, GColorWhite);
@@ -478,7 +480,8 @@ static void update_proc(Layer *layer, GContext *ctx) {
   snprintf(mday, sizeof(mday), "%i", lt->tm_mday);
   graphics_context_set_text_color(ctx, GColorWhite);
 
-  bool has_fresh_weather = ((t - last_refresh) < GET_DURATION() + OFFLINE_DELAY);
+  bool has_fresh_weather =
+      ((t - last_refresh) < GET_DURATION() + OFFLINE_DELAY);
 
   snprintf(weather_temp_char, sizeof(weather_temp_char), "%i\xc2\xb0",
            weather_temp);
@@ -490,7 +493,8 @@ static void update_proc(Layer *layer, GContext *ctx) {
     uint8_t vid = g_hub_config.view_order[current_view_index];
     if (vid == HUB_VIEW_WEATHER || vid == HUB_VIEW_DATE ||
         vid == HUB_VIEW_ANALOG) {
-      draw_alt_view(ctx, vid, icon_id, has_fresh_weather, lt->tm_hour, lt->tm_min);
+      draw_alt_view(ctx, vid, icon_id, has_fresh_weather, lt->tm_hour,
+                    lt->tm_min);
       draw_action_toast(ctx);
       if (g_hub_ring_active)
         draw_toast(ctx, g_hub_ring_active == 1 ? "Timer!" : "Alarm!");
