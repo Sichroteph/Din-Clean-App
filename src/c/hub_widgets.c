@@ -1,8 +1,9 @@
 #include "hub_widgets.h"
 #include "weather_utils.h"
 
-// Uncomment to display fake step data (useful on emulator or aplite without worker)
-#define DEMO_STEPS
+// Uncomment to display fake step data (useful on emulator or aplite without
+// worker)
+// #define DEMO_STEPS
 
 // Weather data from Din_Clean.c
 extern int8_t graph_temps[];
@@ -14,7 +15,6 @@ extern int8_t days_temp_v[];
 extern char days_icon[][3];
 extern uint8_t days_rain_v[];
 extern uint8_t days_wind_v[];
-
 
 // Stock data — count in RAM, panels loaded on demand from persist
 extern uint8_t stock_panel_count;
@@ -317,28 +317,12 @@ static void widget_stocks_draw(GContext *ctx, GRect bounds, uint8_t page) {
 
   int graph_h = STOCK_GRAPH_BOT - STOCK_GRAPH_TOP;
 
-  // Dotted horizontal grid (3 lines) with price labels on the right
+  // Dotted horizontal grid (3 lines)
   for (int g = 1; g <= 3; g++) {
     int gy = STOCK_GRAPH_TOP + g * graph_h / 4;
     for (int x = STOCK_GRAPH_LEFT; x < STOCK_GRAPH_RIGHT; x += 4) {
       graphics_draw_pixel(ctx, GPoint(x, gy));
     }
-  }
-
-  // Price range labels: max at top, min at bottom (right-aligned, small font)
-  if (p->price_max[0] != '\0') {
-    GRect max_rect = GRect(STOCK_GRAPH_LEFT, STOCK_GRAPH_TOP - 1,
-                           STOCK_GRAPH_RIGHT - STOCK_GRAPH_LEFT, 14);
-    graphics_draw_text(ctx, p->price_max, font14, max_rect,
-                       GTextOverflowModeTrailingEllipsis, GTextAlignmentRight,
-                       NULL);
-  }
-  if (p->price_min[0] != '\0') {
-    GRect min_rect = GRect(STOCK_GRAPH_LEFT, STOCK_GRAPH_BOT - 14,
-                           STOCK_GRAPH_RIGHT - STOCK_GRAPH_LEFT, 14);
-    graphics_draw_text(ctx, p->price_min, font14, min_rect,
-                       GTextOverflowModeTrailingEllipsis, GTextAlignmentRight,
-                       NULL);
   }
 
   // X positions for 10 history points, evenly spaced
@@ -381,6 +365,22 @@ static void widget_stocks_draw(GContext *ctx, GRect bounds, uint8_t page) {
   graphics_fill_circle(
       ctx, GPoint(px[STOCK_HISTORY_POINTS - 1], py[STOCK_HISTORY_POINTS - 1]),
       3);
+
+  // Price range labels: max at top, min at bottom, with black background (drawn
+  // last)
+  for (int8_t i = 0; i < 2; i++) {
+    const char *lbl = i ? p->price_min : p->price_max;
+    if (!lbl[0])
+      continue;
+    int lw = (int)strlen(lbl) * 7 + 2;
+    GRect lr = GRect(STOCK_GRAPH_RIGHT - lw,
+                     i ? STOCK_GRAPH_BOT - 14 : STOCK_GRAPH_TOP - 1, lw, 14);
+    graphics_context_set_fill_color(ctx, GColorBlack);
+    graphics_fill_rect(ctx, lr, 0, GCornerNone);
+    graphics_context_set_fill_color(ctx, GColorWhite);
+    graphics_draw_text(ctx, lbl, font14, lr, GTextOverflowModeTrailingEllipsis,
+                       GTextAlignmentRight, NULL);
+  }
 }
 
 // ========== Hourly Weather Widget ==========
@@ -733,10 +733,14 @@ static void widget_steps_draw(GContext *ctx, GRect bounds, uint8_t page) {
     }
   }
 
-  // Day labels below bars: -7 -6 -5 -4 -3 -2 -1
+  // Day labels below bars: first letter of weekday, locale-aware
+  time_t lbl_t = time(NULL);
+  struct tm *lbl_tm = localtime(&lbl_t);
+  const char *lbl_locale = i18n_get_system_locale();
   for (int i = 0; i < 7; i++) {
-    char lbl[4];
-    snprintf(lbl, sizeof(lbl), "-%d", 7 - i);
+    int wday = (lbl_tm->tm_wday - 6 + i + 7) % 7;
+    const char *abbr = weather_utils_get_weekday_abbrev(lbl_locale, wday);
+    char lbl[2] = {abbr[0], '\0'};
     int bx = gap + i * (bar_w + gap);
     graphics_draw_text(
         ctx, lbl, font14, GRect(bx - 2, bar_area_bot, bar_w + 4, 14),

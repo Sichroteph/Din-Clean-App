@@ -856,16 +856,20 @@ function getIOPoolData() {
               getForecast();
             } else {
               console.error("Données inattendues :", data);
+              getForecast();
             }
           } catch (e) {
             console.error("Erreur de parsing JSON :", e);
+            getForecast();
           }
         } else {
           console.error("Erreur HTTP :", xhr.status, xhr.statusText);
+          getForecast();
         }
       };
       xhr.onerror = function () {
         console.error("Erreur réseau");
+        getForecast();
       };
       xhr.send();
       console.log("fin");
@@ -1017,6 +1021,9 @@ function locationError(err) {
       timestamp: 1692448765123
     };
     locationSuccess(position);
+  } else {
+    // No saved GPS — still attempt weather with any previously set coordinates
+    getIOPoolData();
   }
 
 }
@@ -1156,15 +1163,15 @@ function buildFakeStockData() {
   return [
     {
       symbol: 'DJIA', price: '42,531', change: '+0.8%', positive: true,
-      history: [30, 35, 42, 50, 48, 55, 62, 70, 78, 85], price_min: 41800, price_max: 43200
+      history: [30, 42, 48, 55, 62, 70, 78, 85, 90, 92], price_min: 41800, price_max: 43200
     },
     {
       symbol: 'EUR/CHF', price: '0.9385', change: '-0.3%', positive: false,
-      history: [80, 75, 70, 65, 60, 55, 50, 48, 45, 40], price_min: 0.930, price_max: 0.960
+      history: [80, 75, 65, 55, 50, 48, 45, 40, 38, 35], price_min: 0.930, price_max: 0.960
     },
     {
       symbol: 'BTC', price: '97,500', change: '+2.1%', positive: true,
-      history: [10, 20, 15, 30, 45, 40, 60, 55, 80, 95], price_min: 88000, price_max: 102000
+      history: [10, 15, 30, 45, 40, 55, 80, 95, 98, 100], price_min: 88000, price_max: 102000
     }
   ];
 }
@@ -1194,7 +1201,7 @@ function sendStockPanel(panels, idx) {
   var priceMin = (p.price_min !== undefined) ? formatStockPrice(p.price_min) : '?';
   var priceMax = (p.price_max !== undefined) ? formatStockPrice(p.price_max) : '?';
   var dataStr = idx + '|' + p.symbol + '|' + p.price + '|' +
-    (p.positive ? '+' : '') + p.change + '|' + histStr +
+    p.change + '|' + histStr +
     '|' + priceMin + '|' + priceMax;
 
   Pebble.sendAppMessage({ 'KEY_STOCK_DATA': dataStr }, function () {
@@ -1267,11 +1274,11 @@ function fetchStockData() {
           var changePct = ((lastPrice - basePrice) / basePrice * 100);
           var changeStr = (changePct >= 0 ? '+' : '') + changePct.toFixed(1) + '%';
 
-          // Compute raw min/max of the valid history window
-          var rawMin = validCloses[0], rawMax = validCloses[0];
-          for (var vi = 1; vi < validCloses.length; vi++) {
-            if (validCloses[vi] < rawMin) rawMin = validCloses[vi];
-            if (validCloses[vi] > rawMax) rawMax = validCloses[vi];
+          // Compute min/max from sampled data (matches graph normalization)
+          var rawMin = sampled[0], rawMax = sampled[0];
+          for (var vi = 1; vi < sampled.length; vi++) {
+            if (sampled[vi] < rawMin) rawMin = sampled[vi];
+            if (sampled[vi] > rawMax) rawMax = sampled[vi];
           }
 
           panels[idx] = {
