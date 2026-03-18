@@ -859,8 +859,10 @@ static void inbox_received_callback(DictionaryIterator *iterator,
           s++;
       }
       // Parse price_min/max — skip any unread history values first
-      while (*s && *s != '|') s++;
-      if (*s == '|') s++;
+      while (*s && *s != '|')
+        s++;
+      if (*s == '|')
+        s++;
       s = cpf(s, p.price_min, sizeof(p.price_min));
       s = cpf(s, p.price_max, sizeof(p.price_max));
       // Persist this panel individually
