@@ -983,28 +983,10 @@
             <label class="toggle-track" for="hub_view_1"></label>
           </div>
           <div class="row">
-            <div class="row-label">Date &amp; info</div>
+            <div class="row-label">Analog clock</div>
             <input type="checkbox" class="hidden-input" id="hub_view_2" checked>
             <label class="toggle-track" for="hub_view_2"></label>
           </div>
-          <div class="row">
-            <div class="row-label">Analog clock</div>
-            <input type="checkbox" class="hidden-input" id="hub_view_3" checked>
-            <label class="toggle-track" for="hub_view_3"></label>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-header">Countdown J&#8209;X</div>
-          <div class="row">
-            <div class="row-label">Event date</div>
-            <input type="date" class="input-field" id="countdown_date">
-          </div>
-          <div class="row">
-            <div class="row-label">Label (10 chars max)</div>
-            <input type="text" class="input-field" id="countdown_label" maxlength="10" placeholder="e.g.: Holiday">
-          </div>
-          <div class="card-footer">Displays "D-X" on the Date &amp; info panel. Leave empty to disable.</div>
         </div>
       </div>
     </div>
@@ -2072,11 +2054,7 @@
       var views = ['0'];
       if (document.getElementById('hub_view_1').checked) views.push('1');
       if (document.getElementById('hub_view_2').checked) views.push('2');
-      if (document.getElementById('hub_view_3').checked) views.push('3');
       options['hub_views'] = views.join(',');
-
-      options['countdown_date'] = document.getElementById('countdown_date').value || '';
-      options['countdown_label'] = document.getElementById('countdown_label').value || '';
 
       // Stock panels
       persistStockPanels();
@@ -2178,14 +2156,10 @@
       restoreLp('down', 0);
       restoreLp('select', 1);
 
-      var savedViews = localStorage['hub_views'] || '0,1,2,3';
+      var savedViews = localStorage['hub_views'] || '0,1,2';
       var viewIds = savedViews.split(',');
       document.getElementById('hub_view_1').checked = viewIds.indexOf('1') >= 0;
       document.getElementById('hub_view_2').checked = viewIds.indexOf('2') >= 0;
-      document.getElementById('hub_view_3').checked = viewIds.indexOf('3') >= 0;
-
-      document.getElementById('countdown_date').value = localStorage['countdown_date'] || '';
-      document.getElementById('countdown_label').value = localStorage['countdown_label'] || '';
 
       // Stock period
       var savedStockPeriod = localStorage['stock_period'] || '5d';

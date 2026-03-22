@@ -378,39 +378,6 @@ static void draw_alt_view(GContext *ctx, uint8_t vid, int icon_id, bool fresh,
     graphics_fill_circle(ctx, GPoint(AC_CX, AC_CY), 3);
 #undef AC_CX
 #undef AC_CY
-  } else {
-    BatteryChargeState bat = battery_state_service_peek();
-    // --- "Battery" label ---
-    dtext(ctx, "Battery", fs, 8, 16);
-    // --- Gauge body : moitié de largeur, plus épaisse, centrée ---
-    // Gauge: 62px wide x 26px tall, centered (x=38), nub 7x16 on right
-    graphics_context_set_fill_color(ctx, GColorWhite);
-    graphics_fill_rect(ctx, GRect(38, 26, 62, 26), 0, GCornerNone);
-    graphics_context_set_fill_color(ctx, GColorBlack);
-    int c_px = bat.charge_percent * 60 / 100;
-    graphics_fill_rect(ctx, GRect(39 + c_px, 27, 60 - c_px, 24), 0,
-                       GCornerNone);
-    // --- Borne positive (nub) à droite ---
-    graphics_context_set_fill_color(ctx, GColorWhite);
-    graphics_fill_rect(ctx, GRect(100, 31, 7, 16), 0, GCornerNone);
-    // --- Heap free ---
-    snprintf(buf, sizeof(buf), "Heap %zuB", heap_bytes_free());
-    dtext(ctx, buf, fs, 56, 16);
-    // --- Countdown ---
-    if (persist_exists(HUB_PERSIST_COUNTDOWN)) {
-      CountdownData cd;
-      memset(&cd, 0, sizeof(CountdownData));
-      persist_read_data(HUB_PERSIST_COUNTDOWN, &cd, sizeof(CountdownData));
-      int days = (int)((cd.ts - time(NULL)) / 86400);
-      if (days > 0) {
-        bool has_label = cd.label[0] != '\0';
-        if (has_label) {
-          dtext(ctx, cd.label, fb, 80, 34);
-        }
-        snprintf(buf, sizeof(buf), "J-%d", days);
-        dtext(ctx, buf, fb, has_label ? 118 : 96, 34);
-      }
-    }
   }
 }
 
@@ -491,8 +458,7 @@ static void update_proc(Layer *layer, GContext *ctx) {
   // Alternative views: configurable via view_order
   if (current_view_index > 0 && current_view_index < g_hub_config.view_count) {
     uint8_t vid = g_hub_config.view_order[current_view_index];
-    if (vid == HUB_VIEW_WEATHER || vid == HUB_VIEW_DATE ||
-        vid == HUB_VIEW_ANALOG) {
+    if (vid == HUB_VIEW_WEATHER || vid == HUB_VIEW_ANALOG) {
       draw_alt_view(ctx, vid, icon_id, has_fresh_weather, lt->tm_hour,
                     lt->tm_min);
       draw_action_toast(ctx);
@@ -790,28 +756,6 @@ static void inbox_received_callback(DictionaryIterator *iterator,
       hub_config_parse_widgets(t->value->cstring, false);
     if ((t = dict_find(iterator, KEY_HUB_ANIM)))
       g_hub_config.anim_enabled = (t->value->int32 == 1) ? 1 : 0;
-
-    if ((t = dict_find(iterator, KEY_HUB_COUNTDOWN))) {
-      int32_t ts = t->value->int32;
-      if (ts == -1) {
-        persist_delete(HUB_PERSIST_COUNTDOWN);
-      } else {
-        CountdownData cd;
-        memset(&cd, 0, sizeof(CountdownData));
-        if (persist_exists(HUB_PERSIST_COUNTDOWN) &&
-            persist_get_size(HUB_PERSIST_COUNTDOWN) ==
-                (int)sizeof(CountdownData)) {
-          persist_read_data(HUB_PERSIST_COUNTDOWN, &cd, sizeof(CountdownData));
-        }
-        cd.ts = ts;
-        Tuple *lt = dict_find(iterator, KEY_HUB_COUNTDOWN_LABEL);
-        if (lt) {
-          strncpy(cd.label, lt->value->cstring, sizeof(cd.label) - 1);
-          cd.label[sizeof(cd.label) - 1] = '\0';
-        }
-        persist_write_data(HUB_PERSIST_COUNTDOWN, &cd, sizeof(CountdownData));
-      }
-    }
 
     hub_config_save();
     hub_timeout_reset();

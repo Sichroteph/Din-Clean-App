@@ -44,10 +44,12 @@ static void widget_stocks_draw(GContext *ctx, GRect bounds, uint8_t page);
 static void widget_hourly_draw(GContext *ctx, GRect bounds, uint8_t page);
 static void widget_daily_draw(GContext *ctx, GRect bounds, uint8_t page);
 static void widget_steps_draw(GContext *ctx, GRect bounds, uint8_t page);
+static void widget_battery_draw(GContext *ctx, GRect bounds, uint8_t page);
 static uint8_t widget_stocks_page_count(void);
 static uint8_t widget_hourly_page_count(void);
 static uint8_t widget_daily_page_count(void);
 static uint8_t widget_steps_page_count(void);
+static uint8_t widget_battery_page_count(void);
 
 typedef struct {
   void (*draw)(GContext *ctx, GRect bounds, uint8_t page);
@@ -60,6 +62,7 @@ static const WidgetDef s_widget_defs[] = {
                                    widget_hourly_page_count},
     [HUB_WIDGET_WEATHER_DAILY] = {widget_daily_draw, widget_daily_page_count},
     [HUB_WIDGET_STEPS] = {widget_steps_draw, widget_steps_page_count},
+    [HUB_WIDGET_BATTERY] = {widget_battery_draw, widget_battery_page_count},
 };
 
 typedef struct {
@@ -744,6 +747,146 @@ static void widget_steps_draw(GContext *ctx, GRect bounds, uint8_t page) {
     int bx = gap + i * (bar_w + gap);
     graphics_draw_text(
         ctx, lbl, font14, GRect(bx - 2, bar_area_bot, bar_w + 4, 14),
+        GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
+  }
+}
+
+// ========== Battery History Widget ==========
+
+// Julian day number (monotonic day counter, same formula as step_worker)
+static int32_t bat_jday(void) {
+  time_t t = time(NULL);
+  struct tm *tm = localtime(&t);
+  return tm->tm_year * 366 + tm->tm_yday;
+}
+
+// Read nibble i (0-14) from packed 8-byte buffer
+static uint8_t bat_get_nibble(const uint8_t *buf, int i) {
+  uint8_t b = buf[i >> 1];
+  return (i & 1) ? (b & 0x0F) : (b >> 4);
+}
+
+// Set nibble i (0-14) in packed 8-byte buffer
+static void bat_set_nibble(uint8_t *buf, int i, uint8_t val) {
+  int bi = i >> 1;
+  if (i & 1)
+    buf[bi] = (buf[bi] & 0xF0) | (val & 0x0F);
+  else
+    buf[bi] = (buf[bi] & 0x0F) | ((val & 0x0F) << 4);
+}
+
+// Rotate history blob: shift nibbles right by n days, insert current battery
+static void bat_rotate(uint8_t *buf, int n_days) {
+  if (n_days >= 15) {
+    memset(buf, 0, 8);
+  } else {
+    // Shift nibbles right by n_days
+    for (int i = 14; i >= 0; i--) {
+      bat_set_nibble(buf, i, (i >= n_days) ? bat_get_nibble(buf, i - n_days) : 0);
+    }
+  }
+  // Record current battery at index 0
+  BatteryChargeState bat = battery_state_service_peek();
+  bat_set_nibble(buf, 0, (uint8_t)(bat.charge_percent / 10));
+}
+
+static uint8_t widget_battery_page_count(void) { return 1; }
+
+static void widget_battery_draw(GContext *ctx, GRect bounds, uint8_t page) {
+  graphics_context_set_text_color(ctx, GColorWhite);
+  graphics_context_set_fill_color(ctx, GColorWhite);
+
+  // --- Current battery percentage (large, centered top) ---
+  BatteryChargeState bat = battery_state_service_peek();
+  char buf[8];
+  snprintf(buf, sizeof(buf), "%d%%", (int)bat.charge_percent);
+  GFont font28b = fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD);
+  graphics_draw_text(ctx, buf, font28b, GRect(0, 2, bounds.size.w, 34),
+                     GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter,
+                     NULL);
+
+  // --- Battery gauge icon (small, under percentage) ---
+  GFont font14 = fonts_get_system_font(FONT_KEY_GOTHIC_14);
+  int gauge_w = 40, gauge_h = 14;
+  int gx = (bounds.size.w - gauge_w) / 2;
+  int gy = 38;
+  // Outline
+  graphics_context_set_stroke_color(ctx, GColorWhite);
+  graphics_draw_rect(ctx, GRect(gx, gy, gauge_w, gauge_h));
+  // Nub
+  graphics_fill_rect(ctx, GRect(gx + gauge_w, gy + 3, 3, gauge_h - 6), 0,
+                     GCornerNone);
+  // Fill
+  int fill_w = bat.charge_percent * (gauge_w - 2) / 100;
+  if (fill_w > 0)
+    graphics_fill_rect(ctx, GRect(gx + 1, gy + 1, fill_w, gauge_h - 2), 0,
+                       GCornerNone);
+
+  // --- Load & update history ---
+  uint8_t hist_buf[8];
+  memset(hist_buf, 0, 8);
+  if (persist_exists(HUB_PERSIST_BAT_HIST) &&
+      persist_get_size(HUB_PERSIST_BAT_HIST) == 8) {
+    persist_read_data(HUB_PERSIST_BAT_HIST, hist_buf, 8);
+  }
+
+  // Check if day changed since last record
+  int32_t today_jd = bat_jday();
+  int32_t last_jd = 0;
+  if (persist_exists(HUB_PERSIST_BAT_DATE))
+    last_jd = persist_read_int(HUB_PERSIST_BAT_DATE);
+
+  if (last_jd == 0 || today_jd != last_jd) {
+    int gap_days = (last_jd == 0) ? 1 : (int)(today_jd - last_jd);
+    if (gap_days < 0) gap_days = 1;
+    bat_rotate(hist_buf, gap_days);
+    persist_write_data(HUB_PERSIST_BAT_HIST, hist_buf, 8);
+    persist_write_int(HUB_PERSIST_BAT_DATE, today_jd);
+  }
+
+  // Always update nibble 0 with current battery (live refresh)
+  bat_set_nibble(hist_buf, 0, (uint8_t)(bat.charge_percent / 10));
+
+  // --- 15-day bar chart ---
+  int bar_area_top = 62;
+  int bar_area_bot = 148;
+  int bar_h_max = bar_area_bot - bar_area_top;
+  int bar_w = 7;
+  int bar_gap = 2;
+  int total_w = 15 * bar_w + 14 * bar_gap; // 133px
+  int x_off = (bounds.size.w - total_w) / 2;
+
+  // Dotted reference line at 50% (level 5)
+  graphics_context_set_stroke_color(ctx, GColorWhite);
+  int y_50 = bar_area_bot - 5 * bar_h_max / 10;
+  for (int px = x_off; px < x_off + total_w; px += 4) {
+    graphics_draw_pixel(ctx, GPoint(px, y_50));
+    graphics_draw_pixel(ctx, GPoint(px + 1, y_50));
+  }
+
+  // Draw bars (most recent = right, oldest = left)
+  for (int i = 0; i < 15; i++) {
+    uint8_t val = bat_get_nibble(hist_buf, 14 - i); // oldest first (left)
+    int bh = val * bar_h_max / 10;
+    if (val > 0 && bh < 2) bh = 2;
+    int bx = x_off + i * (bar_w + bar_gap);
+    int by = bar_area_bot - bh;
+    if (bh > 0)
+      graphics_fill_rect(ctx, GRect(bx, by, bar_w, bh), 0, GCornerNone);
+  }
+
+  // Day labels: first letter of weekday under each bar
+  time_t lbl_t = time(NULL);
+  struct tm *lbl_tm = localtime(&lbl_t);
+  const char *lbl_locale = i18n_get_system_locale();
+  for (int i = 0; i < 15; i++) {
+    int days_ago = 14 - i; // bar 0 = 14 days ago, bar 14 = today
+    int wday = (lbl_tm->tm_wday - days_ago % 7 + 7) % 7;
+    const char *abbr = weather_utils_get_weekday_abbrev(lbl_locale, wday);
+    char lbl[2] = {abbr[0], '\0'};
+    int bx = x_off + i * (bar_w + bar_gap);
+    graphics_draw_text(
+        ctx, lbl, font14, GRect(bx - 1, bar_area_bot, bar_w + 2, 14),
         GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
   }
 }

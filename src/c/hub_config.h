@@ -22,16 +22,7 @@
 #define KEY_HUB_WIDGETS_UP 360
 #define KEY_HUB_WIDGETS_DOWN 361
 #define KEY_HUB_ANIM 362
-#define KEY_HUB_COUNTDOWN 363
-#define KEY_HUB_COUNTDOWN_LABEL 364
 #define KEY_HUB_VIBE_PATTERN 365
-
-// Countdown persist: CountdownData struct (16 bytes)
-#define HUB_PERSIST_COUNTDOWN 320
-typedef struct {
-  int32_t ts;
-  char label[12];
-} CountdownData;
 
 // Stock widget message keys & persist
 #define KEY_STOCK_DATA 370
@@ -49,6 +40,10 @@ typedef struct {
 #define HUB_PERSIST_STEPS_TODAY 230
 #define HUB_PERSIST_STEPS_DAY0 231 // yesterday
 #define HUB_PERSIST_STEPS_DATE 238 // julian day of "today"
+
+// Battery history persist keys
+#define HUB_PERSIST_BAT_HIST 240 // 8 bytes: 15 nibbles (0-10 each) packed
+#define HUB_PERSIST_BAT_DATE 241 // int32_t: julian day of last record
 
 // Stock widget limits
 #define STOCK_MAX_PANELS 5
@@ -69,7 +64,7 @@ typedef struct {
 #define HUB_MAX_MENU_ITEMS                                                     \
   16 // Heap-allocated: supports up to 16-item menu trees
 #define HUB_MAX_WIDGETS 6
-#define HUB_MAX_VIEWS 4
+#define HUB_MAX_VIEWS 3
 #define HUB_MAX_LABEL 12 // Reduced from 16 to save 64 bytes BSS on APLITE
 #define HUB_MAX_MENU_DEPTH 3
 
@@ -92,12 +87,12 @@ typedef enum {
   HUB_WIDGET_WEATHER_HOURLY,
   HUB_WIDGET_WEATHER_DAILY,
   HUB_WIDGET_STEPS,
+  HUB_WIDGET_BATTERY,
   HUB_WIDGET_COUNT
 } HubWidgetId;
 typedef enum {
   HUB_VIEW_MAIN = 0,
   HUB_VIEW_WEATHER,
-  HUB_VIEW_DATE,
   HUB_VIEW_ANALOG,
   HUB_VIEW_COUNT
 } HubViewId;
