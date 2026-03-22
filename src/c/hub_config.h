@@ -22,6 +22,8 @@
 #define KEY_HUB_WIDGETS_UP 360
 #define KEY_HUB_WIDGETS_DOWN 361
 #define KEY_HUB_ANIM 362
+#define KEY_HUB_COUNTDOWN 363       // Countdown target timestamp (int32) or -1 to delete
+#define KEY_HUB_COUNTDOWN_LABEL 364 // Countdown label string
 #define KEY_HUB_VIBE_PATTERN 365
 
 // Stock widget message keys & persist
@@ -35,6 +37,14 @@
 #define HUB_PERSIST_STOCK2 312
 #define HUB_PERSIST_STOCK3 313
 #define HUB_PERSIST_STOCK4 314
+
+// Countdown persist (battery/date alt view)
+#define HUB_PERSIST_COUNTDOWN 320
+
+typedef struct {
+  int32_t ts;     // Unix timestamp of the target date
+  char label[12]; // Short label, e.g. "Vacances"
+} CountdownData;
 
 // Step counter persist keys (written by background worker, read by widget)
 #define HUB_PERSIST_STEPS_TODAY 230
@@ -62,9 +72,9 @@ typedef struct {
 
 // Limits
 #define HUB_MAX_MENU_ITEMS                                                     \
-  16 // Heap-allocated: supports up to 16-item menu trees
+  10 // Heap-allocated: supports up to 10-item menu trees
 #define HUB_MAX_WIDGETS 6
-#define HUB_MAX_VIEWS 3
+#define HUB_MAX_VIEWS 4
 #define HUB_MAX_LABEL 12 // Reduced from 16 to save 64 bytes BSS on APLITE
 #define HUB_MAX_MENU_DEPTH 3
 
@@ -94,6 +104,7 @@ typedef enum {
   HUB_VIEW_MAIN = 0,
   HUB_VIEW_WEATHER,
   HUB_VIEW_ANALOG,
+  HUB_VIEW_DATE,   // Battery gauge + countdown alt view (value = 3)
   HUB_VIEW_COUNT
 } HubViewId;
 typedef enum { HUB_DIR_UP = 0, HUB_DIR_DOWN } HubDirection;

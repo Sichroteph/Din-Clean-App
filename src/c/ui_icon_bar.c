@@ -2,12 +2,12 @@
 
 #include "ui_icon_bar.h"
 
-// String globals from Din_Clean.c (accessed directly to save 20B RAM)
+// String globals from Din_Clean.c (extern access avoids pointer fields in IconBarData)
 extern char week_day[];
 extern char mday[];
+extern char weather_temp_char[];
 extern char minTemp[];
 extern char maxTemp[];
-extern char weather_temp_char[];
 
 // Layout constants (previously computed in Din_Clean.c update_proc)
 #define IB_DAYW_X 0
@@ -72,33 +72,17 @@ static void draw_humidity_icons(GContext *ctx, const IconBarData *d) {
 
 // Load each wind overlay POURTOURW1-4 only if wind exceeds threshold
 static void draw_wind_overlays(GContext *ctx, int wind_val, int met_unit) {
+  static const uint32_t s_wind_ids[] = {
+    RESOURCE_ID_POURTOURW1, RESOURCE_ID_POURTOURW2,
+    RESOURCE_ID_POURTOURW3, RESOURCE_ID_POURTOURW4
+  };
   const GRect wr = {{IB_ICON_X, IB_ICON_Y}, {35, 35}};
-  if (wind_val > met_unit) {
-    GBitmap *w1 = gbitmap_create_with_resource(RESOURCE_ID_POURTOURW1);
-    if (w1) {
-      graphics_draw_bitmap_in_rect(ctx, w1, wr);
-      gbitmap_destroy(w1);
-    }
-  }
-  if (wind_val > met_unit * 2) {
-    GBitmap *w2 = gbitmap_create_with_resource(RESOURCE_ID_POURTOURW2);
-    if (w2) {
-      graphics_draw_bitmap_in_rect(ctx, w2, wr);
-      gbitmap_destroy(w2);
-    }
-  }
-  if (wind_val > met_unit * 3) {
-    GBitmap *w3 = gbitmap_create_with_resource(RESOURCE_ID_POURTOURW3);
-    if (w3) {
-      graphics_draw_bitmap_in_rect(ctx, w3, wr);
-      gbitmap_destroy(w3);
-    }
-  }
-  if (wind_val > met_unit * 4) {
-    GBitmap *w4 = gbitmap_create_with_resource(RESOURCE_ID_POURTOURW4);
-    if (w4) {
-      graphics_draw_bitmap_in_rect(ctx, w4, wr);
-      gbitmap_destroy(w4);
+  for (int i = 0; i < 4; i++) {
+    if (wind_val <= met_unit * (i + 1)) break;
+    GBitmap *bmp = gbitmap_create_with_resource(s_wind_ids[i]);
+    if (bmp) {
+      graphics_draw_bitmap_in_rect(ctx, bmp, wr);
+      gbitmap_destroy(bmp);
     }
   }
 }
@@ -132,11 +116,11 @@ void ui_draw_icon_bar(GContext *ctx, const IconBarData *d) {
 
   // Connection / quiet time status
   if (!d->is_quiet_time) {
-    graphics_draw_text(ctx, week_day, fsmall, dayw_r, GTextOverflowModeWordWrap,
-                       GTextAlignmentCenter, NULL);
+    graphics_draw_text(ctx, week_day, fsmall, dayw_r,
+                       GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
     if (d->is_connected) {
-      graphics_draw_text(ctx, mday, fmed, day_r, GTextOverflowModeWordWrap,
-                         GTextAlignmentCenter, NULL);
+      graphics_draw_text(ctx, mday, fmed, day_r,
+                         GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
     } else {
       GBitmap *bt = gbitmap_create_with_resource(RESOURCE_ID_BT_DISCONECT);
       if (bt) {
@@ -145,8 +129,8 @@ void ui_draw_icon_bar(GContext *ctx, const IconBarData *d) {
       }
     }
   } else {
-    graphics_draw_text(ctx, week_day, fsmall, dayw_r, GTextOverflowModeWordWrap,
-                       GTextAlignmentCenter, NULL);
+    graphics_draw_text(ctx, week_day, fsmall, dayw_r,
+                       GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
     GBitmap *silent = gbitmap_create_with_resource(RESOURCE_ID_SILENT);
     if (silent) {
       graphics_draw_bitmap_in_rect(ctx, silent, bt_r);
@@ -172,8 +156,10 @@ void ui_draw_icon_bar(GContext *ctx, const IconBarData *d) {
   graphics_draw_text(ctx, weather_temp_char, fmed,
                      GRect(IB_TEMP_X, IB_TEMP_Y, 60, 60),
                      GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
-  graphics_draw_text(ctx, minTemp, fbold, GRect(IB_TMIN_X, IB_TMIN_Y, 45, 35),
+  graphics_draw_text(ctx, minTemp, fbold,
+                     GRect(IB_TMIN_X, IB_TMIN_Y, 45, 35),
                      GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
-  graphics_draw_text(ctx, maxTemp, fbold, GRect(IB_TMAX_X, IB_TMAX_Y, 45, 35),
+  graphics_draw_text(ctx, maxTemp, fbold,
+                     GRect(IB_TMAX_X, IB_TMAX_Y, 45, 35),
                      GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
 }

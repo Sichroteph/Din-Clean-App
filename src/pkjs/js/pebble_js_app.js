@@ -28,6 +28,55 @@ var poolTemp = 0;
 var poolPH = 0;
 var poolORP = 0;
 
+// Packs weather data into a 51-byte array matching WeatherBlob C struct (packed).
+// JS sends last_refresh=0; the C side overwrites with time(NULL) on receipt.
+function packWeatherBlob(data) {
+  var b = [];
+  // last_refresh: time_t int32 le (4 bytes) — C overwrites this
+  b.push(0, 0, 0, 0);
+  // npoolTemp, npoolPH, npoolORP: int16_t le (2 bytes each)
+  function push16(v) {
+    var u = v & 0xFFFF;
+    b.push(u & 0xFF, (u >> 8) & 0xFF);
+  }
+  push16(data.poolTemp); push16(data.poolPH); push16(data.poolORP);
+  // weather_temp, tmin_val, tmax_val: int8_t (1 byte each)
+  b.push(data.temp & 0xFF, data.tmin & 0xFF, data.tmax & 0xFF);
+  // wind_speed, humidity: uint8_t
+  b.push(data.wind & 0xFF, data.humidity & 0xFF);
+  // icon: char[3]
+  var ic = (data.icon || '  ');
+  b.push(ic.charCodeAt(0) & 0xFF, (ic.length > 1 ? ic.charCodeAt(1) : 0) & 0xFF, 0);
+  // graph_hours: uint8_t[4]
+  for (var i = 0; i < 4; i++) b.push((data.hours[i] || 0) & 0xFF);
+  // graph_temps: int8_t[9]
+  for (var i = 0; i < 9; i++) b.push((data.temps[i] || 0) & 0xFF);
+  // graph_rains: uint8_t[12]
+  for (var i = 0; i < 12; i++) b.push((data.rains[i] || 0) & 0xFF);
+  // graph_wind_val: uint8_t[8]
+  for (var i = 0; i < 8; i++) b.push((data.winds[i] || 0) & 0xFF);
+  return b; // 51 bytes
+}
+
+// Packs 5-day forecast into a 35-byte array matching ForecastBlob C struct (packed).
+function packForecastBlob(data) {
+  var b = [];
+  // days_temp_v: int8_t[5]
+  for (var i = 0; i < 5; i++) b.push((data.temps[i] || -128) & 0xFF);
+  // days_icon: char[5][3] — 2-char code + null, 5 times
+  for (var i = 0; i < 5; i++) {
+    var ic = (data.icons[i] || '  ');
+    b.push(ic.charCodeAt(0) & 0xFF, (ic.length > 1 ? ic.charCodeAt(1) : 0) & 0xFF, 0);
+  }
+  // days_rain_v: uint8_t[5]
+  for (var i = 0; i < 5; i++) b.push((data.rains[i] || 0) & 0xFF);
+  // days_wind_v: uint8_t[5]
+  for (var i = 0; i < 5; i++) b.push((data.winds[i] || 0) & 0xFF);
+  // wind_unit_str: char[5] (e.g., "km/h\0")
+  var u = data.windUnit || 'km/h';
+  for (var i = 0; i < 5; i++) b.push(i < u.length ? u.charCodeAt(i) & 0xFF : 0);
+  return b; // 35 bytes
+}
 
 function convertMpsToMph(mps) {
   const conversionFactor = 2.23694;
@@ -335,101 +384,40 @@ function processOpenMeteoResponse(responseText) {
 
   // Split into 2 messages to fit in 512-byte inbox (real watch constraint).
   // Each message is chained via success callback.
-  var dict1 = {
-    "KEY_TEMPERATURE": temperature,
-    "KEY_HUMIDITY": humidity,
-    "KEY_WIND_SPEED": wind,
-    "KEY_ICON": icon,
-    "KEY_TMIN": tmin,
-    "KEY_TMAX": tmax,
-    "KEY_FORECAST_TEMP1": hourlyTemperatures.hour0,
-    "KEY_FORECAST_TEMP2": hourlyTemperatures.hour3,
-    "KEY_FORECAST_TEMP3": hourlyTemperatures.hour6,
-    "KEY_FORECAST_TEMP4": hourlyTemperatures.hour9,
-    "KEY_FORECAST_TEMP5": hourlyTemperatures.hour12,
-    "KEY_FORECAST_H0": h0,
-    "KEY_FORECAST_H1": h1,
-    "KEY_FORECAST_H2": h2,
-    "KEY_FORECAST_H3": h3,
-    "KEY_FORECAST_WIND0": hourlyWind.hour0,
-    "KEY_FORECAST_WIND1": hourlyWind.hour3,
-    "KEY_FORECAST_WIND2": hourlyWind.hour6,
-    "KEY_FORECAST_WIND3": hourlyWind.hour9,
-    "KEY_FORECAST_RAIN1": hourlyRain.hour0,
-    "KEY_FORECAST_RAIN11": hourlyRain.hour1,
-    "KEY_FORECAST_RAIN12": hourlyRain.hour2,
-    "KEY_FORECAST_RAIN2": hourlyRain.hour3,
-    "KEY_FORECAST_RAIN21": hourlyRain.hour4,
-    "KEY_FORECAST_RAIN22": hourlyRain.hour5,
-    "KEY_FORECAST_RAIN3": hourlyRain.hour6,
-    "KEY_FORECAST_RAIN31": hourlyRain.hour7,
-    "KEY_FORECAST_RAIN32": hourlyRain.hour8,
-    "KEY_FORECAST_RAIN4": hourlyRain.hour9,
-    "KEY_FORECAST_RAIN41": hourlyRain.hour10,
-    "KEY_FORECAST_RAIN42": hourlyRain.hour11,
-    "KEY_FORECAST_RAIN_P1_0": hourlyRain.hour12,
-    "KEY_FORECAST_RAIN_P1_1": hourlyRain.hour13,
-    "KEY_FORECAST_RAIN_P1_2": hourlyRain.hour14,
-    "KEY_FORECAST_RAIN_P1_3": hourlyRain.hour15,
-    "KEY_FORECAST_RAIN_P1_4": hourlyRain.hour16,
-    "KEY_FORECAST_RAIN_P1_5": hourlyRain.hour17,
-    "KEY_FORECAST_RAIN_P1_6": hourlyRain.hour18,
-    "KEY_FORECAST_RAIN_P1_7": hourlyRain.hour19,
-    "KEY_FORECAST_RAIN_P1_8": hourlyRain.hour20,
-    "KEY_FORECAST_RAIN_P1_9": hourlyRain.hour21,
-    "KEY_FORECAST_RAIN_P1_10": hourlyRain.hour22,
-    "KEY_FORECAST_RAIN_P1_11": hourlyRain.hour23,
-    "KEY_LOCATION": "",
-    "POOLTEMP": poolTemp * 10,
-    "POOLPH": poolPH * 100,
-    "POOLORP": poolORP,
-  };
+  var windUnit = (units_setting == 1) ? 'mph' : (windSpeedUnit === 'ms') ? 'm/s' : 'km/h';
 
-  var dict2 = {
-    "KEY_FORECAST_ICON1": hourly_icons.hour3,
-    "KEY_FORECAST_ICON2": hourly_icons.hour6,
-    "KEY_FORECAST_ICON3": hourly_icons.hour9,
-    "KEY_DAY1_TEMP": day_temps[0],
-    "KEY_DAY1_ICON": day_icons[0],
-    "KEY_DAY1_RAIN": day_rains[0],
-    "KEY_DAY1_WIND": day_winds[0],
-    "KEY_DAY2_TEMP": day_temps[1],
-    "KEY_DAY2_ICON": day_icons[1],
-    "KEY_DAY2_RAIN": day_rains[1],
-    "KEY_DAY2_WIND": day_winds[1],
-    "KEY_DAY3_TEMP": day_temps[2],
-    "KEY_DAY3_ICON": day_icons[2],
-    "KEY_DAY3_RAIN": day_rains[2],
-    "KEY_DAY3_WIND": day_winds[2],
-    "KEY_DAY4_TEMP": day_temps[3],
-    "KEY_DAY4_ICON": day_icons[3],
-    "KEY_DAY4_RAIN": day_rains[3],
-    "KEY_DAY4_WIND": day_winds[3],
-    "KEY_DAY5_TEMP": day_temps[4],
-    "KEY_DAY5_ICON": day_icons[4],
-    "KEY_DAY5_RAIN": day_rains[4],
-    "KEY_DAY5_WIND": day_winds[4],
-    "KEY_FORECAST_TEMP6": hourlyTemperatures.hour15,
-    "KEY_FORECAST_TEMP7": hourlyTemperatures.hour18,
-    "KEY_FORECAST_TEMP8": hourlyTemperatures.hour21,
-    "KEY_FORECAST_TEMP9": hourlyTemperatures.hour24,
-    "KEY_FORECAST_WIND4": hourlyWind.hour12,
-    "KEY_FORECAST_WIND5": hourlyWind.hour15,
-    "KEY_FORECAST_WIND6": hourlyWind.hour18,
-    "KEY_FORECAST_WIND7": hourlyWind.hour21,
-  };
+  var weatherBlob = packWeatherBlob({
+    poolTemp: poolTemp * 10, poolPH: poolPH * 100, poolORP: poolORP,
+    temp: temperature, wind: wind, humidity: humidity, tmin: tmin, tmax: tmax,
+    icon: icon,
+    hours: [h0, h1, h2, h3],
+    temps: [hourlyTemperatures.hour0, hourlyTemperatures.hour3, hourlyTemperatures.hour6,
+            hourlyTemperatures.hour9, hourlyTemperatures.hour12, hourlyTemperatures.hour15,
+            hourlyTemperatures.hour18, hourlyTemperatures.hour21, hourlyTemperatures.hour24],
+    rains: [hourlyRain.hour0, hourlyRain.hour1, hourlyRain.hour2, hourlyRain.hour3,
+            hourlyRain.hour4, hourlyRain.hour5, hourlyRain.hour6, hourlyRain.hour7,
+            hourlyRain.hour8, hourlyRain.hour9, hourlyRain.hour10, hourlyRain.hour11],
+    winds: [parseInt(hourlyWind.hour0), parseInt(hourlyWind.hour3), parseInt(hourlyWind.hour6),
+            parseInt(hourlyWind.hour9), parseInt(hourlyWind.hour12), parseInt(hourlyWind.hour15),
+            parseInt(hourlyWind.hour18), parseInt(hourlyWind.hour21)]
+  });
 
-  Pebble.sendAppMessage(dict1, function () {
-    console.log("Open-Meteo msg1 sent");
-    Pebble.sendAppMessage(dict2, function () {
-      console.log("Open-Meteo weather info sent to Pebble successfully!");
-      fetchStockData();
-    }, function () {
-      console.log("Error sending Open-Meteo weather info msg2!");
-      fetchStockData();
-    });
+  var forecastBlob = packForecastBlob({
+    temps: [parseInt(day_temps[0]), parseInt(day_temps[1]), parseInt(day_temps[2]),
+            parseInt(day_temps[3]), parseInt(day_temps[4])],
+    icons: [day_icons[0], day_icons[1], day_icons[2], day_icons[3], day_icons[4]],
+    rains: [parseInt(day_rains[0]) || 0, parseInt(day_rains[1]) || 0, parseInt(day_rains[2]) || 0,
+            parseInt(day_rains[3]) || 0, parseInt(day_rains[4]) || 0],
+    winds: [parseInt(day_winds[0]) || 0, parseInt(day_winds[1]) || 0, parseInt(day_winds[2]) || 0,
+            parseInt(day_winds[3]) || 0, parseInt(day_winds[4]) || 0],
+    windUnit: windUnit
+  });
+
+  Pebble.sendAppMessage({'KEY_WEATHER_BLOB': weatherBlob, 'KEY_DAYFORECAST_BLOB': forecastBlob}, function () {
+    console.log("Open-Meteo weather blob sent!");
+    fetchStockData();
   }, function () {
-    console.log("Error sending Open-Meteo weather info to Pebble!");
+    console.log("Error sending Open-Meteo weather blob!");
     fetchStockData();
   });
 }
@@ -725,102 +713,41 @@ function processWeatherResponse(responseText) {
     if (h3 === 0) h3 = 12;
   }
 
-  // Split into 2 messages to fit in 512-byte inbox (real watch constraint).
-  var wdict1 = {
-    "KEY_TEMPERATURE": temperature,
-    "KEY_HUMIDITY": humidity,
-    "KEY_WIND_SPEED": wind,
-    "KEY_ICON": icon,
-    "KEY_TMIN": tmin,
-    "KEY_TMAX": tmax,
-    "KEY_FORECAST_TEMP1": hourlyTemperatures.hour0,
-    "KEY_FORECAST_TEMP2": hourlyTemperatures.hour3,
-    "KEY_FORECAST_TEMP3": hourlyTemperatures.hour6,
-    "KEY_FORECAST_TEMP4": hourlyTemperatures.hour9,
-    "KEY_FORECAST_TEMP5": hourlyTemperatures.hour12,
-    "KEY_FORECAST_H0": h0,
-    "KEY_FORECAST_H1": h1,
-    "KEY_FORECAST_H2": h2,
-    "KEY_FORECAST_H3": h3,
-    "KEY_FORECAST_WIND0": hourlyWind.hour0,
-    "KEY_FORECAST_WIND1": hourlyWind.hour3,
-    "KEY_FORECAST_WIND2": hourlyWind.hour6,
-    "KEY_FORECAST_WIND3": hourlyWind.hour9,
-    "KEY_FORECAST_RAIN1": hourlyRain.hour0,
-    "KEY_FORECAST_RAIN11": hourlyRain.hour1,
-    "KEY_FORECAST_RAIN12": hourlyRain.hour2,
-    "KEY_FORECAST_RAIN2": hourlyRain.hour3,
-    "KEY_FORECAST_RAIN21": hourlyRain.hour4,
-    "KEY_FORECAST_RAIN22": hourlyRain.hour5,
-    "KEY_FORECAST_RAIN3": hourlyRain.hour6,
-    "KEY_FORECAST_RAIN31": hourlyRain.hour7,
-    "KEY_FORECAST_RAIN32": hourlyRain.hour8,
-    "KEY_FORECAST_RAIN4": hourlyRain.hour9,
-    "KEY_FORECAST_RAIN41": hourlyRain.hour10,
-    "KEY_FORECAST_RAIN42": hourlyRain.hour11,
-    "KEY_FORECAST_RAIN_P1_0": hourlyRain.hour12,
-    "KEY_FORECAST_RAIN_P1_1": hourlyRain.hour13,
-    "KEY_FORECAST_RAIN_P1_2": hourlyRain.hour14,
-    "KEY_FORECAST_RAIN_P1_3": hourlyRain.hour15,
-    "KEY_FORECAST_RAIN_P1_4": hourlyRain.hour16,
-    "KEY_FORECAST_RAIN_P1_5": hourlyRain.hour17,
-    "KEY_FORECAST_RAIN_P1_6": hourlyRain.hour18,
-    "KEY_FORECAST_RAIN_P1_7": hourlyRain.hour19,
-    "KEY_FORECAST_RAIN_P1_8": hourlyRain.hour20,
-    "KEY_FORECAST_RAIN_P1_9": hourlyRain.hour21,
-    "KEY_FORECAST_RAIN_P1_10": hourlyRain.hour22,
-    "KEY_FORECAST_RAIN_P1_11": hourlyRain.hour23,
-    "KEY_LOCATION": "",
-    "POOLTEMP": poolTemp * 10,
-    "POOLPH": poolPH * 100,
-    "POOLORP": poolORP,
-  };
+  // Send weather as compact blobs (replaces 2 separate dict messages)
+  var windUnit = (units_setting == 1) ? 'mph' : (windSpeedUnit === 'ms') ? 'm/s' : 'km/h';
 
-  var wdict2 = {
-    "KEY_FORECAST_ICON1": hourly_icons.hour3,
-    "KEY_FORECAST_ICON2": hourly_icons.hour6,
-    "KEY_FORECAST_ICON3": hourly_icons.hour9,
-    "KEY_DAY1_TEMP": day_temps[0],
-    "KEY_DAY1_ICON": day_icons[0],
-    "KEY_DAY1_RAIN": day_rains[0],
-    "KEY_DAY1_WIND": day_winds[0],
-    "KEY_DAY2_TEMP": day_temps[1],
-    "KEY_DAY2_ICON": day_icons[1],
-    "KEY_DAY2_RAIN": day_rains[1],
-    "KEY_DAY2_WIND": day_winds[1],
-    "KEY_DAY3_TEMP": day_temps[2],
-    "KEY_DAY3_ICON": day_icons[2],
-    "KEY_DAY3_RAIN": day_rains[2],
-    "KEY_DAY3_WIND": day_winds[2],
-    "KEY_DAY4_TEMP": day_temps[3],
-    "KEY_DAY4_ICON": day_icons[3],
-    "KEY_DAY4_RAIN": day_rains[3],
-    "KEY_DAY4_WIND": day_winds[3],
-    "KEY_DAY5_TEMP": day_temps[4],
-    "KEY_DAY5_ICON": day_icons[4],
-    "KEY_DAY5_RAIN": day_rains[4],
-    "KEY_DAY5_WIND": day_winds[4],
-    "KEY_FORECAST_TEMP6": hourlyTemperatures.hour15,
-    "KEY_FORECAST_TEMP7": hourlyTemperatures.hour18,
-    "KEY_FORECAST_TEMP8": hourlyTemperatures.hour21,
-    "KEY_FORECAST_TEMP9": hourlyTemperatures.hour24,
-    "KEY_FORECAST_WIND4": hourlyWind.hour12,
-    "KEY_FORECAST_WIND5": hourlyWind.hour15,
-    "KEY_FORECAST_WIND6": hourlyWind.hour18,
-    "KEY_FORECAST_WIND7": hourlyWind.hour21,
-  };
+  var weatherBlob = packWeatherBlob({
+    poolTemp: poolTemp * 10, poolPH: poolPH * 100, poolORP: poolORP,
+    temp: temperature, wind: wind, humidity: humidity, tmin: tmin, tmax: tmax,
+    icon: icon,
+    hours: [h0, h1, h2, h3],
+    temps: [hourlyTemperatures.hour0, hourlyTemperatures.hour3, hourlyTemperatures.hour6,
+            hourlyTemperatures.hour9, hourlyTemperatures.hour12, hourlyTemperatures.hour15,
+            hourlyTemperatures.hour18, hourlyTemperatures.hour21, hourlyTemperatures.hour24],
+    rains: [hourlyRain.hour0, hourlyRain.hour1, hourlyRain.hour2, hourlyRain.hour3,
+            hourlyRain.hour4, hourlyRain.hour5, hourlyRain.hour6, hourlyRain.hour7,
+            hourlyRain.hour8, hourlyRain.hour9, hourlyRain.hour10, hourlyRain.hour11],
+    winds: [parseInt(hourlyWind.hour0), parseInt(hourlyWind.hour3), parseInt(hourlyWind.hour6),
+            parseInt(hourlyWind.hour9), parseInt(hourlyWind.hour12), parseInt(hourlyWind.hour15),
+            parseInt(hourlyWind.hour18), parseInt(hourlyWind.hour21)]
+  });
 
-  Pebble.sendAppMessage(wdict1, function () {
-    console.log("MET Norway msg1 sent");
-    Pebble.sendAppMessage(wdict2, function () {
-      console.log("Weather info sent to Pebble successfully!");
-      fetchStockData();
-    }, function () {
-      console.log("Error sending weather info msg2!");
-      fetchStockData();
-    });
+  var forecastBlob = packForecastBlob({
+    temps: [parseInt(day_temps[0]), parseInt(day_temps[1]), parseInt(day_temps[2]),
+            parseInt(day_temps[3]), parseInt(day_temps[4])],
+    icons: [day_icons[0], day_icons[1], day_icons[2], day_icons[3], day_icons[4]],
+    rains: [parseInt(day_rains[0]) || 0, parseInt(day_rains[1]) || 0, parseInt(day_rains[2]) || 0,
+            parseInt(day_rains[3]) || 0, parseInt(day_rains[4]) || 0],
+    winds: [parseInt(day_winds[0]) || 0, parseInt(day_winds[1]) || 0, parseInt(day_winds[2]) || 0,
+            parseInt(day_winds[3]) || 0, parseInt(day_winds[4]) || 0],
+    windUnit: windUnit
+  });
+
+  Pebble.sendAppMessage({'KEY_WEATHER_BLOB': weatherBlob, 'KEY_DAYFORECAST_BLOB': forecastBlob}, function () {
+    console.log("MET Norway weather blob sent!");
+    fetchStockData();
   }, function () {
-    console.log("Error sending weather info to Pebble!");
+    console.log("Error sending MET Norway weather blob!");
     fetchStockData();
   });
 }

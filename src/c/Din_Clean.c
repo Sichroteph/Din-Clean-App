@@ -78,7 +78,6 @@
 #define KEY_FORECAST_RAIN32 131
 #define KEY_FORECAST_RAIN41 132
 #define KEY_FORECAST_RAIN42 133
-#define KEY_FORECAST_RAIN_P1_0 134
 
 // Extended hourly forecast: temps for h+15, h+18, h+21, h+24
 #define KEY_FORECAST_TEMP6 212
@@ -214,15 +213,13 @@ int8_t tmax_val = 0;
 uint8_t wind_speed_val = 0;
 uint8_t humidity = 0;
 time_t last_refresh = 0;
-#define GET_DURATION() (flags.is_30mn ? 1800 : 3600)
-#define OFFLINE_DELAY 3600
 
 static char icon[3] = " ";
 
 // Hourly forecast data (9 temps for 0-24h, 12 rain bars, 8 winds for 0-24h, 4
 // hours for 0-12h)
 int8_t graph_temps[9] = {10, 10, 10, 10, 10, 10, 10, 10, 10};
-uint8_t graph_rains[24] = {0};
+uint8_t graph_rains[12] = {0};
 uint8_t graph_wind_val[8] = {0};
 uint8_t graph_hours[4] = {0, 3, 6, 9};
 
@@ -266,6 +263,33 @@ static AppFlags flags = {.is_metric = 1,
                          .is_charging = 0,
                          .is_connected = 0};
 
+#define GET_DURATION() (flags.is_30mn ? 1800 : 3600)
+#define OFFLINE_DELAY 3600
+
+// Compact persist blobs: replace O(N) individual persist calls with O(1)
+#define KEY_WEATHER_BLOB     100  // WeatherBlob struct (dict1 weather + hourly)
+#define KEY_DAYFORECAST_BLOB 101  // ForecastBlob struct (dict2 3-day data)
+
+typedef struct __attribute__((packed)) {
+  time_t last_refresh;                 // 4
+  int16_t npoolTemp, npoolPH, npoolORP; // 6
+  int8_t weather_temp, tmin_val, tmax_val; // 3
+  uint8_t wind_speed, humidity;        // 2
+  char icon[3];                        // 3
+  uint8_t graph_hours[4];              // 4
+  int8_t graph_temps[9];              // 9
+  uint8_t graph_rains[12];            // 12
+  uint8_t graph_wind_val[8];          // 8
+} WeatherBlob; // 51 bytes total
+
+typedef struct __attribute__((packed)) {
+  int8_t days_temp_v[5];  // 5
+  char days_icon[5][3];   // 15
+  uint8_t days_rain_v[5]; // 5
+  uint8_t days_wind_v[5]; // 5
+  char wind_unit_str[5];  // 5
+} ForecastBlob; // 35 bytes total
+
 static void app_focus_changed(bool focused) {
   if (focused) {
     layer_set_hidden(layer, false);
@@ -275,9 +299,8 @@ static void app_focus_changed(bool focused) {
       return;
 
     // Check if weather data is stale and request refresh
-    time_t t = time(NULL);
     bool weather_stale =
-        flags.is_connected && ((t - last_refresh) > GET_DURATION());
+        flags.is_connected && ((time(NULL) - last_refresh) > GET_DURATION());
 
     DictionaryIterator *iter;
     if (app_message_outbox_begin(&iter) == APP_MSG_OK) {
@@ -316,7 +339,7 @@ static void dtext(GContext *c, const char *s, GFont f, int y, int h) {
 
 // Alternative view renderer (0 heap alloc — draws on existing GContext)
 static void draw_alt_view(GContext *ctx, uint8_t vid, int icon_id, bool fresh,
-                          uint8_t hour, uint8_t min_v) {
+                           int8_t cur_hour, int8_t cur_min) {
   graphics_context_set_fill_color(ctx, GColorBlack);
   graphics_fill_rect(ctx, GRect(0, 0, 144, 168), 0, GCornerNone);
   graphics_context_set_text_color(ctx, GColorWhite);
@@ -349,35 +372,67 @@ static void draw_alt_view(GContext *ctx, uint8_t vid, int icon_id, bool fresh,
     }
     dtext(ctx, buf, fs, 152, 16);
   } else if (vid == HUB_VIEW_ANALOG) {
-// Analog clock — edge markers + center hub
+// Analog clock — thick lines with rounded ends + 12 hour markers
 #define AC_CX 72
 #define AC_CY 84
+#define AC_R 60
     graphics_context_set_stroke_color(ctx, GColorWhite);
     graphics_context_set_fill_color(ctx, GColorWhite);
+    // 12 hour markers
     for (int i = 0; i < 12; i++) {
       int32_t a = TRIG_MAX_ANGLE * i / 12;
-      graphics_fill_circle(ctx,
-                           GPoint(AC_CX + sin_lookup(a) * 69 / TRIG_MAX_RATIO,
-                                  AC_CY - cos_lookup(a) * 80 / TRIG_MAX_RATIO),
-                           (i % 3 == 0) ? 3 : 1);
+      int mx = AC_CX + sin_lookup(a) * (AC_R - 4) / TRIG_MAX_RATIO;
+      int my = AC_CY - cos_lookup(a) * (AC_R - 4) / TRIG_MAX_RATIO;
+      graphics_fill_circle(ctx, GPoint(mx, my), (i % 3 == 0) ? 3 : 1);
     }
-    int h12 = hour % 12;
-    int32_t ha = TRIG_MAX_ANGLE * (h12 * 60 + min_v) / 720;
+    // Hour hand
+    int h12 = cur_hour % 12;
+    int32_t ha = TRIG_MAX_ANGLE * (h12 * 60 + cur_min) / 720;
+    GPoint hend = GPoint(AC_CX + sin_lookup(ha) * 36 / TRIG_MAX_RATIO,
+                         AC_CY - cos_lookup(ha) * 36 / TRIG_MAX_RATIO);
     graphics_context_set_stroke_width(ctx, 7);
-    graphics_draw_line(ctx, GPoint(AC_CX, AC_CY),
-                       GPoint(AC_CX + sin_lookup(ha) * 38 / TRIG_MAX_RATIO,
-                              AC_CY - cos_lookup(ha) * 38 / TRIG_MAX_RATIO));
-    int32_t ma = TRIG_MAX_ANGLE * min_v / 60;
+    graphics_draw_line(ctx, GPoint(AC_CX, AC_CY), hend);
+    // Minute hand
+    int32_t ma = TRIG_MAX_ANGLE * cur_min / 60;
+    GPoint mend = GPoint(AC_CX + sin_lookup(ma) * 52 / TRIG_MAX_RATIO,
+                         AC_CY - cos_lookup(ma) * 52 / TRIG_MAX_RATIO);
     graphics_context_set_stroke_width(ctx, 5);
-    graphics_draw_line(ctx, GPoint(AC_CX, AC_CY),
-                       GPoint(AC_CX + sin_lookup(ma) * 56 / TRIG_MAX_RATIO,
-                              AC_CY - cos_lookup(ma) * 56 / TRIG_MAX_RATIO));
-    graphics_context_set_fill_color(ctx, GColorBlack);
-    graphics_fill_circle(ctx, GPoint(AC_CX, AC_CY), 6);
-    graphics_context_set_fill_color(ctx, GColorWhite);
+    graphics_draw_line(ctx, GPoint(AC_CX, AC_CY), mend);
+    // Center dot
     graphics_fill_circle(ctx, GPoint(AC_CX, AC_CY), 3);
 #undef AC_CX
 #undef AC_CY
+#undef AC_R
+  } else {
+    BatteryChargeState bat = battery_state_service_peek();
+    // --- "Battery" label ---
+    dtext(ctx, "Battery", fs, 8, 16);
+    // --- Gauge body : moitié de largeur, plus épaisse, centrée ---
+    // Gauge: 62px wide x 26px tall, centered (x=38), nub 7x16 on right
+    graphics_context_set_fill_color(ctx, GColorWhite);
+    graphics_fill_rect(ctx, GRect(38, 26, 62, 26), 0, GCornerNone);
+    graphics_context_set_fill_color(ctx, GColorBlack);
+    int c_px = bat.charge_percent * 60 / 100;
+    graphics_fill_rect(ctx, GRect(39 + c_px, 27, 60 - c_px, 24), 0,
+                       GCornerNone);
+    // --- Borne positive (nub) à droite ---
+    graphics_context_set_fill_color(ctx, GColorWhite);
+    graphics_fill_rect(ctx, GRect(100, 31, 7, 16), 0, GCornerNone);
+    // --- Countdown ---
+    if (persist_exists(HUB_PERSIST_COUNTDOWN)) {
+      CountdownData cd;
+      memset(&cd, 0, sizeof(CountdownData));
+      persist_read_data(HUB_PERSIST_COUNTDOWN, &cd, sizeof(CountdownData));
+      int days = (int)((cd.ts - time(NULL)) / 86400);
+      if (days > 0) {
+        bool has_label = cd.label[0] != '\0';
+        if (has_label) {
+          dtext(ctx, cd.label, fb, 80, 34);
+        }
+        snprintf(buf, sizeof(buf), "J-%d", days);
+        dtext(ctx, buf, fb, has_label ? 118 : 96, 34);
+      }
+    }
   }
 }
 
@@ -422,6 +477,9 @@ static void draw_action_toast(GContext *ctx) {
 }
 
 static void update_proc(Layer *layer, GContext *ctx) {
+  // Compact IconBarData on stack (8B after char* fields removed)
+  IconBarData icon_data;
+
   if (!s_init_done) {
     return;
   }
@@ -437,30 +495,29 @@ static void update_proc(Layer *layer, GContext *ctx) {
   graphics_context_set_fill_color(ctx, GColorBlack);
   graphics_fill_rect(ctx, GRect(0, 0, 160, 180), 0, GCornerNone);
 
-  time_t t = time(NULL);
-  struct tm *lt = localtime(&t);
+  time_t cur_t = time(NULL);
+  struct tm *cur = localtime(&cur_t);
 
   const char *locale = i18n_get_system_locale();
-  snprintf(week_day, sizeof(week_day), "%s",
-           weather_utils_get_weekday_abbrev(locale, lt->tm_wday));
+  memcpy(week_day, weather_utils_get_weekday_abbrev(locale, cur->tm_wday), 4);
 
-  snprintf(mday, sizeof(mday), "%i", lt->tm_mday);
+  snprintf(mday, sizeof(mday), "%i", cur->tm_mday);
   graphics_context_set_text_color(ctx, GColorWhite);
 
   bool has_fresh_weather =
-      ((t - last_refresh) < GET_DURATION() + OFFLINE_DELAY);
+      ((cur_t - last_refresh) < GET_DURATION() + OFFLINE_DELAY);
 
-  snprintf(weather_temp_char, sizeof(weather_temp_char), "%i\xc2\xb0",
-           weather_temp);
+  snprintf(weather_temp_char, sizeof(weather_temp_char), "%i\xc2\xb0", weather_temp);
   snprintf(minTemp, sizeof(minTemp), "%i\xc2\xb0", tmin_val);
   snprintf(maxTemp, sizeof(maxTemp), "%i\xc2\xb0", tmax_val);
 
   // Alternative views: configurable via view_order
   if (current_view_index > 0 && current_view_index < g_hub_config.view_count) {
     uint8_t vid = g_hub_config.view_order[current_view_index];
-    if (vid == HUB_VIEW_WEATHER || vid == HUB_VIEW_ANALOG) {
-      draw_alt_view(ctx, vid, icon_id, has_fresh_weather, lt->tm_hour,
-                    lt->tm_min);
+    if (vid == HUB_VIEW_WEATHER || vid == HUB_VIEW_DATE ||
+        vid == HUB_VIEW_ANALOG) {
+      draw_alt_view(ctx, vid, icon_id, has_fresh_weather,
+                    (int8_t)cur->tm_hour, (int8_t)cur->tm_min);
       draw_action_toast(ctx);
       if (g_hub_ring_active)
         draw_toast(ctx, g_hub_ring_active == 1 ? "Timer!" : "Alarm!");
@@ -471,14 +528,13 @@ static void update_proc(Layer *layer, GContext *ctx) {
   // Draw hours FIRST for instant display (only 4 small bitmaps)
   char heure[5];
   if (clock_is_24h_style()) {
-    strftime(heure, sizeof(heure), "%H%M", lt);
+    strftime(heure, sizeof(heure), "%H%M", cur);
   } else {
-    strftime(heure, sizeof(heure), "%I%M", lt);
+    strftime(heure, sizeof(heure), "%I%M", cur);
   }
   ui_draw_time(ctx, heure);
 
   // Draw icon bar AFTER time (loads many bitmaps, slower)
-  IconBarData icon_data;
   icon_data.has_fresh_weather = has_fresh_weather;
   icon_data.is_connected = flags.is_connected;
   icon_data.is_quiet_time = quiet_time_is_active();
@@ -512,9 +568,9 @@ static void handle_tick(struct tm *cur, TimeUnits units_changed) {
 
   // Get weather update every 30 minutes (even during quiet time)
   if (s_init_done && s_appmsg_open && flags.is_connected) {
-    time_t t = time(NULL);
     if ((((flags.is_30mn) && (cur->tm_min % 30 == 0)) ||
-         (cur->tm_min % 60 == 0) || ((t - last_refresh) > GET_DURATION()))) {
+         (cur->tm_min % 60 == 0) ||
+         ((time(NULL) - last_refresh) > GET_DURATION()))) {
       s_weather_request_pending = true;
       do_send_weather_request();
     }
@@ -536,143 +592,47 @@ static void hub_timeout_fired(void);
 // Helper: copy chars from s until '|' or end, into dst (max n-1 chars + NUL).
 static const char *cpf(const char *s, char *dst, int n) {
   int i = 0;
-  while (*s && *s != '|' && i < n - 1)
-    dst[i++] = *s++;
+  while (*s && *s != '|' && i < n - 1) dst[i++] = *s++;
   dst[i] = '\0';
-  if (*s == '|')
-    s++;
+  if (*s == '|') s++;
   return s;
 }
 
 static void inbox_received_callback(DictionaryIterator *iterator,
                                     void *context) {
-  // Read tuples for data
   Tuple *radio_tuple = dict_find(iterator, KEY_RADIO_UNITS);
-  Tuple *temp_tuple = dict_find(iterator, KEY_TEMPERATURE);
 
-  // If all data is available, use it
-  if (temp_tuple) {
-
-    Tuple *wind_speed_tuple = dict_find(iterator, KEY_WIND_SPEED);
-    Tuple *humidity_tuple = dict_find(iterator, KEY_HUMIDITY);
-    Tuple *tmin_tuple = dict_find(iterator, KEY_TMIN);
-    Tuple *tmax_tuple = dict_find(iterator, KEY_TMAX);
-    Tuple *icon_tuple = dict_find(iterator, KEY_ICON);
-
-    // Pool tuples
-    Tuple *poolTemp_tuple = dict_find(iterator, KEY_POOLTEMP);
-    Tuple *poolPH_tuple = dict_find(iterator, KEY_POOLPH);
-    Tuple *poolORP_tuple = dict_find(iterator, KEY_poolORP);
-
-    // Pool data
-    if (poolTemp_tuple)
-      npoolTemp = (int16_t)poolTemp_tuple->value->int32;
-    if (poolPH_tuple)
-      npoolPH = (int16_t)poolPH_tuple->value->int32;
-    if (poolORP_tuple)
-      npoolORP = (int16_t)poolORP_tuple->value->int32;
-
-    snprintf(icon, sizeof(icon), "%s", icon_tuple->value->cstring);
-    weather_temp = (int)temp_tuple->value->int32;
-    tmin_val = (int)tmin_tuple->value->int32;
-    tmax_val = (int)tmax_tuple->value->int32;
-    wind_speed_val = (int)wind_speed_tuple->value->int32;
-    humidity = (int)humidity_tuple->value->int32;
-
-    // Hourly temps, hours, rain, icons, winds — compact loops
-    Tuple *t;
-    for (int i = 0; i < 5; i++)
-      if ((t = dict_find(iterator, KEY_FORECAST_TEMP1 + i)))
-        graph_temps[i] = (int)t->value->int32;
-
-    if ((t = dict_find(iterator, KEY_FORECAST_H0)))
-      graph_hours[0] = (int)t->value->int32;
-    for (int i = 0; i < 3; i++)
-      if ((t = dict_find(iterator, KEY_FORECAST_H1 + i)))
-        graph_hours[1 + i] = (int)t->value->int32;
-
-    for (int b = 0; b < 4; b++) {
-      if ((t = dict_find(iterator, KEY_FORECAST_RAIN1 + b)))
-        graph_rains[b * 3] = (int)t->value->int32;
-      if ((t = dict_find(iterator, KEY_FORECAST_RAIN11 + b * 2)))
-        graph_rains[b * 3 + 1] = (int)t->value->int32;
-      if ((t = dict_find(iterator, KEY_FORECAST_RAIN11 + b * 2 + 1)))
-        graph_rains[b * 3 + 2] = (int)t->value->int32;
-    }
-    for (int i = 0; i < 12; i++)
-      if ((t = dict_find(iterator, KEY_FORECAST_RAIN_P1_0 + i)))
-        graph_rains[12 + i] = (int)t->value->int32;
-
-    if ((t = dict_find(iterator, KEY_FORECAST_WIND0)))
-      graph_wind_val[0] = atoi(t->value->cstring);
-    for (int i = 0; i < 3; i++)
-      if ((t = dict_find(iterator, KEY_FORECAST_WIND1 + i)))
-        graph_wind_val[1 + i] = atoi(t->value->cstring);
-
-    last_refresh = time(NULL);
-
-    // Persist core weather
-    persist_write_string(KEY_ICON, icon);
-    persist_write_int(KEY_LAST_REFRESH, last_refresh);
-    persist_write_int(KEY_TEMPERATURE, weather_temp);
-    persist_write_int(KEY_WIND_SPEED, wind_speed_val);
-    persist_write_int(KEY_HUMIDITY, humidity);
-    persist_write_int(KEY_TMIN, tmin_val);
-    persist_write_int(KEY_TMAX, tmax_val);
-    persist_write_int(KEY_FORECAST_H0, graph_hours[0]);
-    persist_write_int(KEY_POOLTEMP, npoolTemp);
-    persist_write_int(KEY_POOLPH, npoolPH);
-    persist_write_int(KEY_poolORP, npoolORP);
-    persist_write_data(KEY_FORECAST_TEMP1, graph_temps, sizeof(graph_temps));
-    persist_write_data(KEY_FORECAST_RAIN1, graph_rains, sizeof(graph_rains));
-    persist_write_data(KEY_FORECAST_WIND1, graph_wind_val,
-                       sizeof(graph_wind_val));
-    persist_write_data(KEY_FORECAST_H1, graph_hours, sizeof(graph_hours));
-
+  // Weather data: JS sends a packed WeatherBlob byte array (replaces ~30 individual keys)
+  Tuple *wb_t = dict_find(iterator, KEY_WEATHER_BLOB);
+  if (wb_t && wb_t->length == sizeof(WeatherBlob)) {
+    WeatherBlob wb;
+    memcpy(&wb, wb_t->value->data, sizeof(WeatherBlob));
+    wb.last_refresh = time(NULL);
+    last_refresh = wb.last_refresh;
+    npoolTemp = wb.npoolTemp; npoolPH = wb.npoolPH; npoolORP = wb.npoolORP;
+    weather_temp = wb.weather_temp;
+    tmin_val = wb.tmin_val; tmax_val = wb.tmax_val;
+    wind_speed_val = wb.wind_speed; humidity = wb.humidity;
+    memcpy(icon, wb.icon, sizeof(icon));
+    memcpy(graph_hours, wb.graph_hours, sizeof(graph_hours));
+    memcpy(graph_temps, wb.graph_temps, sizeof(graph_temps));
+    memcpy(graph_rains, wb.graph_rains, sizeof(graph_rains));
+    memcpy(graph_wind_val, wb.graph_wind_val, sizeof(graph_wind_val));
+    persist_write_data(KEY_WEATHER_BLOB, &wb, sizeof(wb));
     layer_mark_dirty(layer);
   }
 
-  // 3-day forecast message (dict2 from JS — no KEY_TEMPERATURE present)
-  Tuple *icon1_check = dict_find(iterator, KEY_FORECAST_ICON1);
-  if (!temp_tuple && icon1_check) {
-    Tuple *t;
-    // 5-day forecast: days 1-3 base=200+d*4, days 4-5 base=204+d*4
-    for (int d = 0; d < 5; d++) {
-      uint32_t base = (d < 3 ? 200 : 204) + d * 4;
-      if ((t = dict_find(iterator, base)))
-        days_temp_v[d] = (int8_t)atoi(t->value->cstring);
-      if ((t = dict_find(iterator, base + 1)))
-        snprintf(days_icon[d], sizeof(days_icon[d]), "%s", t->value->cstring);
-      if ((t = dict_find(iterator, base + 2)))
-        days_rain_v[d] = (uint8_t)atoi(t->value->cstring);
-      if ((t = dict_find(iterator, base + 3))) {
-        days_wind_v[d] = (uint8_t)atoi(t->value->cstring);
-        if (d == 0) {
-          const char *p = t->value->cstring;
-          while (*p >= '0' && *p <= '9')
-            p++;
-          const char *u = "km/h";
-          if (*p == 'm')
-            u = (p[1] == '/') ? "m/s" : "mph";
-          memcpy(wind_unit_str, u, 5);
-        }
-      }
-    }
-
-    // Extended hourly temps + winds (page 2)
-    for (int i = 0; i < 4; i++) {
-      if ((t = dict_find(iterator, KEY_FORECAST_TEMP6 + i)))
-        graph_temps[5 + i] = (int)t->value->int32;
-      if ((t = dict_find(iterator, KEY_FORECAST_WIND4 + i)))
-        graph_wind_val[4 + i] = atoi(t->value->cstring);
-    }
-
-    persist_write_data(KEY_DAY1_TEMP, days_temp_v, sizeof(days_temp_v));
-    persist_write_data(KEY_DAY1_ICON, days_icon, sizeof(days_icon));
-    persist_write_data(KEY_DAY1_RAIN, days_rain_v, sizeof(days_rain_v));
-    persist_write_data(KEY_DAY1_WIND, days_wind_v, sizeof(days_wind_v));
-
-    layer_mark_dirty(layer);
+  // 3-day forecast blob
+  Tuple *fb_t = dict_find(iterator, KEY_DAYFORECAST_BLOB);
+  if (fb_t && fb_t->length == sizeof(ForecastBlob)) {
+    ForecastBlob fb;
+    memcpy(&fb, fb_t->value->data, sizeof(ForecastBlob));
+    memcpy(days_temp_v, fb.days_temp_v, sizeof(days_temp_v));
+    memcpy(days_icon, fb.days_icon, sizeof(days_icon));
+    memcpy(days_rain_v, fb.days_rain_v, sizeof(days_rain_v));
+    memcpy(days_wind_v, fb.days_wind_v, sizeof(days_wind_v));
+    memcpy(wind_unit_str, fb.wind_unit_str, sizeof(wind_unit_str));
+    persist_write_data(KEY_DAYFORECAST_BLOB, &fb, sizeof(fb));
   }
 
   // Configuration message received
@@ -757,6 +717,21 @@ static void inbox_received_callback(DictionaryIterator *iterator,
     if ((t = dict_find(iterator, KEY_HUB_ANIM)))
       g_hub_config.anim_enabled = (t->value->int32 == 1) ? 1 : 0;
 
+    if ((t = dict_find(iterator, KEY_HUB_COUNTDOWN))) {
+      int32_t ts = t->value->int32;
+      if (ts == -1) {
+        persist_delete(HUB_PERSIST_COUNTDOWN);
+      } else {
+        CountdownData cd = {0};
+        cd.ts = ts;
+        Tuple *lt = dict_find(iterator, KEY_HUB_COUNTDOWN_LABEL);
+        if (lt) {
+          strncpy(cd.label, lt->value->cstring, sizeof(cd.label) - 1);
+        }
+        persist_write_data(HUB_PERSIST_COUNTDOWN, &cd, sizeof(CountdownData));
+      }
+    }
+
     hub_config_save();
     hub_timeout_reset();
   }
@@ -802,17 +777,15 @@ static void inbox_received_callback(DictionaryIterator *iterator,
         if (*s == ',')
           s++;
       }
-      // Parse price_min/max — skip any unread history values first
-      while (*s && *s != '|')
-        s++;
-      if (*s == '|')
-        s++;
+      // Parse price_min/max
+      if (*s == '|') s++;
       s = cpf(s, p.price_min, sizeof(p.price_min));
       s = cpf(s, p.price_max, sizeof(p.price_max));
       // Persist this panel individually
       persist_write_data(HUB_PERSIST_STOCK0 + idx, &p, sizeof(StockPanel));
-      if (idx == stock_panel_count - 1)
-        hub_widget_mark_dirty();
+      if (idx == stock_panel_count - 1) {
+        layer_mark_dirty(layer);
+      }
     }
   }
 }
@@ -865,99 +838,48 @@ static void outbox_sent_callback(DictionaryIterator *iterator, void *context) {
 }
 
 static void init_var() {
-  if (persist_exists(KEY_RADIO_UNITS) && persist_exists(KEY_RADIO_REFRESH) &&
-      persist_exists(KEY_TOGGLE_VIBRATION) && persist_exists(KEY_TOGGLE_BT)) {
+  // Config flags — persist_read_bool returns false if key absent
+  flags.is_metric = persist_exists(KEY_RADIO_UNITS) ? persist_read_bool(KEY_RADIO_UNITS) : true;
+  flags.is_30mn = persist_exists(KEY_RADIO_REFRESH) ? persist_read_bool(KEY_RADIO_REFRESH) : true;
+  flags.is_vibration = persist_read_bool(KEY_TOGGLE_VIBRATION);
+  flags.is_bt = persist_read_bool(KEY_TOGGLE_BT);
 
-    flags.is_metric = persist_read_bool(KEY_RADIO_UNITS);
-    flags.is_30mn = persist_read_bool(KEY_RADIO_REFRESH);
-    flags.is_bt = persist_read_bool(KEY_TOGGLE_BT);
-    flags.is_vibration = persist_read_bool(KEY_TOGGLE_VIBRATION);
-  } else {
-    flags.is_metric = true;
-    flags.is_vibration = false;
-    flags.is_bt = false;
-    flags.is_30mn = true;
+  // Weather data — single blob read replaces 15 individual persist calls
+  {
+    WeatherBlob wb;
+    if (persist_get_size(KEY_WEATHER_BLOB) == (int)sizeof(WeatherBlob)) {
+      persist_read_data(KEY_WEATHER_BLOB, &wb, sizeof(WeatherBlob));
+      last_refresh = wb.last_refresh;
+      if (FORCE_REFRESH == 1) last_refresh = 0;
+      npoolTemp = wb.npoolTemp; npoolPH = wb.npoolPH; npoolORP = wb.npoolORP;
+      weather_temp = wb.weather_temp;
+      tmin_val = wb.tmin_val; tmax_val = wb.tmax_val;
+      wind_speed_val = wb.wind_speed; humidity = wb.humidity;
+      memcpy(icon, wb.icon, sizeof(icon));
+      memcpy(graph_hours, wb.graph_hours, sizeof(graph_hours));
+      memcpy(graph_temps, wb.graph_temps, sizeof(graph_temps));
+      memcpy(graph_rains, wb.graph_rains, sizeof(graph_rains));
+      memcpy(graph_wind_val, wb.graph_wind_val, sizeof(graph_wind_val));
+    }
   }
 
-  if (persist_exists(KEY_LAST_REFRESH) && persist_exists(KEY_TEMPERATURE) &&
-      persist_exists(KEY_ICON)) {
-
-    last_refresh = persist_read_int(KEY_LAST_REFRESH);
-
-    if (FORCE_REFRESH == 1)
-      last_refresh = 0;
-
-    weather_temp = persist_read_int(KEY_TEMPERATURE);
-    persist_read_string(KEY_ICON, icon, sizeof(icon));
-
-    wind_speed_val =
-        persist_exists(KEY_WIND_SPEED) ? persist_read_int(KEY_WIND_SPEED) : 0;
-    humidity =
-        persist_exists(KEY_HUMIDITY) ? persist_read_int(KEY_HUMIDITY) : 0;
-    tmin_val = persist_exists(KEY_TMIN) ? persist_read_int(KEY_TMIN) : 0;
-    tmax_val = persist_exists(KEY_TMAX) ? persist_read_int(KEY_TMAX) : 0;
-
-    npoolTemp =
-        persist_exists(KEY_POOLTEMP) ? persist_read_int(KEY_POOLTEMP) : 0;
-    npoolPH = persist_exists(KEY_POOLPH) ? persist_read_int(KEY_POOLPH) : 0;
-    npoolORP = persist_exists(KEY_poolORP) ? persist_read_int(KEY_poolORP) : 0;
-
-    graph_hours[0] = persist_read_int(KEY_FORECAST_H0);
-
-    // Restore compact arrays (new format)
-    if (persist_exists(KEY_FORECAST_TEMP1))
-      persist_read_data(KEY_FORECAST_TEMP1, graph_temps, sizeof(graph_temps));
-    if (persist_exists(KEY_FORECAST_RAIN1))
-      persist_read_data(KEY_FORECAST_RAIN1, graph_rains, sizeof(graph_rains));
-    if (persist_exists(KEY_FORECAST_WIND1))
-      persist_read_data(KEY_FORECAST_WIND1, graph_wind_val,
-                        sizeof(graph_wind_val));
-    if (persist_exists(KEY_FORECAST_H1))
-      persist_read_data(KEY_FORECAST_H1, graph_hours, sizeof(graph_hours));
-
-    // 3-day forecast (integer storage)
-    if (persist_exists(KEY_DAY1_TEMP) &&
-        persist_get_size(KEY_DAY1_TEMP) == (int)sizeof(days_temp_v))
-      persist_read_data(KEY_DAY1_TEMP, days_temp_v, sizeof(days_temp_v));
-    if (persist_exists(KEY_DAY1_ICON) &&
-        persist_get_size(KEY_DAY1_ICON) == (int)sizeof(days_icon))
-      persist_read_data(KEY_DAY1_ICON, days_icon, sizeof(days_icon));
-    if (persist_exists(KEY_DAY1_RAIN) &&
-        persist_get_size(KEY_DAY1_RAIN) == (int)sizeof(days_rain_v))
-      persist_read_data(KEY_DAY1_RAIN, days_rain_v, sizeof(days_rain_v));
-    if (persist_exists(KEY_DAY1_WIND) &&
-        persist_get_size(KEY_DAY1_WIND) == (int)sizeof(days_wind_v))
-      persist_read_data(KEY_DAY1_WIND, days_wind_v, sizeof(days_wind_v));
-
-  } else {
-    last_refresh = 0;
-    wind_speed_val = 0;
-    tmin_val = 0;
-    humidity = 0;
-    tmax_val = 0;
-    weather_temp = 0;
-
-    snprintf(icon, sizeof(icon), " ");
-
-    memset(graph_temps, 10, sizeof(graph_temps));
-    memset(graph_rains, 0, sizeof(graph_rains));
-    memset(graph_wind_val, 0, sizeof(graph_wind_val));
-    graph_hours[0] = 0;
-    graph_hours[1] = 3;
-    graph_hours[2] = 6;
-    graph_hours[3] = 9;
-
-    snprintf(days_icon[0], sizeof(days_icon[0]), " ");
-    snprintf(days_icon[1], sizeof(days_icon[1]), " ");
-    snprintf(days_icon[2], sizeof(days_icon[2]), " ");
+  // 3-day forecast blob
+  {
+    ForecastBlob fb;
+    if (persist_get_size(KEY_DAYFORECAST_BLOB) == (int)sizeof(ForecastBlob)) {
+      persist_read_data(KEY_DAYFORECAST_BLOB, &fb, sizeof(ForecastBlob));
+      memcpy(days_temp_v, fb.days_temp_v, sizeof(days_temp_v));
+      memcpy(days_icon, fb.days_icon, sizeof(days_icon));
+      memcpy(days_rain_v, fb.days_rain_v, sizeof(days_rain_v));
+      memcpy(days_wind_v, fb.days_wind_v, sizeof(days_wind_v));
+      memcpy(wind_unit_str, fb.wind_unit_str, sizeof(wind_unit_str));
+    }
   }
 
   // Restore stock panel count (panels loaded on demand from persist)
-  if (persist_exists(KEY_STOCK_COUNT)) {
-    stock_panel_count = persist_read_int(KEY_STOCK_COUNT);
-    if (stock_panel_count > STOCK_MAX_PANELS)
-      stock_panel_count = STOCK_MAX_PANELS;
-  }
+  stock_panel_count = (uint8_t)persist_read_int(KEY_STOCK_COUNT);
+  if (stock_panel_count > STOCK_MAX_PANELS)
+    stock_panel_count = STOCK_MAX_PANELS;
 
   BatteryChargeState charge_state = battery_state_service_peek();
   flags.is_charging = charge_state.is_charging;
@@ -1110,7 +1032,7 @@ static void init() {
   app_message_register_inbox_received(inbox_received_callback);
   app_message_register_outbox_failed(outbox_failed_callback);
   app_message_register_outbox_sent(outbox_sent_callback);
-  AppMessageResult msg_result = app_message_open(512, 32);
+  AppMessageResult msg_result = app_message_open(380, 32);
   s_appmsg_open = (msg_result == APP_MSG_OK);
 
   init_var();
@@ -1132,12 +1054,6 @@ static void init() {
       .did_focus = app_focus_changed, .will_focus = app_focus_changing});
   hub_set_main_window(s_main_window);
   hub_timeout_init(hub_timeout_fired);
-
-  // Launch step counter background worker — aplite only (no HealthService)
-  // On basalt/diorite the widget reads directly from HealthService
-#ifdef PBL_PLATFORM_APLITE
-  app_worker_launch();
-#endif
 
   // Mark init complete — callbacks (focus, tick) may now safely send
   // AppMessages.

@@ -112,10 +112,14 @@
       "KEY_HUB_WIDGETS_UP": 360,
       "KEY_HUB_WIDGETS_DOWN": 361,
       "KEY_HUB_ANIM": 362,
+      "KEY_HUB_COUNTDOWN": 363,
+      "KEY_HUB_COUNTDOWN_LABEL": 364,
       "KEY_HUB_VIBE_PATTERN": 365,
       "KEY_STOCK_DATA": 370,
       "KEY_STOCK_COUNT": 371,
-      "KEY_HEAP_FREE": 372
+      "KEY_HEAP_FREE": 372,
+      "KEY_WEATHER_BLOB": 100,
+      "KEY_DAYFORECAST_BLOB": 101
     },
     "projectType": "native",
     "resources": {
