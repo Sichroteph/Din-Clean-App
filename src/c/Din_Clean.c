@@ -267,20 +267,20 @@ static AppFlags flags = {.is_metric = 1,
 #define OFFLINE_DELAY 3600
 
 // Compact persist blobs: replace O(N) individual persist calls with O(1)
-#define KEY_WEATHER_BLOB     100  // WeatherBlob struct (dict1 weather + hourly)
-#define KEY_DAYFORECAST_BLOB 101  // ForecastBlob struct (dict2 3-day data)
+#define KEY_WEATHER_BLOB 100     // WeatherBlob struct (dict1 weather + hourly)
+#define KEY_DAYFORECAST_BLOB 101 // ForecastBlob struct (dict2 3-day data)
 
 typedef struct __attribute__((packed)) {
-  time_t last_refresh;                 // 4
-  int16_t npoolTemp, npoolPH, npoolORP; // 6
+  time_t last_refresh;                     // 4
+  int16_t npoolTemp, npoolPH, npoolORP;    // 6
   int8_t weather_temp, tmin_val, tmax_val; // 3
-  uint8_t wind_speed, humidity;        // 2
-  char icon[3];                        // 3
-  uint8_t graph_hours[4];              // 4
-  int8_t graph_temps[9];              // 9
-  uint8_t graph_rains[12];            // 12
-  uint8_t graph_wind_val[8];          // 8
-} WeatherBlob; // 51 bytes total
+  uint8_t wind_speed, humidity;            // 2
+  char icon[3];                            // 3
+  uint8_t graph_hours[4];                  // 4
+  int8_t graph_temps[9];                   // 9
+  uint8_t graph_rains[12];                 // 12
+  uint8_t graph_wind_val[8];               // 8
+} WeatherBlob;                             // 51 bytes total
 
 typedef struct __attribute__((packed)) {
   int8_t days_temp_v[5];  // 5
@@ -288,7 +288,7 @@ typedef struct __attribute__((packed)) {
   uint8_t days_rain_v[5]; // 5
   uint8_t days_wind_v[5]; // 5
   char wind_unit_str[5];  // 5
-} ForecastBlob; // 35 bytes total
+} ForecastBlob;           // 35 bytes total
 
 static void app_focus_changed(bool focused) {
   if (focused) {
@@ -339,7 +339,7 @@ static void dtext(GContext *c, const char *s, GFont f, int y, int h) {
 
 // Alternative view renderer (0 heap alloc — draws on existing GContext)
 static void draw_alt_view(GContext *ctx, uint8_t vid, int icon_id, bool fresh,
-                           int8_t cur_hour, int8_t cur_min) {
+                          int8_t cur_hour, int8_t cur_min) {
   graphics_context_set_fill_color(ctx, GColorBlack);
   graphics_fill_rect(ctx, GRect(0, 0, 144, 168), 0, GCornerNone);
   graphics_context_set_text_color(ctx, GColorWhite);
@@ -507,7 +507,8 @@ static void update_proc(Layer *layer, GContext *ctx) {
   bool has_fresh_weather =
       ((cur_t - last_refresh) < GET_DURATION() + OFFLINE_DELAY);
 
-  snprintf(weather_temp_char, sizeof(weather_temp_char), "%i\xc2\xb0", weather_temp);
+  snprintf(weather_temp_char, sizeof(weather_temp_char), "%i\xc2\xb0",
+           weather_temp);
   snprintf(minTemp, sizeof(minTemp), "%i\xc2\xb0", tmin_val);
   snprintf(maxTemp, sizeof(maxTemp), "%i\xc2\xb0", tmax_val);
 
@@ -516,8 +517,8 @@ static void update_proc(Layer *layer, GContext *ctx) {
     uint8_t vid = g_hub_config.view_order[current_view_index];
     if (vid == HUB_VIEW_WEATHER || vid == HUB_VIEW_DATE ||
         vid == HUB_VIEW_ANALOG) {
-      draw_alt_view(ctx, vid, icon_id, has_fresh_weather,
-                    (int8_t)cur->tm_hour, (int8_t)cur->tm_min);
+      draw_alt_view(ctx, vid, icon_id, has_fresh_weather, (int8_t)cur->tm_hour,
+                    (int8_t)cur->tm_min);
       draw_action_toast(ctx);
       if (g_hub_ring_active)
         draw_toast(ctx, g_hub_ring_active == 1 ? "Timer!" : "Alarm!");
@@ -592,9 +593,11 @@ static void hub_timeout_fired(void);
 // Helper: copy chars from s until '|' or end, into dst (max n-1 chars + NUL).
 static const char *cpf(const char *s, char *dst, int n) {
   int i = 0;
-  while (*s && *s != '|' && i < n - 1) dst[i++] = *s++;
+  while (*s && *s != '|' && i < n - 1)
+    dst[i++] = *s++;
   dst[i] = '\0';
-  if (*s == '|') s++;
+  if (*s == '|')
+    s++;
   return s;
 }
 
@@ -602,17 +605,22 @@ static void inbox_received_callback(DictionaryIterator *iterator,
                                     void *context) {
   Tuple *radio_tuple = dict_find(iterator, KEY_RADIO_UNITS);
 
-  // Weather data: JS sends a packed WeatherBlob byte array (replaces ~30 individual keys)
+  // Weather data: JS sends a packed WeatherBlob byte array (replaces ~30
+  // individual keys)
   Tuple *wb_t = dict_find(iterator, KEY_WEATHER_BLOB);
   if (wb_t && wb_t->length == sizeof(WeatherBlob)) {
     WeatherBlob wb;
     memcpy(&wb, wb_t->value->data, sizeof(WeatherBlob));
     wb.last_refresh = time(NULL);
     last_refresh = wb.last_refresh;
-    npoolTemp = wb.npoolTemp; npoolPH = wb.npoolPH; npoolORP = wb.npoolORP;
+    npoolTemp = wb.npoolTemp;
+    npoolPH = wb.npoolPH;
+    npoolORP = wb.npoolORP;
     weather_temp = wb.weather_temp;
-    tmin_val = wb.tmin_val; tmax_val = wb.tmax_val;
-    wind_speed_val = wb.wind_speed; humidity = wb.humidity;
+    tmin_val = wb.tmin_val;
+    tmax_val = wb.tmax_val;
+    wind_speed_val = wb.wind_speed;
+    humidity = wb.humidity;
     memcpy(icon, wb.icon, sizeof(icon));
     memcpy(graph_hours, wb.graph_hours, sizeof(graph_hours));
     memcpy(graph_temps, wb.graph_temps, sizeof(graph_temps));
@@ -778,7 +786,8 @@ static void inbox_received_callback(DictionaryIterator *iterator,
           s++;
       }
       // Parse price_min/max
-      if (*s == '|') s++;
+      if (*s == '|')
+        s++;
       s = cpf(s, p.price_min, sizeof(p.price_min));
       s = cpf(s, p.price_max, sizeof(p.price_max));
       // Persist this panel individually
@@ -839,8 +848,12 @@ static void outbox_sent_callback(DictionaryIterator *iterator, void *context) {
 
 static void init_var() {
   // Config flags — persist_read_bool returns false if key absent
-  flags.is_metric = persist_exists(KEY_RADIO_UNITS) ? persist_read_bool(KEY_RADIO_UNITS) : true;
-  flags.is_30mn = persist_exists(KEY_RADIO_REFRESH) ? persist_read_bool(KEY_RADIO_REFRESH) : true;
+  flags.is_metric = persist_exists(KEY_RADIO_UNITS)
+                        ? persist_read_bool(KEY_RADIO_UNITS)
+                        : true;
+  flags.is_30mn = persist_exists(KEY_RADIO_REFRESH)
+                      ? persist_read_bool(KEY_RADIO_REFRESH)
+                      : true;
   flags.is_vibration = persist_read_bool(KEY_TOGGLE_VIBRATION);
   flags.is_bt = persist_read_bool(KEY_TOGGLE_BT);
 
@@ -850,11 +863,16 @@ static void init_var() {
     if (persist_get_size(KEY_WEATHER_BLOB) == (int)sizeof(WeatherBlob)) {
       persist_read_data(KEY_WEATHER_BLOB, &wb, sizeof(WeatherBlob));
       last_refresh = wb.last_refresh;
-      if (FORCE_REFRESH == 1) last_refresh = 0;
-      npoolTemp = wb.npoolTemp; npoolPH = wb.npoolPH; npoolORP = wb.npoolORP;
+      if (FORCE_REFRESH == 1)
+        last_refresh = 0;
+      npoolTemp = wb.npoolTemp;
+      npoolPH = wb.npoolPH;
+      npoolORP = wb.npoolORP;
       weather_temp = wb.weather_temp;
-      tmin_val = wb.tmin_val; tmax_val = wb.tmax_val;
-      wind_speed_val = wb.wind_speed; humidity = wb.humidity;
+      tmin_val = wb.tmin_val;
+      tmax_val = wb.tmax_val;
+      wind_speed_val = wb.wind_speed;
+      humidity = wb.humidity;
       memcpy(icon, wb.icon, sizeof(icon));
       memcpy(graph_hours, wb.graph_hours, sizeof(graph_hours));
       memcpy(graph_temps, wb.graph_temps, sizeof(graph_temps));

@@ -221,9 +221,11 @@ static void widget_navigate(WidgetCtx *ctx, bool forward) {
       ctx->current_page = 0;
       widget_steps_timer_start(ctx);
       layer_mark_dirty(ctx->canvas);
-    } else {
+    } else if (ctx->nav_up_is_next) {
+      // UP list: DOWN at last item = back toward watchface
       hub_return_to_watchface();
     }
+    // else: DOWN list at far end, stay
   } else {
     if (ctx->current_index > 0) {
       widget_steps_timer_stop(ctx);
@@ -231,9 +233,11 @@ static void widget_navigate(WidgetCtx *ctx, bool forward) {
       ctx->current_page = 0;
       widget_steps_timer_start(ctx);
       layer_mark_dirty(ctx->canvas);
-    } else {
+    } else if (!ctx->nav_up_is_next) {
+      // DOWN list: UP at first item = back toward watchface
       hub_return_to_watchface();
     }
+    // else: UP list at far end, stay
   }
 }
 
@@ -654,9 +658,8 @@ static void draw_dotted_hline(GContext *ctx, int y, int x0, int x1) {
 }
 
 // Draw first-letter weekday labels under bars
-static void draw_day_labels(GContext *ctx, GFont font, int count,
-                            int days_back, int x0, int step, int y,
-                            int lbl_w) {
+static void draw_day_labels(GContext *ctx, GFont font, int count, int days_back,
+                            int x0, int step, int y, int lbl_w) {
   time_t t = time(NULL);
   struct tm *tm = localtime(&t);
   const char *loc = i18n_get_system_locale();
@@ -775,8 +778,8 @@ static void widget_steps_draw(GContext *ctx, GRect bounds, uint8_t page) {
   }
 
   // Day labels below bars
-  draw_day_labels(ctx, font14, 7, 6, gap + bar_w / 2, bar_w + gap,
-                  bar_area_bot, bar_w + 4);
+  draw_day_labels(ctx, font14, 7, 6, gap + bar_w / 2, bar_w + gap, bar_area_bot,
+                  bar_w + 4);
 }
 
 // ========== Battery History Widget ==========
@@ -810,7 +813,8 @@ static void bat_rotate(uint8_t *buf, int n_days) {
   } else {
     // Shift nibbles right by n_days
     for (int i = 14; i >= 0; i--) {
-      bat_set_nibble(buf, i, (i >= n_days) ? bat_get_nibble(buf, i - n_days) : 0);
+      bat_set_nibble(buf, i,
+                     (i >= n_days) ? bat_get_nibble(buf, i - n_days) : 0);
     }
   }
   // Record current battery at index 0
@@ -866,7 +870,8 @@ static void widget_battery_draw(GContext *ctx, GRect bounds, uint8_t page) {
 
   if (last_jd == 0 || today_jd != last_jd) {
     int gap_days = (last_jd == 0) ? 1 : (int)(today_jd - last_jd);
-    if (gap_days < 0) gap_days = 1;
+    if (gap_days < 0)
+      gap_days = 1;
     bat_rotate(hist_buf, gap_days);
     persist_write_data(HUB_PERSIST_BAT_HIST, hist_buf, 8);
     persist_write_int(HUB_PERSIST_BAT_DATE, today_jd);
@@ -893,7 +898,8 @@ static void widget_battery_draw(GContext *ctx, GRect bounds, uint8_t page) {
   for (int i = 0; i < 15; i++) {
     uint8_t val = bat_get_nibble(hist_buf, 14 - i); // oldest first (left)
     int bh = val * bar_h_max / 10;
-    if (val > 0 && bh < 2) bh = 2;
+    if (val > 0 && bh < 2)
+      bh = 2;
     int bx = x_off + i * (bar_w + bar_gap);
     int by = bar_area_bot - bh;
     if (bh > 0)
