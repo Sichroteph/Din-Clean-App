@@ -1032,7 +1032,7 @@ static void init() {
   app_message_register_inbox_received(inbox_received_callback);
   app_message_register_outbox_failed(outbox_failed_callback);
   app_message_register_outbox_sent(outbox_sent_callback);
-  AppMessageResult msg_result = app_message_open(380, 32);
+  AppMessageResult msg_result = app_message_open(480, 32);
   s_appmsg_open = (msg_result == APP_MSG_OK);
 
   init_var();
