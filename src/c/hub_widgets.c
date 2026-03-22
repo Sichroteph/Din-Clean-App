@@ -631,6 +631,35 @@ static void widget_daily_draw(GContext *ctx, GRect bounds, uint8_t page) {
                      NULL);
 }
 
+// ========== Shared widget helpers ==========
+
+// Draw a dotted horizontal line (2px on, 2px off)
+static void draw_dotted_hline(GContext *ctx, int y, int x0, int x1) {
+  for (int px = x0; px < x1; px += 4) {
+    graphics_draw_pixel(ctx, GPoint(px, y));
+    graphics_draw_pixel(ctx, GPoint(px + 1, y));
+  }
+}
+
+// Draw first-letter weekday labels under bars
+static void draw_day_labels(GContext *ctx, GFont font, int count,
+                            int days_back, int x0, int step, int y,
+                            int lbl_w) {
+  time_t t = time(NULL);
+  struct tm *tm = localtime(&t);
+  const char *loc = i18n_get_system_locale();
+  for (int i = 0; i < count; i++) {
+    int ago = days_back - i;
+    int wday = (tm->tm_wday - ago % 7 + 7) % 7;
+    const char *abbr = weather_utils_get_weekday_abbrev(loc, wday);
+    char lbl[2] = {abbr[0], '\0'};
+    int bx = x0 + i * step;
+    graphics_draw_text(ctx, lbl, font, GRect(bx - lbl_w / 2, y, lbl_w, 14),
+                       GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter,
+                       NULL);
+  }
+}
+
 // ========== Steps Widget ==========
 
 static uint8_t widget_steps_page_count(void) { return 1; }
@@ -719,10 +748,7 @@ static void widget_steps_draw(GContext *ctx, GRect bounds, uint8_t page) {
   graphics_context_set_stroke_color(ctx, GColorWhite);
   for (int thr = 5000; thr <= (int)hist_max; thr += 5000) {
     int y_ref = bar_area_bot - thr * bar_h_max / (int)hist_max;
-    for (int px = 2; px < bounds.size.w; px += 4) {
-      graphics_draw_pixel(ctx, GPoint(px, y_ref));
-      graphics_draw_pixel(ctx, GPoint(px + 1, y_ref));
-    }
+    draw_dotted_hline(ctx, y_ref, 2, bounds.size.w);
   }
 
   for (int i = 0; i < 7; i++) {
@@ -736,19 +762,9 @@ static void widget_steps_draw(GContext *ctx, GRect bounds, uint8_t page) {
     }
   }
 
-  // Day labels below bars: first letter of weekday, locale-aware
-  time_t lbl_t = time(NULL);
-  struct tm *lbl_tm = localtime(&lbl_t);
-  const char *lbl_locale = i18n_get_system_locale();
-  for (int i = 0; i < 7; i++) {
-    int wday = (lbl_tm->tm_wday - 6 + i + 7) % 7;
-    const char *abbr = weather_utils_get_weekday_abbrev(lbl_locale, wday);
-    char lbl[2] = {abbr[0], '\0'};
-    int bx = gap + i * (bar_w + gap);
-    graphics_draw_text(
-        ctx, lbl, font14, GRect(bx - 2, bar_area_bot, bar_w + 4, 14),
-        GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
-  }
+  // Day labels below bars
+  draw_day_labels(ctx, font14, 7, 6, gap + bar_w / 2, bar_w + gap,
+                  bar_area_bot, bar_w + 4);
 }
 
 // ========== Battery History Widget ==========
@@ -859,10 +875,7 @@ static void widget_battery_draw(GContext *ctx, GRect bounds, uint8_t page) {
   // Dotted reference line at 50% (level 5)
   graphics_context_set_stroke_color(ctx, GColorWhite);
   int y_50 = bar_area_bot - 5 * bar_h_max / 10;
-  for (int px = x_off; px < x_off + total_w; px += 4) {
-    graphics_draw_pixel(ctx, GPoint(px, y_50));
-    graphics_draw_pixel(ctx, GPoint(px + 1, y_50));
-  }
+  draw_dotted_hline(ctx, y_50, x_off, x_off + total_w);
 
   // Draw bars (most recent = right, oldest = left)
   for (int i = 0; i < 15; i++) {
@@ -875,18 +888,7 @@ static void widget_battery_draw(GContext *ctx, GRect bounds, uint8_t page) {
       graphics_fill_rect(ctx, GRect(bx, by, bar_w, bh), 0, GCornerNone);
   }
 
-  // Day labels: first letter of weekday under each bar
-  time_t lbl_t = time(NULL);
-  struct tm *lbl_tm = localtime(&lbl_t);
-  const char *lbl_locale = i18n_get_system_locale();
-  for (int i = 0; i < 15; i++) {
-    int days_ago = 14 - i; // bar 0 = 14 days ago, bar 14 = today
-    int wday = (lbl_tm->tm_wday - days_ago % 7 + 7) % 7;
-    const char *abbr = weather_utils_get_weekday_abbrev(lbl_locale, wday);
-    char lbl[2] = {abbr[0], '\0'};
-    int bx = x_off + i * (bar_w + bar_gap);
-    graphics_draw_text(
-        ctx, lbl, font14, GRect(bx - 1, bar_area_bot, bar_w + 2, 14),
-        GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
-  }
+  // Day labels under bars
+  draw_day_labels(ctx, font14, 15, 14, x_off + bar_w / 2, bar_w + bar_gap,
+                  bar_area_bot, bar_w + 2);
 }
