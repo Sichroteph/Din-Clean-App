@@ -149,7 +149,7 @@ void hub_widgets_push(bool is_up, HubDirection direction) {
                                               .unload = widget_window_unload,
                                           });
 
-  window_stack_push(ctx->window, g_hub_config.anim_enabled ? true : false);
+  window_stack_push(ctx->window, false);
 }
 
 static void widget_window_load(Window *window) {
@@ -196,17 +196,6 @@ static void widget_update_proc(Layer *layer, GContext *ctx) {
     s_widget_defs[widget_id].draw(ctx, bounds, wctx->current_page);
   }
 
-  // Draw widget position indicator (e.g., "1/3")
-  if (wctx->widget_count > 1) {
-    char indicator[8];
-    snprintf(indicator, sizeof(indicator), "%d/%d", wctx->current_index + 1,
-             wctx->widget_count);
-    graphics_context_set_text_color(ctx, GColorWhite);
-    GRect ind_rect = GRect(bounds.size.w - 40, bounds.size.h - 18, 36, 16);
-    graphics_draw_text(
-        ctx, indicator, fonts_get_system_font(FONT_KEY_GOTHIC_14), ind_rect,
-        GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
-  }
   hub_wipe_draw(ctx);
 }
 

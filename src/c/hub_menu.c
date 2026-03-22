@@ -74,7 +74,7 @@ void hub_menu_push(bool is_up_menu, HubDirection direction) {
                                               .unload = menu_window_unload,
                                           });
 
-  window_stack_push(ctx->window, true);
+  window_stack_push(ctx->window, false);
 }
 
 void hub_menu_push_submenu(const HubMenuItem *items, uint8_t count,
@@ -114,7 +114,7 @@ void hub_menu_push_submenu(const HubMenuItem *items, uint8_t count,
                                               .unload = menu_window_unload,
                                           });
 
-  window_stack_push(ctx->window, true);
+  window_stack_push(ctx->window, false);
 }
 
 // Delayed return to avoid freeing menu context inside callback

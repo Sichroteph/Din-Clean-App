@@ -489,11 +489,11 @@ static void wipe_timer_cb(void *context) {
 }
 
 void start_wipe(uint8_t dir) {
-  if (g_hub_config.anim_enabled && !s_wipe_timer) {
-    g_wipe_frame = 1;
-    g_wipe_dir = dir;
-    s_wipe_timer = app_timer_register(33, wipe_timer_cb, NULL);
-  }
+  if (!g_hub_config.anim_enabled) return;
+  if (s_wipe_timer) { app_timer_cancel(s_wipe_timer); s_wipe_timer = NULL; }
+  g_wipe_frame = 1;
+  g_wipe_dir = dir;
+  s_wipe_timer = app_timer_register(33, wipe_timer_cb, NULL);
 }
 
 void hub_wipe_draw(GContext *ctx) {
@@ -1007,6 +1007,7 @@ static void up_click_handler(ClickRecognizerRef recognizer, void *context) {
     return;
   }
   hub_timeout_reset();
+  start_wipe(WIPE_DIR_UP);
   if (g_hub_config.btn_up_type == HUB_OBJ_MENU) {
     hub_menu_push(true, HUB_DIR_UP);
   } else {
@@ -1021,6 +1022,7 @@ static void down_click_handler(ClickRecognizerRef recognizer, void *context) {
     return;
   }
   hub_timeout_reset();
+  start_wipe(WIPE_DIR_DOWN);
   if (g_hub_config.btn_down_type == HUB_OBJ_MENU) {
     hub_menu_push(false, HUB_DIR_DOWN);
   } else {
@@ -1109,6 +1111,9 @@ static void init() {
   hub_set_main_window(s_main_window);
   hub_timeout_init(hub_timeout_fired);
 
+  // Launch step-counter background worker (aplite: accelerometer pedometer)
+  app_worker_launch();
+
   // Mark init complete — callbacks (focus, tick) may now safely send
   // AppMessages.
   s_init_done = true;
@@ -1118,6 +1123,7 @@ static void init() {
 }
 
 static void deinit() {
+  app_worker_kill();
 
   hub_timeout_deinit();
 

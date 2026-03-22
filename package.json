@@ -6,7 +6,8 @@
   "pebble": {
     "capabilities": [
       "location",
-      "configurable"
+      "configurable",
+      "health"
     ],
     "displayName": "Keystone",
     "enableMultiJS": false,
