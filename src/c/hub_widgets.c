@@ -19,6 +19,10 @@ extern uint8_t days_wind_v[];
 // Stock data — count in RAM, panels loaded on demand from persist
 extern uint8_t stock_panel_count;
 
+// Wipe transition from Din_Clean.c
+extern void start_wipe(uint8_t dir);
+extern void hub_wipe_draw(GContext *ctx);
+
 // Load a single stock panel from persist into dst. Returns true on success.
 static bool stock_load_panel(uint8_t idx, StockPanel *dst) {
   if (idx >= STOCK_MAX_PANELS)
@@ -203,6 +207,7 @@ static void widget_update_proc(Layer *layer, GContext *ctx) {
         ctx, indicator, fonts_get_system_font(FONT_KEY_GOTHIC_14), ind_rect,
         GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
   }
+  hub_wipe_draw(ctx);
 }
 
 static void widget_click_config(void *context) {
@@ -220,6 +225,7 @@ static void widget_navigate(WidgetCtx *ctx, bool forward) {
       ctx->current_index++;
       ctx->current_page = 0;
       widget_steps_timer_start(ctx);
+      start_wipe(WIPE_DIR_DOWN);
       layer_mark_dirty(ctx->canvas);
     } else if (ctx->nav_up_is_next) {
       // UP list: DOWN at last item = back toward watchface
@@ -232,6 +238,7 @@ static void widget_navigate(WidgetCtx *ctx, bool forward) {
       ctx->current_index--;
       ctx->current_page = 0;
       widget_steps_timer_start(ctx);
+      start_wipe(WIPE_DIR_UP);
       layer_mark_dirty(ctx->canvas);
     } else if (!ctx->nav_up_is_next) {
       // DOWN list: UP at first item = back toward watchface
@@ -260,6 +267,7 @@ static void widget_select_handler(ClickRecognizerRef rec, void *context) {
     uint8_t pages = s_widget_defs[widget_id].page_count();
     if (pages > 1) {
       ctx->current_page = (ctx->current_page + 1) % pages;
+      start_wipe(WIPE_DIR_RIGHT);
       layer_mark_dirty(ctx->canvas);
     }
   }

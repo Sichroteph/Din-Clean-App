@@ -109,6 +109,12 @@ typedef enum {
 } HubViewId;
 typedef enum { HUB_DIR_UP = 0, HUB_DIR_DOWN } HubDirection;
 
+// Wipe animation direction (argument to start_wipe())
+#define WIPE_DIR_RIGHT 0  // new content from right (select/forward)
+#define WIPE_DIR_LEFT  1  // new content from left (back)
+#define WIPE_DIR_DOWN  2  // new content from bottom (next widget)
+#define WIPE_DIR_UP    3  // new content from top (prev widget)
+
 // --- Structures ---
 typedef struct {
   char label[HUB_MAX_LABEL];

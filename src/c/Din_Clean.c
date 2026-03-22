@@ -247,6 +247,11 @@ static bool s_init_done = false;
 // Hub: current watchface view index
 static uint8_t current_view_index = 0;
 
+// View transition wipe animation — global so hub_widgets.c can read them
+uint8_t g_wipe_frame = 0;
+uint8_t g_wipe_dir = 0;
+static AppTimer *s_wipe_timer = NULL;
+
 // Packed flags to save memory
 typedef struct {
   uint16_t is_metric : 1;
@@ -476,6 +481,31 @@ static void draw_action_toast(GContext *ctx) {
   draw_toast(ctx, "Action sent!");
 }
 
+static void wipe_timer_cb(void *context) {
+  if (++g_wipe_frame > 4) { g_wipe_frame = 0; s_wipe_timer = NULL; }
+  else s_wipe_timer = app_timer_register(33, wipe_timer_cb, NULL);
+  Window *top = window_stack_get_top_window();
+  if (top) layer_mark_dirty(window_get_root_layer(top));
+}
+
+void start_wipe(uint8_t dir) {
+  if (g_hub_config.anim_enabled && !s_wipe_timer) {
+    g_wipe_frame = 1;
+    g_wipe_dir = dir;
+    s_wipe_timer = app_timer_register(33, wipe_timer_cb, NULL);
+  }
+}
+
+void hub_wipe_draw(GContext *ctx) {
+  if (!g_wipe_frame) return;
+  graphics_context_set_fill_color(ctx, GColorBlack);
+  int16_t f = g_wipe_frame;
+  if      (g_wipe_dir == WIPE_DIR_RIGHT) graphics_fill_rect(ctx, GRect(0,    0,    144 - f*36, 168),        0, GCornerNone);
+  else if (g_wipe_dir == WIPE_DIR_LEFT)  graphics_fill_rect(ctx, GRect(f*36, 0,    144 - f*36, 168),        0, GCornerNone);
+  else if (g_wipe_dir == WIPE_DIR_DOWN)  graphics_fill_rect(ctx, GRect(0,    0,    144,        168 - f*42), 0, GCornerNone);
+  else                                   graphics_fill_rect(ctx, GRect(0,    f*42, 144,        168 - f*42), 0, GCornerNone);
+}
+
 static void update_proc(Layer *layer, GContext *ctx) {
   // Compact IconBarData on stack (8B after char* fields removed)
   IconBarData icon_data;
@@ -522,6 +552,7 @@ static void update_proc(Layer *layer, GContext *ctx) {
       draw_action_toast(ctx);
       if (g_hub_ring_active)
         draw_toast(ctx, g_hub_ring_active == 1 ? "Timer!" : "Alarm!");
+      hub_wipe_draw(ctx);
       return;
     }
   }
@@ -554,6 +585,9 @@ static void update_proc(Layer *layer, GContext *ctx) {
   // Exit hint toast (double-back to exit)
   if (s_show_exit_hint)
     draw_toast(ctx, "Press < to exit");
+
+  // Wipe transition overlay
+  hub_wipe_draw(ctx);
 }
 
 // Forward declaration (used in handle_tick, inbox handler, and retry callback)
@@ -936,6 +970,7 @@ static void back_click_handler(ClickRecognizerRef recognizer, void *context) {
       app_timer_cancel(s_back_timer);
       s_back_timer = NULL;
     }
+    start_wipe(WIPE_DIR_LEFT);
     layer_mark_dirty(layer);
     return;
   }
@@ -1002,6 +1037,7 @@ static void select_click_handler(ClickRecognizerRef recognizer, void *context) {
   if (g_hub_config.view_count > 1) {
     current_view_index = (current_view_index + 1) % g_hub_config.view_count;
     hub_timeout_reset();
+    start_wipe(WIPE_DIR_RIGHT);
     layer_mark_dirty(layer);
   }
 }

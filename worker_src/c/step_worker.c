@@ -2,21 +2,23 @@
 
 // --- Persist keys (shared with app) ---
 #define PERSIST_STEPS_TODAY 230
-#define PERSIST_STEPS_DAY0  231  // yesterday (DAY0..DAY6 = 231..237)
-#define PERSIST_STEPS_DATE  238  // julian day of current "today"
+#define PERSIST_STEPS_DAY0 231 // yesterday (DAY0..DAY6 = 231..237)
+#define PERSIST_STEPS_DATE 238 // julian day of current "today"
 
 // --- Algorithm parameters ---
-#define ACCEL_BATCH_SIZE    25   // samples per batch (25 samples @ 25Hz = 1 wakeup/sec)
-#define PERSIST_BATCHES     60   // persist every N batches (60 × 1s = 60s)
-#define MAG_THRESHOLD       340  // magnitude delta threshold for step detection
-#define MIN_SAMPLE_GAP      12   // minimum samples between steps (~480ms debounce @ 25Hz)
+#define ACCEL_BATCH_SIZE                                                       \
+  25 // samples per batch (25 samples @ 25Hz = 1 wakeup/sec)
+#define PERSIST_BATCHES 60 // persist every N batches (60 × 1s = 60s)
+#define MAG_THRESHOLD 340  // magnitude delta threshold for step detection
+#define MIN_SAMPLE_GAP                                                         \
+  12 // minimum samples between steps (~480ms debounce @ 25Hz)
 
 // --- State ---
 static uint32_t s_steps_today;
-static int16_t  s_last_mag;
+static int16_t s_last_mag;
 static uint16_t s_batches_since_persist;
-static uint8_t  s_samples_since_step;
-static int32_t  s_today_jday;       // julian day number of "today"
+static uint8_t s_samples_since_step;
+static int32_t s_today_jday; // julian day number of "today"
 
 // --- Helpers ---
 
@@ -47,7 +49,8 @@ static void rotate_day(void) {
 static void accel_batch_handler(AccelData *data, uint32_t num_samples) {
   for (uint32_t i = 0; i < num_samples; i++) {
     if (data[i].did_vibrate) {
-      if (s_samples_since_step < 255) s_samples_since_step++;
+      if (s_samples_since_step < 255)
+        s_samples_since_step++;
       continue;
     }
 
@@ -58,7 +61,8 @@ static void accel_batch_handler(AccelData *data, uint32_t num_samples) {
       s_steps_today++;
       s_samples_since_step = 0;
     } else {
-      if (s_samples_since_step < 255) s_samples_since_step++;
+      if (s_samples_since_step < 255)
+        s_samples_since_step++;
     }
 
     s_last_mag = mag;
@@ -89,7 +93,8 @@ static void prv_init(void) {
 
   if (s_today_jday != now_jday && s_today_jday != 0) {
     int32_t gap = now_jday - s_today_jday;
-    if (gap < 0 || gap > 7) gap = 1;
+    if (gap < 0 || gap > 7)
+      gap = 1;
     for (int32_t d = 0; d < gap; d++) {
       rotate_day();
     }
