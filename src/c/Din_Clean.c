@@ -482,28 +482,43 @@ static void draw_action_toast(GContext *ctx) {
 }
 
 static void wipe_timer_cb(void *context) {
-  if (++g_wipe_frame > 4) { g_wipe_frame = 0; s_wipe_timer = NULL; }
-  else s_wipe_timer = app_timer_register(33, wipe_timer_cb, NULL);
+  if (++g_wipe_frame > 4) {
+    g_wipe_frame = 0;
+    s_wipe_timer = NULL;
+  } else
+    s_wipe_timer = app_timer_register(33, wipe_timer_cb, NULL);
   Window *top = window_stack_get_top_window();
-  if (top) layer_mark_dirty(window_get_root_layer(top));
+  if (top)
+    layer_mark_dirty(window_get_root_layer(top));
 }
 
 void start_wipe(uint8_t dir) {
-  if (!g_hub_config.anim_enabled) return;
-  if (s_wipe_timer) { app_timer_cancel(s_wipe_timer); s_wipe_timer = NULL; }
+  if (!g_hub_config.anim_enabled)
+    return;
+  if (s_wipe_timer) {
+    app_timer_cancel(s_wipe_timer);
+    s_wipe_timer = NULL;
+  }
   g_wipe_frame = 1;
   g_wipe_dir = dir;
   s_wipe_timer = app_timer_register(33, wipe_timer_cb, NULL);
 }
 
 void hub_wipe_draw(GContext *ctx) {
-  if (!g_wipe_frame) return;
+  if (!g_wipe_frame)
+    return;
   graphics_context_set_fill_color(ctx, GColorBlack);
   int16_t f = g_wipe_frame;
-  if      (g_wipe_dir == WIPE_DIR_RIGHT) graphics_fill_rect(ctx, GRect(0,    0,    144 - f*36, 168),        0, GCornerNone);
-  else if (g_wipe_dir == WIPE_DIR_LEFT)  graphics_fill_rect(ctx, GRect(f*36, 0,    144 - f*36, 168),        0, GCornerNone);
-  else if (g_wipe_dir == WIPE_DIR_DOWN)  graphics_fill_rect(ctx, GRect(0,    0,    144,        168 - f*42), 0, GCornerNone);
-  else                                   graphics_fill_rect(ctx, GRect(0,    f*42, 144,        168 - f*42), 0, GCornerNone);
+  if (g_wipe_dir == WIPE_DIR_RIGHT)
+    graphics_fill_rect(ctx, GRect(0, 0, 144 - f * 36, 168), 0, GCornerNone);
+  else if (g_wipe_dir == WIPE_DIR_LEFT)
+    graphics_fill_rect(ctx, GRect(f * 36, 0, 144 - f * 36, 168), 0,
+                       GCornerNone);
+  else if (g_wipe_dir == WIPE_DIR_DOWN)
+    graphics_fill_rect(ctx, GRect(0, 0, 144, 168 - f * 42), 0, GCornerNone);
+  else
+    graphics_fill_rect(ctx, GRect(0, f * 42, 144, 168 - f * 42), 0,
+                       GCornerNone);
 }
 
 static void update_proc(Layer *layer, GContext *ctx) {

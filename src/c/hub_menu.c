@@ -2,9 +2,14 @@
 #include "hub_actions.h"
 #include "hub_pseudoapp.h"
 
+// Wipe transition from Din_Clean.c
+extern void start_wipe(uint8_t dir);
+extern void hub_wipe_draw(GContext *ctx);
+
 typedef struct {
   Window *window;
   MenuLayer *menu;
+  Layer *overlay; // drawn on top of MenuLayer to show wipe animation
   const HubMenuItem *all_items;
   HubMenuItem *owned_items; // non-NULL for root menus only (separate malloc)
   uint8_t all_count;
@@ -29,6 +34,10 @@ static void handle_up_click(ClickRecognizerRef recognizer, void *context);
 static void handle_down_click(ClickRecognizerRef recognizer, void *context);
 static void handle_select_click(ClickRecognizerRef recognizer, void *context);
 static void menu_click_config_provider(void *context);
+
+static void menu_wipe_overlay_proc(Layer *layer, GContext *ctx) {
+  hub_wipe_draw(ctx);
+}
 
 void hub_menu_push(bool is_up_menu, HubDirection direction) {
   MenuCtx *ctx = malloc(sizeof(MenuCtx));
@@ -74,6 +83,7 @@ void hub_menu_push(bool is_up_menu, HubDirection direction) {
                                               .unload = menu_window_unload,
                                           });
 
+  start_wipe(direction == HUB_DIR_UP ? WIPE_DIR_UP : WIPE_DIR_DOWN);
   window_stack_push(ctx->window, false);
 }
 
@@ -114,6 +124,7 @@ void hub_menu_push_submenu(const HubMenuItem *items, uint8_t count,
                                               .unload = menu_window_unload,
                                           });
 
+  start_wipe(WIPE_DIR_RIGHT);
   window_stack_push(ctx->window, false);
 }
 
@@ -151,6 +162,10 @@ static void menu_window_load(Window *window) {
       window, menu_click_config_provider, ctx);
   layer_add_child(root, menu_layer_get_layer(ctx->menu));
 
+  ctx->overlay = layer_create(bounds);
+  layer_set_update_proc(ctx->overlay, menu_wipe_overlay_proc);
+  layer_add_child(root, ctx->overlay);
+
   if (ctx->depth == 0 && ctx->direction == HUB_DIR_UP &&
       ctx->visible_count > 0) {
     // Start at last real item (after padding), aligned to bottom for continuity
@@ -168,6 +183,8 @@ static void menu_window_load(Window *window) {
 
 static void menu_window_unload(Window *window) {
   MenuCtx *ctx = window_get_user_data(window);
+  if (ctx->overlay)
+    layer_destroy(ctx->overlay);
   if (ctx->menu)
     menu_layer_destroy(ctx->menu);
   if (ctx->owned_items)
@@ -293,8 +310,10 @@ static void handle_up_click(ClickRecognizerRef recognizer, void *context) {
 
   if (current.row <= first_real_row) {
     // DOWN menu: UP at first item = back toward watchface
-    if (ctx->depth == 0 && ctx->direction == HUB_DIR_DOWN)
+    if (ctx->depth == 0 && ctx->direction == HUB_DIR_DOWN) {
+      start_wipe(WIPE_DIR_UP);
       app_timer_register(0, delayed_return_to_watchface, NULL);
+    }
     // else: UP menu far end, stay
     return;
   }
@@ -311,8 +330,10 @@ static void handle_down_click(ClickRecognizerRef recognizer, void *context) {
 
   if (current.row >= last_real_row) {
     // UP menu: DOWN at last item = back toward watchface
-    if (ctx->depth == 0 && ctx->direction == HUB_DIR_UP)
+    if (ctx->depth == 0 && ctx->direction == HUB_DIR_UP) {
+      start_wipe(WIPE_DIR_DOWN);
       app_timer_register(0, delayed_return_to_watchface, NULL);
+    }
     // else: DOWN menu far end, stay
     return;
   }
