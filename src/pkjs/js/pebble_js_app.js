@@ -1321,11 +1321,9 @@ Pebble.addEventListener('appmessage',
       console.log('[DIAG] heap_free~' + heapFree + 'B');
     }
 
-    if ((navigator.onLine) || (b_force_internet)) {
-      console.log("Appel météo !!");
-      getWeather();
-      // fetchStockData() is now triggered after weather messages complete to avoid AppMessage collision
-    }
+    console.log("Appel météo !!");
+    getWeather();
+    // fetchStockData() is now triggered after weather messages complete to avoid AppMessage collision
   }
 );
 
