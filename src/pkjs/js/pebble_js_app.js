@@ -392,28 +392,28 @@ function processOpenMeteoResponse(responseText) {
     icon: icon,
     hours: [h0, h1, h2, h3],
     temps: [hourlyTemperatures.hour0, hourlyTemperatures.hour3, hourlyTemperatures.hour6,
-            hourlyTemperatures.hour9, hourlyTemperatures.hour12, hourlyTemperatures.hour15,
-            hourlyTemperatures.hour18, hourlyTemperatures.hour21, hourlyTemperatures.hour24],
+    hourlyTemperatures.hour9, hourlyTemperatures.hour12, hourlyTemperatures.hour15,
+    hourlyTemperatures.hour18, hourlyTemperatures.hour21, hourlyTemperatures.hour24],
     rains: [hourlyRain.hour0, hourlyRain.hour1, hourlyRain.hour2, hourlyRain.hour3,
-            hourlyRain.hour4, hourlyRain.hour5, hourlyRain.hour6, hourlyRain.hour7,
-            hourlyRain.hour8, hourlyRain.hour9, hourlyRain.hour10, hourlyRain.hour11],
+    hourlyRain.hour4, hourlyRain.hour5, hourlyRain.hour6, hourlyRain.hour7,
+    hourlyRain.hour8, hourlyRain.hour9, hourlyRain.hour10, hourlyRain.hour11],
     winds: [parseInt(hourlyWind.hour0), parseInt(hourlyWind.hour3), parseInt(hourlyWind.hour6),
-            parseInt(hourlyWind.hour9), parseInt(hourlyWind.hour12), parseInt(hourlyWind.hour15),
-            parseInt(hourlyWind.hour18), parseInt(hourlyWind.hour21)]
+    parseInt(hourlyWind.hour9), parseInt(hourlyWind.hour12), parseInt(hourlyWind.hour15),
+    parseInt(hourlyWind.hour18), parseInt(hourlyWind.hour21)]
   });
 
   var forecastBlob = packForecastBlob({
     temps: [parseInt(day_temps[0]), parseInt(day_temps[1]), parseInt(day_temps[2]),
-            parseInt(day_temps[3]), parseInt(day_temps[4])],
+    parseInt(day_temps[3]), parseInt(day_temps[4])],
     icons: [day_icons[0], day_icons[1], day_icons[2], day_icons[3], day_icons[4]],
     rains: [parseInt(day_rains[0]) || 0, parseInt(day_rains[1]) || 0, parseInt(day_rains[2]) || 0,
-            parseInt(day_rains[3]) || 0, parseInt(day_rains[4]) || 0],
+    parseInt(day_rains[3]) || 0, parseInt(day_rains[4]) || 0],
     winds: [parseInt(day_winds[0]) || 0, parseInt(day_winds[1]) || 0, parseInt(day_winds[2]) || 0,
-            parseInt(day_winds[3]) || 0, parseInt(day_winds[4]) || 0],
+    parseInt(day_winds[3]) || 0, parseInt(day_winds[4]) || 0],
     windUnit: windUnit
   });
 
-  Pebble.sendAppMessage({'KEY_WEATHER_BLOB': weatherBlob, 'KEY_DAYFORECAST_BLOB': forecastBlob}, function () {
+  Pebble.sendAppMessage({ 'KEY_WEATHER_BLOB': weatherBlob, 'KEY_DAYFORECAST_BLOB': forecastBlob }, function () {
     console.log("Open-Meteo weather blob sent!");
     fetchStockData();
   }, function () {
@@ -722,28 +722,28 @@ function processWeatherResponse(responseText) {
     icon: icon,
     hours: [h0, h1, h2, h3],
     temps: [hourlyTemperatures.hour0, hourlyTemperatures.hour3, hourlyTemperatures.hour6,
-            hourlyTemperatures.hour9, hourlyTemperatures.hour12, hourlyTemperatures.hour15,
-            hourlyTemperatures.hour18, hourlyTemperatures.hour21, hourlyTemperatures.hour24],
+    hourlyTemperatures.hour9, hourlyTemperatures.hour12, hourlyTemperatures.hour15,
+    hourlyTemperatures.hour18, hourlyTemperatures.hour21, hourlyTemperatures.hour24],
     rains: [hourlyRain.hour0, hourlyRain.hour1, hourlyRain.hour2, hourlyRain.hour3,
-            hourlyRain.hour4, hourlyRain.hour5, hourlyRain.hour6, hourlyRain.hour7,
-            hourlyRain.hour8, hourlyRain.hour9, hourlyRain.hour10, hourlyRain.hour11],
+    hourlyRain.hour4, hourlyRain.hour5, hourlyRain.hour6, hourlyRain.hour7,
+    hourlyRain.hour8, hourlyRain.hour9, hourlyRain.hour10, hourlyRain.hour11],
     winds: [parseInt(hourlyWind.hour0), parseInt(hourlyWind.hour3), parseInt(hourlyWind.hour6),
-            parseInt(hourlyWind.hour9), parseInt(hourlyWind.hour12), parseInt(hourlyWind.hour15),
-            parseInt(hourlyWind.hour18), parseInt(hourlyWind.hour21)]
+    parseInt(hourlyWind.hour9), parseInt(hourlyWind.hour12), parseInt(hourlyWind.hour15),
+    parseInt(hourlyWind.hour18), parseInt(hourlyWind.hour21)]
   });
 
   var forecastBlob = packForecastBlob({
     temps: [parseInt(day_temps[0]), parseInt(day_temps[1]), parseInt(day_temps[2]),
-            parseInt(day_temps[3]), parseInt(day_temps[4])],
+    parseInt(day_temps[3]), parseInt(day_temps[4])],
     icons: [day_icons[0], day_icons[1], day_icons[2], day_icons[3], day_icons[4]],
     rains: [parseInt(day_rains[0]) || 0, parseInt(day_rains[1]) || 0, parseInt(day_rains[2]) || 0,
-            parseInt(day_rains[3]) || 0, parseInt(day_rains[4]) || 0],
+    parseInt(day_rains[3]) || 0, parseInt(day_rains[4]) || 0],
     winds: [parseInt(day_winds[0]) || 0, parseInt(day_winds[1]) || 0, parseInt(day_winds[2]) || 0,
-            parseInt(day_winds[3]) || 0, parseInt(day_winds[4]) || 0],
+    parseInt(day_winds[3]) || 0, parseInt(day_winds[4]) || 0],
     windUnit: windUnit
   });
 
-  Pebble.sendAppMessage({'KEY_WEATHER_BLOB': weatherBlob, 'KEY_DAYFORECAST_BLOB': forecastBlob}, function () {
+  Pebble.sendAppMessage({ 'KEY_WEATHER_BLOB': weatherBlob, 'KEY_DAYFORECAST_BLOB': forecastBlob }, function () {
     console.log("MET Norway weather blob sent!");
     fetchStockData();
   }, function () {
