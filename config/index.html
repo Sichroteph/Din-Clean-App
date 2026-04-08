@@ -704,6 +704,109 @@
     }
 
     /* ============================================================
+       BACKUP & RESTORE
+       ============================================================ */
+    .backup-actions {
+      display: flex;
+      gap: 10px;
+      margin: 8px 0;
+    }
+
+    .backup-btn {
+      flex: 1;
+      padding: 10px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      font-family: inherit;
+      transition: all 0.15s;
+      text-align: center;
+    }
+
+    .backup-btn.export-btn {
+      background: var(--surface2);
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .backup-btn.export-btn:active {
+      background: var(--accent-glow);
+    }
+
+    .backup-btn.import-btn {
+      background: var(--surface2);
+      color: var(--success);
+      border-color: var(--success);
+    }
+
+    .backup-btn.import-btn:active {
+      background: rgba(74, 230, 138, 0.15);
+    }
+
+    .backup-textarea {
+      width: 100%;
+      min-height: 100px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 0.75rem;
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      color: var(--text);
+      resize: vertical;
+      outline: none;
+      line-height: 1.4;
+      word-break: break-all;
+    }
+
+    .backup-textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .backup-textarea::placeholder {
+      color: var(--text-muted);
+    }
+
+    .backup-status {
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      margin-top: 8px;
+      display: none;
+    }
+
+    .backup-status.success {
+      display: block;
+      background: rgba(74, 230, 138, 0.12);
+      color: var(--success);
+      border: 1px solid rgba(74, 230, 138, 0.3);
+    }
+
+    .backup-status.error {
+      display: block;
+      background: rgba(255, 108, 108, 0.12);
+      color: var(--accent2);
+      border: 1px solid rgba(255, 108, 108, 0.3);
+    }
+
+    .backup-file-input {
+      display: none;
+    }
+
+    .backup-or {
+      text-align: center;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin: 8px 0;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* ============================================================
        ANIMATIONS
        ============================================================ */
     @keyframes fadeIn {
@@ -1208,6 +1311,52 @@
           </div>
           <div class="card-footer">Optional. Connect your iopool for pool monitoring data.</div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================
+       SECTION 8: BACKUP & RESTORE
+       ========================================================== -->
+  <div class="section" data-section>
+    <div class="section-header" onclick="toggleSection(this)">
+      <div class="icon">&#128190;</div>
+      <div class="label">Backup &amp; Restore</div>
+      <svg class="chevron" viewBox="0 0 20 20" fill="currentColor">
+        <path
+          d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" />
+      </svg>
+    </div>
+    <div class="section-body">
+      <div class="section-body-inner">
+
+        <!-- Export -->
+        <div class="card">
+          <div class="card-header">Export settings</div>
+          <div class="card-footer">Save all your current settings to a JSON file for backup.</div>
+          <div class="row">
+            <button class="backup-btn export-btn" onclick="exportConfig()" style="width:100%">&#x2B07; Export to JSON file</button>
+          </div>
+        </div>
+
+        <!-- Import -->
+        <div class="card">
+          <div class="card-header">Import settings</div>
+          <div class="card-footer">Restore settings from a previously exported JSON file or paste the JSON content below.</div>
+          <div class="row" style="flex-direction:column;align-items:stretch">
+            <div class="backup-actions">
+              <button class="backup-btn import-btn" onclick="document.getElementById('backup_file_input').click()" style="flex:1">&#x1F4C2; Choose JSON file</button>
+              <input type="file" id="backup_file_input" class="backup-file-input" accept=".json,application/json" onchange="importFromFile(this)">
+            </div>
+            <div class="backup-or">&mdash; or paste JSON below &mdash;</div>
+            <textarea class="backup-textarea" id="backup_textarea" placeholder='Paste your exported JSON here...'></textarea>
+            <div style="margin-top:8px">
+              <button class="backup-btn import-btn" onclick="importFromTextarea()" style="width:100%">&#x2B06; Import from text</button>
+            </div>
+            <div class="backup-status" id="backup_status"></div>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
@@ -2072,6 +2221,103 @@
 
       console.log('Config data: ' + JSON.stringify(options));
       return options;
+    }
+
+    // ================================================================
+    // Backup & Restore
+    // ================================================================
+    function exportConfig() {
+      // Ensure latest state is persisted to localStorage
+      persistMenus();
+      persistWidgets();
+      persistStockPanels();
+
+      var backup = {};
+      for (var i = 0; i < localStorage.length; i++) {
+        var key = localStorage.key(i);
+        backup[key] = localStorage.getItem(key);
+      }
+
+      var blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      var now = new Date();
+      var dateStr = now.getFullYear() +
+        ('0' + (now.getMonth() + 1)).slice(-2) +
+        ('0' + now.getDate()).slice(-2) + '_' +
+        ('0' + now.getHours()).slice(-2) +
+        ('0' + now.getMinutes()).slice(-2);
+      a.download = 'keystone_config_' + dateStr + '.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function applyImportedConfig(jsonStr) {
+      var statusEl = document.getElementById('backup_status');
+      try {
+        var data = JSON.parse(jsonStr);
+        if (typeof data !== 'object' || data === null || Array.isArray(data)) {
+          throw new Error('Invalid format: expected a JSON object.');
+        }
+
+        // Validate that it looks like a config backup (has at least one known key)
+        var knownKeys = ['radio_units', 'toggle_bt', 'weather_api', 'hub_timeout',
+                         'hub_btn_up', 'hub_menu_up_json', 'hub_widgets_up', 'toggle_vibration'];
+        var hasKnown = false;
+        for (var k = 0; k < knownKeys.length; k++) {
+          if (data.hasOwnProperty(knownKeys[k])) { hasKnown = true; break; }
+        }
+        if (!hasKnown) {
+          throw new Error('This JSON does not appear to be a Keystone config backup.');
+        }
+
+        var keyCount = Object.keys(data).length;
+        if (!confirm('Import ' + keyCount + ' settings? This will overwrite your current configuration and reload the page.')) return;
+
+        localStorage.clear();
+        for (var key in data) {
+          if (data.hasOwnProperty(key)) {
+            localStorage.setItem(key, data[key]);
+          }
+        }
+
+        statusEl.className = 'backup-status success';
+        statusEl.textContent = '\u2714 ' + keyCount + ' settings imported. Reloading...';
+        setTimeout(function () { location.reload(); }, 800);
+      } catch (e) {
+        statusEl.className = 'backup-status error';
+        statusEl.textContent = '\u2718 ' + (e.message || 'Invalid JSON');
+      }
+    }
+
+    function importFromFile(input) {
+      var file = input.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function (e) {
+        applyImportedConfig(e.target.result);
+      };
+      reader.onerror = function () {
+        var statusEl = document.getElementById('backup_status');
+        statusEl.className = 'backup-status error';
+        statusEl.textContent = '\u2718 Failed to read file.';
+      };
+      reader.readAsText(file);
+      input.value = ''; // allow re-selecting the same file
+    }
+
+    function importFromTextarea() {
+      var text = document.getElementById('backup_textarea').value.trim();
+      if (!text) {
+        var statusEl = document.getElementById('backup_status');
+        statusEl.className = 'backup-status error';
+        statusEl.textContent = '\u2718 Please paste the JSON content first.';
+        return;
+      }
+      applyImportedConfig(text);
     }
 
     function getQueryParam(variable, defaultValue) {
