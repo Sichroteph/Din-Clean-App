@@ -1333,25 +1333,27 @@
         <!-- Export -->
         <div class="card">
           <div class="card-header">Export settings</div>
-          <div class="card-footer">Save all your current settings to a JSON file for backup.</div>
+          <div class="card-footer">Générez le JSON de vos paramètres, puis copiez-le dans un fichier texte pour le conserver.</div>
           <div class="row">
-            <button class="backup-btn export-btn" onclick="exportConfig()" style="width:100%">&#x2B07; Export to JSON file</button>
+            <button class="backup-btn export-btn" onclick="exportConfig()" style="width:100%">&#x2699; Générer le JSON</button>
+          </div>
+          <div id="export_output_wrap" style="display:none;padding:0 12px 12px">
+            <textarea class="backup-textarea" id="export_textarea" readonly></textarea>
+            <div class="backup-actions" style="margin-top:8px">
+              <button class="backup-btn export-btn" onclick="copyExportToClipboard()" style="flex:1">&#x1F4CB; Copier dans le presse-papier</button>
+            </div>
+            <div class="backup-status" id="export_status"></div>
           </div>
         </div>
 
         <!-- Import -->
         <div class="card">
           <div class="card-header">Import settings</div>
-          <div class="card-footer">Restore settings from a previously exported JSON file or paste the JSON content below.</div>
+          <div class="card-footer">Collez ici un JSON exporté précédemment pour restaurer vos paramètres.</div>
           <div class="row" style="flex-direction:column;align-items:stretch">
-            <div class="backup-actions">
-              <button class="backup-btn import-btn" onclick="document.getElementById('backup_file_input').click()" style="flex:1">&#x1F4C2; Choose JSON file</button>
-              <input type="file" id="backup_file_input" class="backup-file-input" accept=".json,application/json" onchange="importFromFile(this)">
-            </div>
-            <div class="backup-or">&mdash; or paste JSON below &mdash;</div>
-            <textarea class="backup-textarea" id="backup_textarea" placeholder='Paste your exported JSON here...'></textarea>
+            <textarea class="backup-textarea" id="backup_textarea" placeholder='Collez votre JSON ici...'></textarea>
             <div style="margin-top:8px">
-              <button class="backup-btn import-btn" onclick="importFromTextarea()" style="width:100%">&#x2B06; Import from text</button>
+              <button class="backup-btn import-btn" onclick="importFromTextarea()" style="width:100%">&#x2B06; Importer</button>
             </div>
             <div class="backup-status" id="backup_status"></div>
           </div>
@@ -2238,21 +2240,40 @@
         backup[key] = localStorage.getItem(key);
       }
 
-      var blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
-      var url = URL.createObjectURL(blob);
-      var a = document.createElement('a');
-      a.href = url;
-      var now = new Date();
-      var dateStr = now.getFullYear() +
-        ('0' + (now.getMonth() + 1)).slice(-2) +
-        ('0' + now.getDate()).slice(-2) + '_' +
-        ('0' + now.getHours()).slice(-2) +
-        ('0' + now.getMinutes()).slice(-2);
-      a.download = 'keystone_config_' + dateStr + '.json';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      var json = JSON.stringify(backup, null, 2);
+      var ta = document.getElementById('export_textarea');
+      ta.value = json;
+      document.getElementById('export_output_wrap').style.display = '';
+      ta.select();
+      // Scroll to the textarea
+      ta.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function copyExportToClipboard() {
+      var ta = document.getElementById('export_textarea');
+      var statusEl = document.getElementById('export_status');
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(ta.value).then(function () {
+          statusEl.className = 'backup-status success';
+          statusEl.textContent = '\u2714 Copié dans le presse-papier !';
+        }, function () {
+          fallbackCopy(ta, statusEl);
+        });
+      } else {
+        fallbackCopy(ta, statusEl);
+      }
+    }
+
+    function fallbackCopy(ta, statusEl) {
+      ta.select();
+      try {
+        document.execCommand('copy');
+        statusEl.className = 'backup-status success';
+        statusEl.textContent = '\u2714 Copié dans le presse-papier !';
+      } catch (e) {
+        statusEl.className = 'backup-status error';
+        statusEl.textContent = '\u2718 Copie automatique impossible — sélectionnez tout et copiez manuellement.';
+      }
     }
 
     function applyImportedConfig(jsonStr) {
@@ -2291,22 +2312,6 @@
         statusEl.className = 'backup-status error';
         statusEl.textContent = '\u2718 ' + (e.message || 'Invalid JSON');
       }
-    }
-
-    function importFromFile(input) {
-      var file = input.files[0];
-      if (!file) return;
-      var reader = new FileReader();
-      reader.onload = function (e) {
-        applyImportedConfig(e.target.result);
-      };
-      reader.onerror = function () {
-        var statusEl = document.getElementById('backup_status');
-        statusEl.className = 'backup-status error';
-        statusEl.textContent = '\u2718 Failed to read file.';
-      };
-      reader.readAsText(file);
-      input.value = ''; // allow re-selecting the same file
     }
 
     function importFromTextarea() {
