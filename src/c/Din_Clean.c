@@ -353,16 +353,43 @@ static int16_t pool_scale_x(int16_t value, int16_t min, int16_t max,
          (int16_t)(((int32_t)(value - min) * (width - 1)) / (max - min));
 }
 
+static void draw_pool_zone(GContext *ctx, int16_t x, int16_t y, int16_t width,
+                           uint8_t style) {
+  static const int8_t s_top_offset[3] = {-1, 0, -2};
+  static const uint8_t s_height[3] = {4, 2, 6};
+  if (width <= 0) {
+    return;
+  }
+  graphics_fill_rect(ctx,
+                     GRect(x, y + s_top_offset[style], width, s_height[style]),
+                     0, GCornerNone);
+}
+
 static void draw_pool_bar(GContext *ctx, int16_t y, int16_t value, int16_t min,
-                          int16_t max) {
+                          int16_t max, int16_t t1, int16_t t2, int16_t t3,
+                          int16_t t4) {
 #define POOL_BAR_X 10
 #define POOL_BAR_W 124
+#define POOL_ZONE_GAP 1
+  int16_t bounds[6] = {min, t1, t2, t3, t4, max};
   graphics_context_set_fill_color(ctx, GColorWhite);
-  graphics_fill_rect(ctx, GRect(POOL_BAR_X, y, POOL_BAR_W, 2), 0, GCornerNone);
+  for (int i = 0; i < 5; i++) {
+    int16_t x0 = pool_scale_x(bounds[i], min, max, POOL_BAR_X, POOL_BAR_W);
+    int16_t x1 = pool_scale_x(bounds[i + 1], min, max, POOL_BAR_X, POOL_BAR_W);
+    uint8_t style = (i == 2) ? 2 : ((i == 1 || i == 3) ? 1 : 0);
+    if (i > 0) {
+      x0 += POOL_ZONE_GAP;
+    }
+    if (i < 4) {
+      x1 -= POOL_ZONE_GAP;
+    }
+    draw_pool_zone(ctx, x0, y, x1 - x0 + 1, style);
+  }
   int16_t px = pool_scale_x(value, min, max, POOL_BAR_X, POOL_BAR_W);
   graphics_fill_rect(ctx, GRect(px - 3, y - 3, 7, 8), 0, GCornerNone);
 #undef POOL_BAR_X
 #undef POOL_BAR_W
+#undef POOL_ZONE_GAP
 }
 
 // Alternative view renderer (0 heap alloc — draws on existing GContext)
@@ -410,18 +437,18 @@ static void draw_alt_view(GContext *ctx, uint8_t vid, int icon_id, bool fresh,
         temp_dec = -temp_dec;
       snprintf(buf, sizeof(buf), "%d.%d C", npoolTemp / 10, temp_dec);
       dtext(ctx, buf, fb, 20, 30);
-      draw_pool_bar(ctx, 54, npoolTemp, 120, 370);
+      draw_pool_bar(ctx, 54, npoolTemp, 120, 370, 150, 205, 290, 320);
 
       snprintf(buf, sizeof(buf), "%d mV", npoolORP);
       dtext(ctx, buf, fb, 67, 30);
-      draw_pool_bar(ctx, 101, npoolORP, 400, 1050);
+      draw_pool_bar(ctx, 101, npoolORP, 400, 1050, 550, 650, 800, 1000);
 
       int ph_dec = npoolPH % 100;
       if (ph_dec < 0)
         ph_dec = -ph_dec;
       snprintf(buf, sizeof(buf), "%d.%02d pH", npoolPH / 100, ph_dec);
       dtext(ctx, buf, fb, 114, 30);
-      draw_pool_bar(ctx, 148, npoolPH, 640, 850);
+      draw_pool_bar(ctx, 148, npoolPH, 640, 850, 680, 710, 770, 810);
     }
   } else {
     BatteryChargeState bat = battery_state_service_peek();
