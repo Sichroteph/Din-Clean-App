@@ -1191,7 +1191,7 @@ function fetchStockData() {
             return;
           }
 
-          var sampled = sampleArray(validCloses, 10);
+          var sampled = sampleArray(validCloses, 8);
           var lastPrice = validCloses[validCloses.length - 1];
 
           // Use the first point of the fetched period as base price,

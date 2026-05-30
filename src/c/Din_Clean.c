@@ -804,7 +804,7 @@ static void inbox_received_callback(DictionaryIterator *iterator,
 
   Tuple *stock_data_tuple = dict_find(iterator, KEY_STOCK_DATA);
   if (stock_data_tuple) {
-    // Format: "idx|symbol|price|change|h0,h1,...,h9|price_min|price_max"
+    // Format: "idx|symbol|price|change|h0,h1,...,h7|price_min|price_max"
     const char *s = stock_data_tuple->value->cstring;
     int idx = 0;
     // Parse index
