@@ -342,6 +342,29 @@ static void dtext(GContext *c, const char *s, GFont f, int y, int h) {
                      NULL);
 }
 
+static int16_t pool_scale_x(int16_t value, int16_t min, int16_t max,
+                            int16_t left, int16_t width) {
+  if (value < min) {
+    value = min;
+  } else if (value > max) {
+    value = max;
+  }
+  return left +
+         (int16_t)(((int32_t)(value - min) * (width - 1)) / (max - min));
+}
+
+static void draw_pool_bar(GContext *ctx, int16_t y, int16_t value, int16_t min,
+                          int16_t max) {
+#define POOL_BAR_X 10
+#define POOL_BAR_W 124
+  graphics_context_set_fill_color(ctx, GColorWhite);
+  graphics_fill_rect(ctx, GRect(POOL_BAR_X, y, POOL_BAR_W, 2), 0, GCornerNone);
+  int16_t px = pool_scale_x(value, min, max, POOL_BAR_X, POOL_BAR_W);
+  graphics_fill_rect(ctx, GRect(px - 3, y - 3, 7, 8), 0, GCornerNone);
+#undef POOL_BAR_X
+#undef POOL_BAR_W
+}
+
 // Alternative view renderer (0 heap alloc — draws on existing GContext)
 static void draw_alt_view(GContext *ctx, uint8_t vid, int icon_id, bool fresh,
                           int8_t cur_hour, int8_t cur_min) {
@@ -377,37 +400,29 @@ static void draw_alt_view(GContext *ctx, uint8_t vid, int icon_id, bool fresh,
     }
     dtext(ctx, buf, fs, 152, 16);
   } else if (vid == HUB_VIEW_ANALOG) {
-// Analog clock — thick lines with rounded ends + 12 hour markers
-#define AC_CX 72
-#define AC_CY 84
-#define AC_R 60
-    graphics_context_set_stroke_color(ctx, GColorWhite);
-    graphics_context_set_fill_color(ctx, GColorWhite);
-    // 12 hour markers
-    for (int i = 0; i < 12; i++) {
-      int32_t a = TRIG_MAX_ANGLE * i / 12;
-      int mx = AC_CX + sin_lookup(a) * (AC_R - 4) / TRIG_MAX_RATIO;
-      int my = AC_CY - cos_lookup(a) * (AC_R - 4) / TRIG_MAX_RATIO;
-      graphics_fill_circle(ctx, GPoint(mx, my), (i % 3 == 0) ? 3 : 1);
+    GFont ft = fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
+    dtext(ctx, "POOL MONITOR", ft, 4, 22);
+    if (npoolTemp == 0 && npoolPH == 0 && npoolORP == 0) {
+      dtext(ctx, "No data", fb, 56, 34);
+    } else {
+      int temp_dec = npoolTemp % 10;
+      if (temp_dec < 0)
+        temp_dec = -temp_dec;
+      snprintf(buf, sizeof(buf), "%d.%d C", npoolTemp / 10, temp_dec);
+      dtext(ctx, buf, fb, 20, 30);
+      draw_pool_bar(ctx, 54, npoolTemp, 120, 370);
+
+      snprintf(buf, sizeof(buf), "%d mV", npoolORP);
+      dtext(ctx, buf, fb, 67, 30);
+      draw_pool_bar(ctx, 101, npoolORP, 400, 1050);
+
+      int ph_dec = npoolPH % 100;
+      if (ph_dec < 0)
+        ph_dec = -ph_dec;
+      snprintf(buf, sizeof(buf), "%d.%02d pH", npoolPH / 100, ph_dec);
+      dtext(ctx, buf, fb, 114, 30);
+      draw_pool_bar(ctx, 148, npoolPH, 640, 850);
     }
-    // Hour hand
-    int h12 = cur_hour % 12;
-    int32_t ha = TRIG_MAX_ANGLE * (h12 * 60 + cur_min) / 720;
-    GPoint hend = GPoint(AC_CX + sin_lookup(ha) * 36 / TRIG_MAX_RATIO,
-                         AC_CY - cos_lookup(ha) * 36 / TRIG_MAX_RATIO);
-    graphics_context_set_stroke_width(ctx, 7);
-    graphics_draw_line(ctx, GPoint(AC_CX, AC_CY), hend);
-    // Minute hand
-    int32_t ma = TRIG_MAX_ANGLE * cur_min / 60;
-    GPoint mend = GPoint(AC_CX + sin_lookup(ma) * 52 / TRIG_MAX_RATIO,
-                         AC_CY - cos_lookup(ma) * 52 / TRIG_MAX_RATIO);
-    graphics_context_set_stroke_width(ctx, 5);
-    graphics_draw_line(ctx, GPoint(AC_CX, AC_CY), mend);
-    // Center dot
-    graphics_fill_circle(ctx, GPoint(AC_CX, AC_CY), 3);
-#undef AC_CX
-#undef AC_CY
-#undef AC_R
   } else {
     BatteryChargeState bat = battery_state_service_peek();
     // --- "Battery" label ---
