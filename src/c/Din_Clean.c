@@ -343,14 +343,31 @@ static void dtext(GContext *c, const char *s, GFont f, int y, int h) {
 }
 
 static int16_t pool_scale_x(int16_t value, int16_t min, int16_t max,
-                            int16_t left, int16_t width) {
+                            int16_t x0, int16_t x1) {
   if (value < min) {
     value = min;
   } else if (value > max) {
     value = max;
   }
-  return left +
-         (int16_t)(((int32_t)(value - min) * (width - 1)) / (max - min));
+  return x0 + (int16_t)(((int32_t)(value - min) * (x1 - x0)) / (max - min));
+}
+
+static int16_t pool_value_x(int16_t value, int16_t min, int16_t max,
+                            int16_t t1, int16_t t2, int16_t t3, int16_t t4) {
+  static const uint8_t s_zone_x[6] = {10, 28, 44, 99, 115, 133};
+  if (value <= t1) {
+    return pool_scale_x(value, min, t1, s_zone_x[0], s_zone_x[1]);
+  }
+  if (value <= t2) {
+    return pool_scale_x(value, t1, t2, s_zone_x[1], s_zone_x[2]);
+  }
+  if (value <= t3) {
+    return pool_scale_x(value, t2, t3, s_zone_x[2], s_zone_x[3]);
+  }
+  if (value <= t4) {
+    return pool_scale_x(value, t3, t4, s_zone_x[3], s_zone_x[4]);
+  }
+  return pool_scale_x(value, t4, max, s_zone_x[4], s_zone_x[5]);
 }
 
 static void draw_pool_zone(GContext *ctx, int16_t x, int16_t y, int16_t width,
@@ -368,27 +385,26 @@ static void draw_pool_zone(GContext *ctx, int16_t x, int16_t y, int16_t width,
 static void draw_pool_bar(GContext *ctx, int16_t y, int16_t value, int16_t min,
                           int16_t max, int16_t t1, int16_t t2, int16_t t3,
                           int16_t t4) {
-#define POOL_BAR_X 10
-#define POOL_BAR_W 124
+  static const uint8_t s_zone_x[6] = {10, 28, 44, 99, 115, 133};
+  static const uint8_t s_zone_style[5] = {0, 1, 2, 1, 0};
 #define POOL_ZONE_GAP 1
-  int16_t bounds[6] = {min, t1, t2, t3, t4, max};
   graphics_context_set_fill_color(ctx, GColorWhite);
   for (int i = 0; i < 5; i++) {
-    int16_t x0 = pool_scale_x(bounds[i], min, max, POOL_BAR_X, POOL_BAR_W);
-    int16_t x1 = pool_scale_x(bounds[i + 1], min, max, POOL_BAR_X, POOL_BAR_W);
-    uint8_t style = (i == 2) ? 2 : ((i == 1 || i == 3) ? 1 : 0);
+    int16_t x0 = s_zone_x[i];
+    int16_t x1 = s_zone_x[i + 1];
     if (i > 0) {
       x0 += POOL_ZONE_GAP;
     }
     if (i < 4) {
       x1 -= POOL_ZONE_GAP;
     }
-    draw_pool_zone(ctx, x0, y, x1 - x0 + 1, style);
+    draw_pool_zone(ctx, x0, y, x1 - x0 + 1, s_zone_style[i]);
   }
-  int16_t px = pool_scale_x(value, min, max, POOL_BAR_X, POOL_BAR_W);
-  graphics_fill_rect(ctx, GRect(px - 3, y - 3, 7, 8), 0, GCornerNone);
-#undef POOL_BAR_X
-#undef POOL_BAR_W
+  int16_t px = pool_value_x(value, min, max, t1, t2, t3, t4);
+  graphics_fill_rect(ctx, GRect(px - 1, y - 8, 3, 17), 0, GCornerNone);
+  graphics_context_set_fill_color(ctx, GColorBlack);
+  graphics_fill_rect(ctx, GRect(px, y - 3, 1, 7), 0, GCornerNone);
+  graphics_context_set_fill_color(ctx, GColorWhite);
 #undef POOL_ZONE_GAP
 }
 
