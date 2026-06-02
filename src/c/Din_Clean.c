@@ -1110,7 +1110,14 @@ static void select_click_handler(ClickRecognizerRef recognizer, void *context) {
     return;
   }
   if (g_hub_config.view_count > 1) {
-    current_view_index = (current_view_index + 1) % g_hub_config.view_count;
+    if (++current_view_index >= g_hub_config.view_count)
+      current_view_index = 0;
+    if (g_hub_config.view_order[current_view_index] == HUB_VIEW_ANALOG &&
+        s_init_done && s_appmsg_open &&
+        flags.is_connected) {
+      s_weather_request_pending = true;
+      do_send_weather_request();
+    }
     hub_timeout_reset();
     start_wipe(WIPE_DIR_RIGHT);
     layer_mark_dirty(layer);
